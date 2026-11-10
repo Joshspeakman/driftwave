@@ -10,7 +10,7 @@ typealias ViewState<V> = SwiftUICore.State<V>
 /// User preferences, persisted in UserDefaults.
 @Observable @MainActor
 final class Preferences {
-    private let d = UserDefaults.standard
+    private let d = Diagnostics.isTestRun ? UserDefaults(suiteName: "io.github.joshspeakman.Shortwave.TestRun")! : UserDefaults.standard
 
     var recordingMode: RecordingMode { didSet { d.set(recordingMode.rawValue, forKey: "recordingMode") } }
     var trackDirectory: URL { didSet { d.set(trackDirectory.path, forKey: "trackDirectory") } }

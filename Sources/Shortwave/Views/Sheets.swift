@@ -149,6 +149,7 @@ struct LocalStationSheet: View {
                     }
                 } footer: {
                     Text("Playlist links (.pls, .m3u) are followed automatically.").foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if editing == nil {
                     Section {
@@ -158,6 +159,7 @@ struct LocalStationSheet: View {
                     } footer: {
                         Text("Public stations are added to the community database and become available for everyone.")
                             .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }

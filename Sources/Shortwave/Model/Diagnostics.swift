@@ -15,10 +15,19 @@ enum Diagnostics {
         FileHandle.standardError.write(Data("[shortwave] \(message())\n".utf8))
     }
 
+    /// Test runs use their own data folder and preferences, so they never touch the real app's data.
+    static var isTestRun: Bool {
+        CommandLine.arguments.contains("-muted") || playURL != nil || startPage != nil || searchText != nil || openFirstResult || openTrackDetail
+            || ProcessInfo.processInfo.environment["SHORTWAVE_TEST"] == "1"
+    }
+
     static var playURL: String? { UserDefaults.standard.string(forKey: "playURL") }
     static var startPage: String? { UserDefaults.standard.string(forKey: "page") }
     static var searchText: String? { UserDefaults.standard.string(forKey: "searchText") }
     static var openFirstResult: Bool { CommandLine.arguments.contains("-openFirstResult") }
     static var openTrackDetail: Bool { CommandLine.arguments.contains("-openTrackDetail") }
-    static var startMuted: Bool { CommandLine.arguments.contains("-muted") }
+    /// Test runs are always muted and keep off Now Playing / media keys (pass -audible for a sound test).
+    static var startMuted: Bool {
+        CommandLine.arguments.contains("-muted") || (isTestRun && !CommandLine.arguments.contains("-audible"))
+    }
 }

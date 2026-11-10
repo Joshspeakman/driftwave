@@ -55,9 +55,12 @@ You only need the Xcode Command Line Tools (Swift 6), not Xcode.
 | `swift test` | Runs the core unit tests |
 | `scripts/build-app.sh --nightly` | Builds `~/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app` |
 | `scripts/install.sh --nightly` | Builds the app and installs it to `/Applications` |
-| `scripts/smoke-test.sh` | Plays real streams muted and checks titles and recording |
+| `scripts/smoke-test.sh` | Plays real MP3, AAC, HLS, Ogg and `.pls` streams muted and checks that playback and titles work |
+| `scripts/recording-test.sh` | Runs a local Icecast-style server (`scripts/icy-test-server.py`, needs ffmpeg) and checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable |
 
 Build output goes to `~/ProjectBuilds/shortwave-macos`, and `.build` is a symlink to it.
+
+Test runs use their own data folder (`ShortwaveTestRun`) and their own preferences. They also stay off Now Playing and the media keys, so they never disturb the installed app. A run counts as a test run when it gets any launch flag from `Sources/Shortwave/Model/Diagnostics.swift`, such as `-muted` or `-playURL`.
 
 ### Toolchain note
 

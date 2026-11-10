@@ -48,7 +48,8 @@ final class ImageStore {
         if let m = memory[k] { return m }
         if failed.contains(k) { return nil }
         if let t = inFlight[k] { return await t.value }
-        let task = Task<NSImage?, Never> { [paths, session] in
+        // Download, decode and resize away from the main thread.
+        let task = Task.detached(priority: .utility) { [paths, session] () -> NSImage? in
             if let cover = s.customCover {
                 return NSImage(contentsOf: paths.covers.appendingPathComponent(cover))
             }
