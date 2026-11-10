@@ -27,7 +27,7 @@ enum Page: String, Hashable, CaseIterable, Identifiable {
 @Observable @MainActor
 final class AppModel {
     let settings = Preferences()
-    let paths = AppPaths()
+    let paths = AppPaths(appFolder: Diagnostics.isTestRun ? "ShortwaveTestRun" : "Shortwave")
     let api = RadioBrowser()
     let images: ImageStore
     let player: Player
@@ -72,6 +72,7 @@ final class AppModel {
         }
         Task { await refreshLibrary() }
         if Diagnostics.startMuted { player.isMuted = true }
+        Diagnostics.log("launch testRun=\(Diagnostics.isTestRun) muted=\(player.isMuted)")
         if let p = Diagnostics.startPage.flatMap(Page.init(rawValue:)) { page = p }
         if let q = Diagnostics.searchText { search.name = q; searchChanged() }
         if let url = Diagnostics.playURL {

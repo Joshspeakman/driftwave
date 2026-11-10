@@ -114,7 +114,10 @@ final class IcyStream: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard !stopped else { return }
+        guard !stopped else {
+            session.finishTasksAndInvalidate()   // also covers servers without ICY metadata
+            return
+        }
         stopped = true
         if let events = recorder?.streamEnded(), !events.isEmpty { post(.recorder(events)) }
         post(.ended(error?.localizedDescription))

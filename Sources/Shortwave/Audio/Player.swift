@@ -24,6 +24,8 @@ final class Player: NSObject {
     @ObservationIgnored let avPlayer = AVPlayer()
     @ObservationIgnored private let settings: Preferences
     @ObservationIgnored private let paths: AppPaths
+    /// Temporary recordings; test runs each get their own so parallel runs never clear each other's.
+    @ObservationIgnored private let recordingDir: URL
     @ObservationIgnored private let api: RadioBrowser
     @ObservationIgnored var artworkProvider: ((Station) -> NSImage?)?
     @ObservationIgnored var onShowTrack: ((Track) -> Void)?
@@ -45,6 +47,9 @@ final class Player: NSObject {
         self.settings = settings
         self.paths = paths
         self.api = api
+        recordingDir = Diagnostics.isTestRun
+            ? paths.recording.appendingPathComponent(String(ProcessInfo.processInfo.processIdentifier))
+            : paths.recording
         super.init()
         volume = settings.volume
         avPlayer.volume = Float(volume)
@@ -53,7 +58,7 @@ final class Player: NSObject {
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.syncStateFromPlayer() } }
         }
         if !Diagnostics.startMuted { setUpRemoteCommands() }
-        try? FileManager.default.removeItem(at: paths.recording)
+        try? FileManager.default.removeItem(at: recordingDir)
     }
 
     var isPlaying: Bool { state == .playing || state == .loading }
@@ -158,7 +163,7 @@ final class Player: NSObject {
     }
 
     private func startIcy(url: URL, gen: Int) {
-        let stream = IcyStream(url: url, config: settings.recorderConfig, directory: paths.recording) { [weak self] message in
+        let stream = IcyStream(url: url, config: settings.recorderConfig, directory: recordingDir) { [weak self] message in
             guard let self, gen == self.generation else {
                 // A stream we already left: still let finished recordings land on their tracks.
                 if case .recorder(let events) = message { self?.apply(events, live: false) }
@@ -287,6 +292,8 @@ final class Player: NSObject {
                 guard live, let station else { continue }
                 let track = Track(id: id, title: title, station: station, state: state, file: file, format: icyFormat(file))
                 tracks[id] = track
+                // After a title-stream reconnect the same song is announced again: keep the one we have.
+                if state == .idleIncomplete, title == playingTrack?.title { continue }
                 // The sidecar runs ahead of what is audible by AVPlayer's buffer.
                 let lead = bufferedLead()
                 let gen = generation
