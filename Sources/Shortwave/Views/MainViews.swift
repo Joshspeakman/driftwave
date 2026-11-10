@@ -12,33 +12,35 @@ struct MainView: View {
             }
             .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 240)
         } detail: {
-            Group {
-                switch app.page {
-                case .library: LibraryPage()
-                case .discover: DiscoverPage()
-                case .search: SearchPage()
-                }
-            }
-            .frame(minWidth: 420)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !app.showPlayer && app.player.station != nil {
-                    VStack(spacing: 0) {
-                        Divider()
-                        MiniPlayer().background(.bar)
+            // The player is a plain side panel, not .inspector: inside this split view the inspector
+            // drew its content a toolbar-height lower than where it took clicks, so the volume
+            // slider and buttons could not be used.
+            HStack(spacing: 0) {
+                Group {
+                    switch app.page {
+                    case .library: LibraryPage()
+                    case .discover: DiscoverPage()
+                    case .search: SearchPage()
                     }
                 }
-            }
-            .inspector(isPresented: $app.showPlayer) {
-                PlayerPanel()
-                    .inspectorColumnWidth(min: 260, ideal: 300, max: 380)
-                    .toolbar {
-                        Spacer()
-                        Button { app.showPlayer.toggle() } label: {
-                            Label("Player", systemImage: "sidebar.trailing")
+                .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if !app.showPlayer && app.player.station != nil {
+                        VStack(spacing: 0) {
+                            Divider()
+                            MiniPlayer().background(.bar)
                         }
-                        .help("Hide Player")
                     }
+                }
+                if app.showPlayer {
+                    Divider()
+                    PlayerPanel()
+                        .frame(width: 300)
+                        .frame(maxHeight: .infinity)
+                        .transition(.move(edge: .trailing))
+                }
             }
+            .animation(.snappy(duration: 0.2), value: app.showPlayer)
             .toolbar {
                 ToolbarItem {
                     Button { app.showingAddStation = true } label: {
@@ -46,13 +48,11 @@ struct MainView: View {
                     }
                     .help("Add a local station")
                 }
-                if !app.showPlayer {
-                    ToolbarItem {
-                        Button { app.showPlayer = true } label: {
-                            Label("Player", systemImage: "sidebar.trailing")
-                        }
-                        .help("Show Player")
+                ToolbarItem {
+                    Button { app.showPlayer.toggle() } label: {
+                        Label("Player", systemImage: "sidebar.trailing")
                     }
+                    .help(app.showPlayer ? "Hide Player" : "Show Player")
                 }
             }
         }
