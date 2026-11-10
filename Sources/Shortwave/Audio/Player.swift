@@ -26,6 +26,7 @@ final class Player: NSObject {
     @ObservationIgnored private let paths: AppPaths
     @ObservationIgnored private let api: RadioBrowser
     @ObservationIgnored var artworkProvider: ((Station) -> NSImage?)?
+    @ObservationIgnored var onShowTrack: ((Track) -> Void)?
     @ObservationIgnored var stationNeighbours: ((Station, Int) -> Station?)?
 
     @ObservationIgnored private var icy: IcyStream?
@@ -51,7 +52,7 @@ final class Player: NSObject {
         statusObservation = avPlayer.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.syncStateFromPlayer() } }
         }
-        setUpRemoteCommands()
+        if !Diagnostics.startMuted { setUpRemoteCommands() }
         try? FileManager.default.removeItem(at: paths.recording)
     }
 
@@ -61,7 +62,7 @@ final class Player: NSObject {
 
     func select(_ station: Station) {
         if self.station?.id != station.id {
-            stopPlayback()
+            stopPlayback(reason: "station change")
             self.station = station
             settings.lastStationID = station.id
             resetTracks()
@@ -80,7 +81,7 @@ final class Player: NSObject {
     }
 
     func togglePlayback() {
-        if isPlaying { stopPlayback() } else { startPlayback() }
+        if isPlaying { stopPlayback(reason: "toggle") } else { startPlayback() }
     }
 
     func startPlayback() {
@@ -103,7 +104,8 @@ final class Player: NSObject {
         }
     }
 
-    func stopPlayback() {
+    func stopPlayback(reason: String = "user") {
+        Diagnostics.log("stop (\(reason))")
         generation += 1
         stopStreams()
         if let t = playingTrack, t.state.includeInPastTracks { addPast(t) }
@@ -322,6 +324,7 @@ final class Player: NSObject {
         guard playingTrack?.id != track.id else { return }
         if let old = playingTrack, old.state.includeInPastTracks { addPast(old) }
         playingTrack = track
+        if Diagnostics.openTrackDetail, track.state == .recording { onShowTrack?(track) }
         Diagnostics.log("now playing \"\(track.title)\"")
         updateNowPlaying()
         notify(track)
@@ -377,6 +380,7 @@ final class Player: NSObject {
     // MARK: Now Playing / media keys
 
     func updateNowPlaying() {
+        guard !Diagnostics.startMuted else { return }   // muted test runs leave the media keys alone
         let center = MPNowPlayingInfoCenter.default()
         guard let station else {
             center.nowPlayingInfo = nil
@@ -410,7 +414,7 @@ final class Player: NSObject {
     private func setUpRemoteCommands() {
         let c = MPRemoteCommandCenter.shared()
         c.togglePlayPauseCommand.addTarget { [weak self] _ in
-            MainActor.assumeIsolated { self?.togglePlayback() }
+            MainActor.assumeIsolated { Diagnostics.log("media key toggle"); self?.togglePlayback() }
             return .success
         }
         c.playCommand.addTarget { [weak self] _ in
@@ -418,11 +422,11 @@ final class Player: NSObject {
             return .success
         }
         c.pauseCommand.addTarget { [weak self] _ in
-            MainActor.assumeIsolated { self?.stopPlayback() }
+            MainActor.assumeIsolated { self?.stopPlayback(reason: "media key pause") }
             return .success
         }
         c.stopCommand.addTarget { [weak self] _ in
-            MainActor.assumeIsolated { self?.stopPlayback() }
+            MainActor.assumeIsolated { self?.stopPlayback(reason: "media key stop") }
             return .success
         }
         c.nextTrackCommand.addTarget { [weak self] _ in

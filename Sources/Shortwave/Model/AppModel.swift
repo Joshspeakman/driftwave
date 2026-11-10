@@ -64,6 +64,7 @@ final class AppModel {
         player = Player(settings: settings, paths: paths, api: api)
         library = LibraryFile.load(from: paths.library)
         player.artworkProvider = { [images] station in images.cached(for: station) }
+        player.onShowTrack = { [weak self] t in if self?.detailTrack == nil { self?.detailTrack = t } }
         player.stationNeighbours = { [weak self] station, delta in self?.neighbour(of: station, delta: delta) }
         if let id = settings.lastStationID, let s = library.first(where: { $0.id == id }) {
             player.restore(s)
@@ -208,6 +209,7 @@ final class AppModel {
                 guard !Task.isCancelled else { return }
                 searchResults = results
                 searchError = nil
+                if Diagnostics.openFirstResult, detailStation == nil { detailStation = results.first }
             } catch {
                 guard !Task.isCancelled else { return }
                 searchError = error.localizedDescription

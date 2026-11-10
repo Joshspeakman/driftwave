@@ -63,7 +63,7 @@ struct MainView: View {
         .sheet(item: $app.editingStation) { LocalStationSheet(editing: $0) }
         .onDisappear {
             // Closing the window stops playback unless background playback is on.
-            if !app.settings.backgroundPlayback { app.player.stopPlayback() }
+            if !app.settings.backgroundPlayback { app.player.stopPlayback(reason: "window closed") }
         }
     }
 }
@@ -102,6 +102,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Tracks are recognised from the station’s stream metadata. MP3 and AAC streams can be recorded; HLS and Ogg streams play without recording.")
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Section {
                     LabeledContent("Track Folder") {
@@ -127,7 +128,7 @@ struct SettingsView: View {
             .formStyle(.grouped)
             .tabItem { Label("Recording", systemImage: "record.circle") }
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 520, height: 520)
         .onChange(of: settings.recorderConfig) { app.player.settingsChanged() }
     }
 }
