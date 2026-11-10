@@ -143,6 +143,7 @@ struct CountryMenu: View {
 
 struct SearchPage: View {
     @Environment(AppModel.self) private var app
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         @Bindable var app = app
@@ -178,38 +179,51 @@ struct SearchPage: View {
         }
         .navigationTitle("Search")
         .searchable(text: $app.search.name, placement: .toolbar, prompt: "Search stations")
+        .searchFocused($searchFocused)
+        .onAppear { searchFocused = true }
         .onChange(of: app.search) { app.searchChanged() }
         .task { await app.loadFacets() }
     }
 
     private var filterBar: some View {
         @Bindable var app = app
-        return HStack(spacing: 12) {
+        return ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 10) {
             Picker("Sort", selection: $app.search.order) {
                 ForEach(RadioBrowser.Search.Order.allCases) { Text($0.title).tag($0) }
             }
-            .fixedSize()
+            .frame(width: 140)
+            .help("Sort results")
             Picker("Country", selection: $app.search.countryCode) {
-                Text("Any").tag("")
+                Text("Any Country").tag("")
+                Divider()
                 ForEach(app.countries) { Text($0.name).tag($0.iso_3166_1 ?? "") }
             }
-            .frame(maxWidth: 220)
+            .frame(width: 170)
             Picker("Language", selection: $app.search.language) {
-                Text("Any").tag("")
+                Text("Any Language").tag("")
+                Divider()
                 ForEach(app.languages) { Text($0.name.capitalized).tag($0.name) }
             }
-            .frame(maxWidth: 200)
+            .frame(width: 150)
             Picker("Tag", selection: $app.search.tag) {
-                Text("Any").tag("")
+                Text("Any Tag").tag("")
+                Divider()
                 ForEach(app.tags) { Text($0.name).tag($0.name) }
             }
-            .frame(maxWidth: 200)
-            Spacer()
-            if !app.searchResults.isEmpty {
-                Text("\(app.searchResults.count) stations").foregroundStyle(.secondary).font(.callout)
+            .frame(width: 140)
+            if app.search != RadioBrowser.Search() {
+                Button("Clear") { app.search = RadioBrowser.Search() }
+                    .buttonStyle(.borderless)
             }
+            if !app.searchResults.isEmpty {
+                Text("\(app.searchResults.count) stations").foregroundStyle(.secondary).font(.callout).lineLimit(1)
+                    .fixedSize()
+            }
+          }
+          .labelsHidden()
+          .padding(.horizontal, 16)
+          .padding(.vertical, 8)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
     }
 }
