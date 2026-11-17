@@ -76,6 +76,24 @@ public sealed class Player : Observable
 
         if (!Diagnostics.StartMuted || Diagnostics.ForceMediaControls) controls = new MediaControls(mp, ui, this);
         try { if (Directory.Exists(recordingDir)) Directory.Delete(recordingDir, true); } catch { }
+        if (Diagnostics.IsTestRun) RemoveStaleTestRecordings(paths.Recording);
+    }
+
+    /// <summary>Test runs that were killed leave their per-process folder behind; remove those whose process is gone.</summary>
+    static void RemoveStaleTestRecordings(string parent)
+    {
+        try
+        {
+            if (!Directory.Exists(parent)) return;
+            foreach (var dir in Directory.GetDirectories(parent))
+            {
+                if (!int.TryParse(Path.GetFileName(dir), out int pid) || pid == Environment.ProcessId) continue;
+                bool running;
+                try { using var p = System.Diagnostics.Process.GetProcessById(pid); running = !p.HasExited; } catch { running = false; }
+                if (!running) { try { Directory.Delete(dir, true); } catch { } }
+            }
+        }
+        catch { }
     }
 
     // MARK: Observable state

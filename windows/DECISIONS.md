@@ -74,3 +74,43 @@ If muxing fails, the raw `.aac` is saved instead, as on the Mac.
 | Install method | Per-user install to `%LOCALAPPDATA%\Programs\<name>` with a Start menu shortcut and an uninstall script; no admin, no MSIX, no certificate | Easiest to undo. Release (`Shortwave`) and Nightly (`Shortwave Nightly`) install side by side |
 | Settings window | A Settings page in the main window's navigation (Windows convention) | |
 | Library.json fixture | Written by hand in the Mac's exact format | The repo has no captured Mac file. **Still worth checking with a real one from the Mac** |
+
+## 5. Verification status (2026-11-17, built and tested on this PC)
+
+### Verified by automated runs
+
+All of these were muted test runs using the `ShortwaveTestRun` folders. The real `%APPDATA%\Shortwave`
+was never created.
+
+| Check | Result |
+|---|---|
+| Core unit tests (`test.ps1`) | 31/31 pass: the 19 Swift tests translated, the Mac-format `library.json` fixture, Windows reserved file names, the frame clock, the M4A muxer (including a real ffmpeg passthrough round trip) and the Ogg reader |
+| Smoke test (`smoke-test.ps1`, installed Nightly) | 5/5 pass: MP3 and AAC with ICY titles, HLS with ID3 titles, Ogg with Vorbis comment titles, `.pls` |
+| Recording test (`recording-test.ps1`, installed Nightly) | Pass. MP3 and AAC are cut at the title change (about 15 s each), tagged and decodable; AAC is saved as `.m4a`. The m4a bitrate (128.0 kbps) matches the stream, so there was no re-encode. The first track is marked `idleIncomplete` |
+| Old Shoutcast `ICY 200 OK` (`recording-test.ps1 -StatusLine icy`) | Pass. Titles are read over the raw-socket fallback, and Media Foundation plays it too |
+| https to http redirect (`dance.ogg`) | Followed; titles read |
+| Decide for Each Track + "Save this track when recording is complete" (UI Automation) | Only the ticked track was saved |
+| Search, then details, Add to Library, Play (UI Automation) | Station saved to `library.json`; it played; the dialog showed "Playing" |
+| Settings changes (UI Automation) | Saved to the test `settings.json` |
+| Add Local Station dialog (UI Automation) | Station added to the library |
+| Background Playback off, then close the window (UI Automation) | Playback stops, and the app keeps running in the notification area |
+| Library refresh at launch | An unknown UUID is marked "Orphaned station"; the local station is labelled |
+| Media overlay (system media session) | Read-only check with `-mediaControls` while nothing else was playing: a session appeared with title, artist and "Playing", and went away when the app quit. An idle app has no session |
+| Single instance (installed Nightly, real run, no playback) | A second launch hands over and exits; `--quit` closes the running copy |
+| Start menu shortcut | Carries AppUserModelID `Joshspeakman.Shortwave.Nightly` |
+| Notification on a new track | Fired without error. Not seen on screen |
+| UI pages and dialogs | Rendered with `-screenshot`: Library, Discover, Search, Settings, station details, track details, mini player |
+
+### Not verified (needs Josh)
+
+- **What's actually on screen.** No GPU-drawn window could be screen-captured in this session; WPF test
+  windows came out blank too. So the UI was checked by rendering its XAML, which leaves out the Mica
+  backdrop and real window chrome. Worth a look the first time.
+- **Sound.** Every test was muted. Play a station with sound.
+- **Keyboard media keys and the overlay's buttons.** Implemented with System Media Transport
+  Controls, but never pressed, per `CLAUDE.md`. Try play/pause/next/previous yourself.
+- **Keyboard shortcuts** (Ctrl+Enter and the rest) and the notification-area menu. Built, but not
+  driven by the tests.
+- **A `library.json` copied from the Mac.** Only the hand-built fixture was tested.
+- **Title timing by ear.** The delay is computed from stream position (SomaFM: about 16 s burst), but
+  nobody has listened to check that a title changes when the song does.
