@@ -61,6 +61,12 @@ public sealed partial class MainWindow : Window
         AddShortcuts();
         ShowPage();
         UpdatePlayerPane();
+        Nav.Loaded += (_, _) =>
+        {
+            ShowPage();   // SettingsItem exists only once the template is applied
+            // Start with focus in the pane without a keyboard focus rectangle on the menu button.
+            if (Nav.SelectedItem is Control c) c.Focus(FocusState.Pointer);
+        };
     }
 
     UIElement PageView(Page p)

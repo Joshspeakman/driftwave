@@ -26,7 +26,7 @@ public sealed partial class MiniPlayerWindow : Window
             p.IsMinimizable = true;
         }
         double scale = Native.GetDpiForWindow(Hwnd) / 96.0;
-        int w = (int)(400 * scale), h = (int)(104 * scale);
+        int w = (int)(430 * scale), h = (int)(104 * scale);
         // Top right of the primary work area, like the Mac's .topTrailing.
         var area = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
         AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X + area.Width - w - (int)(24 * scale), area.Y + (int)(24 * scale), w, h));
