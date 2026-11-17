@@ -21,6 +21,7 @@ public sealed partial class StationCard : UserControl
     {
         InitializeComponent();
         DataContextChanged += (_, e) => { if (e.NewValue is Station s) SetStation(s); };
+        Card.Invoked += () => { if (station != null) App.Current?.Model.ShowStation(station); };
         Loaded += (_, _) =>
         {
             player = App.Current?.Model.Player;

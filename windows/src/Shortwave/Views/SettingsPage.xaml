@@ -16,7 +16,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" Margin="24,12,16,8" Height="32" />
+        <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" Margin="24,12,16,8" MinHeight="32" />
         <ScrollViewer Grid.Row="1">
             <StackPanel Padding="24,4,24,24" Spacing="4" MaxWidth="760" HorizontalAlignment="Stretch">
                 <TextBlock Text="Playback" FontWeight="SemiBold" Margin="2,8,0,4" />
