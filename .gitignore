@@ -8,3 +8,4 @@ windows/**/bin/
 windows/**/obj/
 windows/**/*.user
 windows/.vs/
+windows/out/
