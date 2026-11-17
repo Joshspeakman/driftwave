@@ -1,0 +1,47 @@
+{
+  "stations" : [
+    {
+      "bitrate" : 128,
+      "codec" : "MP3",
+      "country" : "The United States Of America",
+      "countryCode" : "US",
+      "customCover" : "5C1A7F0E-2B7D-4F64-9E1B-1D2C3B4A5F60.png",
+      "faviconURL" : "https:\/\/somafm.com\/img3\/groovesalad-400.jpg",
+      "homepage" : "https:\/\/somafm.com\/groovesalad\/",
+      "id" : "960cfd3b-0601-11e8-ae97-52543be04c81",
+      "isHLS" : false,
+      "isLocal" : false,
+      "isOrphaned" : false,
+      "language" : "English",
+      "latitude" : 37.775,
+      "longitude" : -122.419,
+      "name" : "SomaFM Groove Salad",
+      "state" : "California",
+      "streamURL" : "http:\/\/ice1.somafm.com\/groovesalad-128-mp3",
+      "tags" : [
+        "ambient",
+        "chillout"
+      ],
+      "votes" : 4321
+    },
+    {
+      "bitrate" : 0,
+      "codec" : "",
+      "country" : "",
+      "countryCode" : "",
+      "id" : "local-2f6a0c1e-8d3b-4c5a-9e7f-0a1b2c3d4e5f",
+      "isHLS" : false,
+      "isLocal" : true,
+      "isOrphaned" : false,
+      "language" : "",
+      "name" : "Café Radio été",
+      "state" : "",
+      "streamURL" : "https:\/\/example.com\/listen.pls",
+      "tags" : [
+
+      ],
+      "votes" : 0
+    }
+  ],
+  "version" : 1
+}

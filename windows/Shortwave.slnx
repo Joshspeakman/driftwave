@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ShortwaveCore/ShortwaveCore.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ShortwaveCore.Tests/ShortwaveCore.Tests.csproj" />
+  </Folder>
+</Solution>
