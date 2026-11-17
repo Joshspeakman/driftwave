@@ -22,7 +22,7 @@ public sealed class MediaControls : IDisposable
     {
         this.ui = ui;
         smtc = mp.SystemMediaTransportControls;
-        smtc.IsEnabled = true;
+        smtc.IsEnabled = false;   // enabled once there is a station, so an idle app stays out of the media overlay
         smtc.IsPlayEnabled = true;
         smtc.IsPauseEnabled = true;
         smtc.IsStopEnabled = true;
@@ -54,8 +54,10 @@ public sealed class MediaControls : IDisposable
             u.ClearAll();
             u.Update();
             smtc.PlaybackStatus = MediaPlaybackStatus.Closed;
+            smtc.IsEnabled = false;
             return;
         }
+        smtc.IsEnabled = true;
         u.Type = MediaPlaybackType.Music;
         u.AppMediaId = Diagnostics.AppName;
         var m = u.MusicProperties;

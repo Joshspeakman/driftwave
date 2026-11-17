@@ -51,12 +51,15 @@ public partial class App : Application
         if (Diagnostics.QuitAfter is { } q) After(q, () => { Quit(); return Task.CompletedTask; });
     }
 
+    private readonly HashSet<DispatcherQueueTimer> timers = [];   // keeps pending timers from being collected
+
     void After(double seconds, Func<Task> action)
     {
         var t = DispatcherQueue.CreateTimer();
         t.Interval = TimeSpan.FromSeconds(seconds);
         t.IsRepeating = false;
-        t.Tick += async (s, _) => { s.Stop(); await action(); };
+        timers.Add(t);
+        t.Tick += async (s, _) => { s.Stop(); timers.Remove(s); await action(); };
         t.Start();
     }
 
@@ -146,6 +149,7 @@ public partial class App : Application
         try
         {
             if (window.Content is not FrameworkElement root || root.XamlRoot is null) return;
+            Diagnostics.Log("screenshot: rendering window");
             var (bg, w, h) = await Render(root);
             bool dark = root.ActualTheme == ElementTheme.Dark;
             var canvas = new byte[w * h * 4];
@@ -153,10 +157,11 @@ public partial class App : Application
             for (int i = 0; i < canvas.Length; i += 4) { canvas[i] = canvas[i + 1] = canvas[i + 2] = shade; canvas[i + 3] = 255; }
             Blend(canvas, w, h, bg, w, h, 0, 0);
             double scale = root.XamlRoot.RasterizationScale;
-            foreach (var popup in Microsoft.UI.Xaml.Media.VisualTreeHelper.GetOpenPopupsForXamlRoot(root.XamlRoot))
+            foreach (var popup in Microsoft.UI.Xaml.Media.VisualTreeHelper.GetOpenPopupsForXamlRoot(root.XamlRoot).Reverse())   // topmost comes first
             {
                 if (popup.Child is not FrameworkElement child || child.ActualWidth < 1) continue;
                 var at = child.TransformToVisual(null).TransformPoint(new Windows.Foundation.Point(0, 0));
+                Diagnostics.Log($"screenshot: rendering popup {child.GetType().Name}");
                 var (px, pw, ph) = await Render(child);
                 Blend(canvas, w, h, px, pw, ph, (int)Math.Round(at.X * scale), (int)Math.Round(at.Y * scale));
             }
@@ -176,8 +181,11 @@ public partial class App : Application
 
     static async Task<(byte[] Pixels, int Width, int Height)> Render(UIElement element)
     {
+        // RenderAsync never completes while the window isn't being drawn (e.g. minimized), so don't wait forever.
         var rtb = new Microsoft.UI.Xaml.Media.Imaging.RenderTargetBitmap();
-        await rtb.RenderAsync(element);
+        var render = rtb.RenderAsync(element).AsTask();
+        if (await Task.WhenAny(render, Task.Delay(10000)) != render) throw new TimeoutException("the window is not being drawn");
+        await render;
         return ((await rtb.GetPixelsAsync()).ToArray(), rtb.PixelWidth, rtb.PixelHeight);
     }
 

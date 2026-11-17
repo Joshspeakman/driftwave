@@ -24,10 +24,11 @@ public static class Program
             return 0;
         }
 
-        if (!Diagnostics.IsTestRun)
+        bool quit = args.Contains("--quit");
+        if (!Diagnostics.IsTestRun || quit)
         {
             Native.SetCurrentProcessExplicitAppUserModelID(Diagnostics.AppUserModelId);
-            // One instance: a second launch brings the running app to the front.
+            // One instance: a second launch brings the running app to the front ("--quit" asks it to quit).
             var key = AppInstance.FindOrRegisterForKey(Diagnostics.AppName);
             if (!key.IsCurrent)
             {
@@ -35,7 +36,15 @@ public static class Program
                 Task.Run(() => key.RedirectActivationToAsync(activation).AsTask()).Wait();
                 return 0;
             }
-            key.Activated += (_, _) => App.Current?.DispatcherQueue.TryEnqueue(() => App.Current.ShowMainWindow());
+            if (quit) return 0;   // nothing running
+            key.Activated += (_, e) =>
+            {
+                string command = (e.Data as Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs)?.Arguments ?? "";
+                App.Current?.DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (command.Contains("--quit")) App.Current.Quit(); else App.Current.ShowMainWindow();
+                });
+            };
         }
 
         Application.Start(p =>

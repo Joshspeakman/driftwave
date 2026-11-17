@@ -69,7 +69,8 @@ Test runs use their own data folder (`ShortwaveTestRun`) and their own preferenc
 
 ## Windows
 
-A Windows version is planned in [`windows/PLAN.md`](windows/PLAN.md). It will be built on the `windows` branch.
+The Windows version (C# and WinUI 3, on the `windows` branch) is in [`windows/`](windows/README.md):
+same features, same `library.json`, same test flags.
 
 ## Data
 
