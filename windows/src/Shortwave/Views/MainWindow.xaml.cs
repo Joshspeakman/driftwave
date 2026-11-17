@@ -103,9 +103,13 @@ public sealed partial class MainWindow : Window
         PlayerToggleItem.Content = app.ShowPlayer ? "Hide Player" : "Show Player";
     }
 
-    void AddStation_Tapped(object sender, TappedRoutedEventArgs e) => app.AddLocalStation();
-    void PlayerToggle_Tapped(object sender, TappedRoutedEventArgs e) => app.ShowPlayer = !app.ShowPlayer;
-    void MiniPlayer_Tapped(object sender, TappedRoutedEventArgs e) => App.Current?.ShowMiniPlayer();
+    // Footer commands (they don't select a page). ItemInvoked also covers keyboard and UI Automation.
+    void Nav_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+    {
+        if (args.InvokedItemContainer == AddStationItem) app.AddLocalStation();
+        else if (args.InvokedItemContainer == PlayerToggleItem) app.ShowPlayer = !app.ShowPlayer;
+        else if (args.InvokedItemContainer == MiniPlayerItem) App.Current?.ShowMiniPlayer();
+    }
 
     /// <summary>The Mac's menu shortcuts with Ctrl in place of Command. Space is deliberately not play/stop.</summary>
     void AddShortcuts()

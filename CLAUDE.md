@@ -1,8 +1,8 @@
 # Shortwave: notes for Claude sessions
 
 Josh's personal internet radio app, modelled on GNOME Shortwave. The macOS app is native SwiftUI
-(`Sources/`). A Windows version is being built from `windows/PLAN.md`; read that first if you are
-on Windows.
+(`Sources/`). The Windows version (C# + WinUI 3, under `windows/`) was built from `windows/PLAN.md`;
+on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
 
 ## Branches
 
@@ -41,3 +41,22 @@ Only the Command Line Tools are needed, not Xcode.
 | `scripts/install.sh --nightly` | Builds and installs `/Applications/Shortwave Nightly.app` |
 | `scripts/smoke-test.sh` | Real streams, muted |
 | `scripts/recording-test.sh` | Local ICY server plus ffmpeg: checks that tracks are cut and saved |
+
+## Windows build
+
+Needs the .NET 10 SDK; the tests also need Python 3 and ffmpeg. Run from the repo root in PowerShell.
+
+| Command | What it does |
+|---|---|
+| `windows/scripts/test.ps1` | Core unit tests (31: the 19 Swift ones translated, plus Windows-only ones) |
+| `windows/scripts/build.ps1 -Flavor Nightly` | Builds `windows/out/Nightly/Shortwave.exe` |
+| `windows/scripts/install.ps1 -Flavor Nightly` | Builds and installs `Shortwave Nightly` for the current user (Start menu, Settings > Apps) |
+| `windows/scripts/smoke-test.ps1` | Real streams, muted |
+| `windows/scripts/recording-test.ps1` | Local ICY server plus ffmpeg: checks that tracks are cut, saved and tagged |
+
+- In some sessions no GPU-drawn window can be screen-captured (WinUI and WPF both came out blank).
+  `-screenshot <png>` renders the app's XAML instead, dialogs included. Use that to check the UI.
+- Keep `EnableMsixTooling` in `Shortwave.csproj`. Without it, published builds have no `Shortwave.pri`
+  and crash on the first XAML page.
+- Keep a reference to every `DispatcherQueueTimer` until it fires. An unreferenced one can be
+  garbage-collected and never tick.

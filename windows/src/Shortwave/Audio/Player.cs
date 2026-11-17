@@ -74,7 +74,7 @@ public sealed class Player : Observable
         };
         mp.PlaybackSession.PlaybackStateChanged += (_, _) => ui.TryEnqueue(SyncStateFromPlayer);
 
-        if (!Diagnostics.StartMuted) controls = new MediaControls(mp, ui, this);
+        if (!Diagnostics.StartMuted || Diagnostics.ForceMediaControls) controls = new MediaControls(mp, ui, this);
         try { if (Directory.Exists(recordingDir)) Directory.Delete(recordingDir, true); } catch { }
     }
 
@@ -495,13 +495,17 @@ public sealed class Player : Observable
         Promote(new Track(Guid.NewGuid(), full, s, st, null, null));
     }
 
+    // Timers are kept here until they fire: a DispatcherQueueTimer nothing references can be collected before it ticks.
+    private readonly HashSet<DispatcherQueueTimer> timers = [];
+
     private void After(double seconds, Action action)
     {
         if (seconds <= 0.01) { ui.TryEnqueue(() => action()); return; }
         var timer = ui.CreateTimer();
         timer.Interval = TimeSpan.FromSeconds(seconds);
         timer.IsRepeating = false;
-        timer.Tick += (t, _) => { t.Stop(); action(); };
+        timers.Add(timer);
+        timer.Tick += (t, _) => { t.Stop(); timers.Remove(t); action(); };
         timer.Start();
     }
 

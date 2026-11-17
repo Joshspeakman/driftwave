@@ -19,7 +19,7 @@
         </Grid>
         <NavigationView x:Name="Nav" Grid.Row="1" PaneDisplayMode="Left" IsBackButtonVisible="Collapsed" IsSettingsVisible="True"
                         OpenPaneLength="200" CompactModeThresholdWidth="900" ExpandedModeThresholdWidth="1000"
-                        SelectionChanged="Nav_SelectionChanged" IsTitleBarAutoPaddingEnabled="False">
+                        SelectionChanged="Nav_SelectionChanged" ItemInvoked="Nav_ItemInvoked" IsTitleBarAutoPaddingEnabled="False">
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Library" Tag="Library" ToolTipService.ToolTip="Library (Ctrl+1)">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon>
@@ -32,15 +32,15 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem x:Name="AddStationItem" Content="Add Local Station" SelectsOnInvoked="False" Tapped="AddStation_Tapped"
+                <NavigationViewItem x:Name="AddStationItem" Content="Add Local Station" SelectsOnInvoked="False"
                                     ToolTipService.ToolTip="Add a local station (Ctrl+N)">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE710;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="PlayerToggleItem" Content="Hide Player" SelectsOnInvoked="False" Tapped="PlayerToggle_Tapped"
+                <NavigationViewItem x:Name="PlayerToggleItem" Content="Hide Player" SelectsOnInvoked="False"
                                     ToolTipService.ToolTip="Show or hide the player (Ctrl+Alt+P)">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE89F;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="MiniPlayerItem" Content="Mini Player" SelectsOnInvoked="False" Tapped="MiniPlayer_Tapped"
+                <NavigationViewItem x:Name="MiniPlayerItem" Content="Mini Player" SelectsOnInvoked="False"
                                     ToolTipService.ToolTip="Open the mini player (Ctrl+Shift+M)">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE944;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>

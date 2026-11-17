@@ -326,15 +326,25 @@ public sealed class TrackDetailDialog : ContentDialog
             e.Cancel = true;
             if (track.SavedTo is { } saved) Ui.Open(saved);
         };
-        track.PropertyChanged += OnChanged;
-        app.Player.PropertyChanged += OnChanged;
+        track.PropertyChanged += OnTrackChanged;
+        app.Player.PropertyChanged += OnPlayerChanged;
         timer.Tick += (_, _) => UpdateDuration();
-        Closed += (_, _) => { track.PropertyChanged -= OnChanged; app.Player.PropertyChanged -= OnChanged; timer.Stop(); };
+        Closed += (_, _) => { track.PropertyChanged -= OnTrackChanged; app.Player.PropertyChanged -= OnPlayerChanged; timer.Stop(); };
         Build();
         timer.Start();
     }
 
-    void OnChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e) => Build();
+    // Rebuild only for changes the dialog shows (not on every buffering blip, which would also reset the checkbox).
+    void OnTrackChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(Track.State) or nameof(Track.SavedTo) or nameof(Track.SaveError) or nameof(Track.File) or "") Build();
+        else if (e.PropertyName is nameof(Track.Duration)) UpdateDuration();
+    }
+
+    void OnPlayerChanged(object? s, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(Audio.Player.PlayingTrack) or "") Build();
+    }
 
     void UpdateDuration()
     {

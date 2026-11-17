@@ -13,7 +13,7 @@ namespace Shortwave;
 ///   -muted / -audible          start muted (the default in test runs) / allow sound in a test run
 ///   -&lt;settingKey&gt; &lt;value&gt;     override a setting for this run (e.g. -recordingMode everything)
 /// Windows-only: -miniPlayer (open the mini player), -screenshot &lt;png&gt; [-screenshotDelay &lt;s&gt;] (save the
-/// main window and exit), -quitAfter &lt;s&gt; (exit after that many seconds).
+/// main window and exit), -quitAfter &lt;s&gt; (exit after that many seconds), -mediaControls (see below).
 /// A test run uses its own data folder and settings, and stays muted and off the system media controls.
 /// </summary>
 public static class Diagnostics
@@ -21,6 +21,12 @@ public static class Diagnostics
     static readonly string[] Args = Environment.GetCommandLineArgs().Skip(1).ToArray();
     public static readonly bool Logging = Environment.GetEnvironmentVariable("SHORTWAVE_LOG") == "1";
     static readonly object logLock = new();
+
+    static Diagnostics()
+    {
+        // Titles can be any language: log UTF-8, not the console code page.
+        if (Logging) { try { Console.OutputEncoding = new System.Text.UTF8Encoding(false); } catch { } }
+    }
 
     public static void Log(string message)
     {
@@ -56,6 +62,12 @@ public static class Diagnostics
         Has("-muted") || PlayURL != null || StartPage != null || SearchText != null || OpenFirstResult || OpenTrackDetail
         || OpenMiniPlayer || Screenshot != null || QuitAfter != null
         || Environment.GetEnvironmentVariable("SHORTWAVE_TEST") == "1";
+
+    /// <summary>
+    /// -mediaControls: use the system media controls even in a test run. Only for checking the media session
+    /// (read-only) when nothing else is playing; never while Josh is listening to something.
+    /// </summary>
+    public static readonly bool ForceMediaControls = Has("-mediaControls");
 
     /// <summary>Test runs are always muted and keep off the system media controls (pass -audible for a sound test).</summary>
     public static readonly bool StartMuted = Has("-muted") || (IsTestRun && !Has("-audible"));
