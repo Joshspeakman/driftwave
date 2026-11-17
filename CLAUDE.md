@@ -54,8 +54,11 @@ Needs the .NET 10 SDK; the tests also need Python 3 and ffmpeg. Run from the rep
 | `windows/scripts/smoke-test.ps1` | Real streams, muted |
 | `windows/scripts/recording-test.ps1` | Local ICY server plus ffmpeg: checks that tracks are cut, saved and tagged |
 
-- In some sessions no GPU-drawn window can be screen-captured (WinUI and WPF both came out blank).
-  `-screenshot <png>` renders the app's XAML instead, dialogs included. Use that to check the UI.
+- With the displays asleep, newly started GPU-drawn windows (WinUI and WPF alike) came out black in
+  screen captures. `-screenshot <png>` renders the app's XAML instead, dialogs included; use it to
+  check the UI.
+- Test runs save tracks under `ShortwaveTestRun\Tracks` unless given `-trackDirectory`. Never point
+  them at `Music\Shortwave`.
 - Keep `EnableMsixTooling` in `Shortwave.csproj`. Without it, published builds have no `Shortwave.pri`
   and crash on the first XAML page.
 - Keep a reference to every `DispatcherQueueTimer` until it fires. An unreferenced one can be

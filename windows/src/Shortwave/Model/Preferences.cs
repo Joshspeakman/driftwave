@@ -24,7 +24,11 @@ public sealed class Preferences : Observable
 
         recordingMode = RecordingModes.FromRawValue(Get("recordingMode")) ?? RecordingMode.Decide;
         string? dir = Get("trackDirectory");
-        trackDirectory = string.IsNullOrEmpty(dir) ? AppPaths.DefaultTrackDirectory : dir;
+        // Test runs never save into the real track folder unless told to (-trackDirectory). The Mac's test runs
+        // default to ~/Music/Shortwave; here they use ShortwaveTestRun\Tracks.
+        trackDirectory = !string.IsNullOrEmpty(dir) ? dir
+            : Diagnostics.IsTestRun ? Path.Combine(paths.Support, "Tracks")
+            : AppPaths.DefaultTrackDirectory;
         minimumDuration = GetInt("recordingMinimumDuration") ?? 30;
         maximumDuration = GetInt("recordingMaximumDuration") ?? 900;
         backgroundPlayback = GetBool("backgroundPlayback") ?? true;

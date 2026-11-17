@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.UI.Dispatching;
 using Shortwave.Audio;
 using Shortwave.Core;
@@ -88,17 +89,8 @@ public sealed class MediaControls : IDisposable
 
     static RandomAccessStreamReference? Thumbnail(string path)
     {
-        try
-        {
-            var ms = new InMemoryRandomAccessStream();
-            using (var w = new DataWriter(ms.GetOutputStreamAt(0)))
-            {
-                w.WriteBytes(File.ReadAllBytes(path));
-                w.StoreAsync().AsTask().Wait();
-                w.DetachStream();
-            }
-            return RandomAccessStreamReference.CreateFromStream(ms);
-        }
+        // Read the (small, cached) PNG into memory; nothing here waits on async work.
+        try { return RandomAccessStreamReference.CreateFromStream(new MemoryStream(File.ReadAllBytes(path)).AsRandomAccessStream()); }
         catch { return null; }
     }
 

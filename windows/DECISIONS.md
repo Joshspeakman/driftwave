@@ -103,14 +103,32 @@ was never created.
 
 ### Not verified (needs Josh)
 
-- **What's actually on screen.** No GPU-drawn window could be screen-captured in this session; WPF test
-  windows came out blank too. So the UI was checked by rendering its XAML, which leaves out the Mica
-  backdrop and real window chrome. Worth a look the first time.
+- **Whether the window draws on screen. Check this first.** While this session ran, the displays had
+  been asleep for over 80 minutes. In that state, newly started GPU-drawn windows came out black in every
+  screen capture: Shortwave, a plain WinUI 3 window, and a plain WPF window. The same WPF window in
+  software rendering drew fine, as did Notepad, and Chrome and Windows Terminal (started earlier) kept
+  updating. So the likely cause is the GPU/display power state, not Shortwave. Still, nobody has seen
+  the real window. Open *Shortwave Nightly* from Start: you should see the Library page with a dark
+  Mica background. The UI was checked by rendering its XAML (`-screenshot`), which leaves out the
+  backdrop and window chrome.
 - **Sound.** Every test was muted. Play a station with sound.
 - **Keyboard media keys and the overlay's buttons.** Implemented with System Media Transport
   Controls, but never pressed, per `CLAUDE.md`. Try play/pause/next/previous yourself.
-- **Keyboard shortcuts** (Ctrl+Enter and the rest) and the notification-area menu. Built, but not
-  driven by the tests.
+- **Keyboard shortcuts** (Ctrl+Enter and the rest), and the **notification-area icon and menu** (whether
+  the icon shows, and the menu). Built, but not driven by the tests.
+- **ICY reconnect**: the title connection dropping while audio plays, reconnecting, and not adding the
+  same song twice. Ported from the Mac code but not exercised.
+- **Local station content-type probe**: a local station whose link is a playlist without a `.pls` or `.m3u`
+  extension.
+- **Changing a station cover** (Change Station Cover… / Use Default Cover).
 - **A `library.json` copied from the Mac.** Only the hand-built fixture was tested.
 - **Title timing by ear.** The delay is computed from stream position (SomaFM: about 16 s burst), but
   nobody has listened to check that a title changes when the song does.
+
+## 6. Departures from the Mac's behaviour
+
+- **Test runs save tracks to `%APPDATA%\ShortwaveTestRun\Tracks`** unless `-trackDirectory` says otherwise.
+  The Mac's test runs default to `~/Music/Shortwave`. This keeps every test out of the real track folder.
+- **Test runs delete the recording folders of earlier test runs that were killed** (the Mac leaves them).
+- **An idle app isn't in the media overlay.** The system media controls switch on once a station is
+  chosen.
