@@ -1,0 +1,4 @@
+# Keep shell and Python scripts LF on Windows checkouts so they still run (Git Bash, WSL, the Mac).
+*.sh   text eol=lf
+*.py   text eol=lf
+*.swift text eol=lf
