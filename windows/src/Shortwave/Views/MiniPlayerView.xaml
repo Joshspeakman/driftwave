@@ -1,0 +1,19 @@
+<UserControl
+    x:Class="Shortwave.Views.MiniPlayerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Shortwave.Views">
+    <Grid Padding="10" ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <local:StationCover x:Name="Cover" Size="44" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+            <TextBlock x:Name="NameText" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+            <TextBlock x:Name="StatusText" Style="{StaticResource CaptionSecondaryStyle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxLines="1" />
+        </StackPanel>
+        <local:PlaybackControls Grid.Column="2" />
+    </Grid>
+</UserControl>
