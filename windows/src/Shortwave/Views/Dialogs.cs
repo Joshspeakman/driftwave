@@ -140,10 +140,10 @@ public sealed class StationDetailDialog : ContentDialog
         if (station.Tags.Count > 0)
             info.Children.Add(new TextBlock { Text = string.Join(" · ", station.Tags.Take(8)), Foreground = Form.Res("TextFillColorSecondaryBrush"), TextWrapping = TextWrapping.Wrap, MaxLines = 2, TextTrimming = TextTrimming.CharacterEllipsis });
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 4, 0, 0) };
-        var play = Form.LabeledButton("", IsActive ? "Playing" : "Play", () => app.Play(station), accent: true);
+        var play = Form.LabeledButton("\uF5B0", IsActive ? "Playing" : "Play", () => app.Play(station), accent: true);
         play.IsEnabled = !IsActive;
         buttons.Children.Add(play);
-        buttons.Children.Add(Form.LabeledButton(inLibrary ? "" : "", inLibrary ? "Remove from Library" : "Add to Library", () =>
+        buttons.Children.Add(Form.LabeledButton(inLibrary ? "\uE738" : "\uE710", inLibrary ? "Remove from Library" : "Add to Library", () =>
         {
             app.ToggleLibrary(station);
             station = app.LibraryVersion(station);
@@ -151,7 +151,7 @@ public sealed class StationDetailDialog : ContentDialog
         }));
         if (inLibrary)
         {
-            var more = new DropDownButton { Content = new FontIcon { Glyph = "", FontSize = 14 } };
+            var more = new DropDownButton { Content = new FontIcon { Glyph = "\uE712", FontSize = 14 } };
             AutomationProperties.SetName(more, "More");
             var menu = new MenuFlyout();
             if (station.IsLocal) menu.Items.Add(MenuItem("Edit Station…", () => { Hide(); app.EditStation(station); }));
@@ -169,9 +169,9 @@ public sealed class StationDetailDialog : ContentDialog
         root.Children.Add(header);
 
         if (station.IsLocal)
-            Form.Section(null, root, Form.Note("", "Local Station", "This station exists only in your library, and is not part of the public database."));
+            Form.Section(null, root, Form.Note("\uE946", "Local Station", "This station exists only in your library, and is not part of the public database."));
         else if (station.IsOrphaned)
-            Form.Section(null, root, Form.Note("", "Orphaned Station", "The information could not be updated, probably this station was removed from the public database."));
+            Form.Section(null, root, Form.Note("\uE946", "Orphaned Station", "The information could not be updated, probably this station was removed from the public database."));
 
         UIElement? homepage = null;
         if (station.Homepage is { } home && Uri.TryCreate(home, UriKind.Absolute, out var homeUrl) && (homeUrl.Scheme == "http" || homeUrl.Scheme == "https"))
@@ -200,7 +200,7 @@ public sealed class StationDetailDialog : ContentDialog
 
         var stream = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         stream.Children.Add(new TextBlock { Text = station.StreamURL, MaxWidth = 340, TextTrimming = TextTrimming.CharacterEllipsis, IsTextSelectionEnabled = true, Foreground = Form.Res("TextFillColorSecondaryBrush"), VerticalAlignment = VerticalAlignment.Center });
-        stream.Children.Add(Form.IconButton("", "Copy Stream URL", () => Ui.Copy(station.StreamURL)));
+        stream.Children.Add(Form.IconButton("\uE8C8", "Copy Stream URL", () => Ui.Copy(station.StreamURL)));
         ToolTipService.SetToolTip(stream, station.StreamURL);
         Form.Section("Audio", root, Form.Rows(
             Form.TextRow("Codec", station.Codec + (station.IsHLS ? " (HLS)" : "")),
@@ -387,7 +387,7 @@ public sealed class TrackDetailDialog : ContentDialog
         if (track.SaveError is { } err)
         {
             var e = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-            e.Children.Add(new FontIcon { Glyph = "", FontSize = 14, Foreground = Form.Res("SystemFillColorCautionBrush") });
+            e.Children.Add(new FontIcon { Glyph = "\uE7BA", FontSize = 14, Foreground = Form.Res("SystemFillColorCautionBrush") });
             e.Children.Add(new TextBlock { Text = err, Foreground = Form.Res("SystemFillColorCautionBrush"), TextWrapping = TextWrapping.Wrap, MaxWidth = 380 });
             rows.Add(e);
         }

@@ -94,13 +94,13 @@ public sealed partial class SearchPage : UserControl
         RetryButton.Visibility = Visibility.Collapsed;
         if (s.IsEmpty)
         {
-            PlaceholderGlyph.Glyph = "";
+            PlaceholderGlyph.Glyph = "\uE721";
             PlaceholderTitle.Text = "Search Stations";
             PlaceholderText.Text = "Search by name, or pick a tag, country or language.";
         }
         else if (app.SearchError is { } err)
         {
-            PlaceholderGlyph.Glyph = "";
+            PlaceholderGlyph.Glyph = "\uEB5E";
             PlaceholderTitle.Text = "Unable to Retrieve Station Data";
             PlaceholderText.Text = err;
             RetryButton.Visibility = Visibility.Visible;
@@ -111,7 +111,7 @@ public sealed partial class SearchPage : UserControl
         }
         else if (app.SearchResults.Count == 0)
         {
-            PlaceholderGlyph.Glyph = "";
+            PlaceholderGlyph.Glyph = "\uE721";
             PlaceholderTitle.Text = s.Name.Length > 0 ? $"No Results for “{s.Name}”" : "No Results";
             PlaceholderText.Text = "Check the spelling or try a new search.";
         }

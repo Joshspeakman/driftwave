@@ -78,7 +78,7 @@ public sealed partial class PlayerPanel : UserControl
         {
             RecordingIndicator.Visibility = Visibility.Visible;
             bool recording = track.State == RecordingState.Recording;
-            RecordingGlyph.Glyph = recording ? "" : track.State.IsRecorded() ? "" : "";
+            RecordingGlyph.Glyph = recording ? "\uE7C8" : track.State.IsRecorded() ? "\uE930" : "\uEA3A";
             RecordingGlyph.Foreground = recording
                 ? (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"]
                 : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];

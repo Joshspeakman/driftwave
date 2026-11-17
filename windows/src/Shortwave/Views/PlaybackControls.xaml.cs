@@ -61,7 +61,7 @@ public sealed partial class PlaybackControls : UserControl
         AutomationProperties.SetName(PlayButton, label);
 
         double v = player.Volume;
-        MuteGlyph.Glyph = player.IsMuted || v == 0 ? "" : v < 0.34 ? "" : v < 0.67 ? "" : "";
+        MuteGlyph.Glyph = player.IsMuted || v == 0 ? "\uE74F" : v < 0.34 ? "\uE993" : v < 0.67 ? "\uE994" : "\uE995";
         ToolTipService.SetToolTip(MuteButton, player.IsMuted ? "Unmute" : "Mute");
         AutomationProperties.SetName(MuteButton, player.IsMuted ? "Unmute" : "Mute");
         updating = true;
