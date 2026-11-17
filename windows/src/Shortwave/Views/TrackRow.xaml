@@ -1,0 +1,28 @@
+<UserControl
+    x:Class="Shortwave.Views.TrackRow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="6,5" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" ColumnSpacing="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Button x:Name="Body" Click="Body_Click" Background="Transparent" BorderThickness="0" Padding="0"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" ToolTipService.ToolTip="Show track details">
+            <StackPanel Spacing="1">
+                <TextBlock x:Name="SongText" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                <TextBlock x:Name="ArtistText" Style="{StaticResource CaptionSecondaryStyle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxLines="1" />
+            </StackPanel>
+        </Button>
+        <Grid Grid.Column="1" VerticalAlignment="Center">
+            <FontIcon x:Name="SavedIcon" Glyph="&#xE930;" Foreground="{ThemeResource SystemFillColorSuccessBrush}" Visibility="Collapsed"
+                      ToolTipService.ToolTip="Saved" />
+            <Button x:Name="SaveButton" Click="SaveButton_Click" Padding="6,4" Background="Transparent" BorderThickness="0" Visibility="Collapsed"
+                    ToolTipService.ToolTip="Save Track" AutomationProperties.Name="Save Track">
+                <FontIcon Glyph="&#xE896;" FontSize="14" />
+            </Button>
+            <FontIcon x:Name="RecordingIcon" Glyph="&#xE7C8;" Foreground="{ThemeResource SystemFillColorCriticalBrush}" FontSize="12" Visibility="Collapsed"
+                      ToolTipService.ToolTip="Recording…" />
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>Shortwave</RootNamespace>
+    <AssemblyName>Shortwave</AssemblyName>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Shortwave.ico</ApplicationIcon>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- Release or Nightly; set by scripts\build.ps1 -->
+    <Flavor Condition="'$(Flavor)' == ''">Nightly</Flavor>
+    <DefineConstants Condition="'$(Flavor)' == 'Nightly'">$(DefineConstants);NIGHTLY</DefineConstants>
+    <Version Condition="'$(Version)' == ''">1.0.0</Version>
+    <AssemblyTitle Condition="'$(Flavor)' == 'Nightly'">Shortwave Nightly</AssemblyTitle>
+    <AssemblyTitle Condition="'$(Flavor)' != 'Nightly'">Shortwave</AssemblyTitle>
+    <Product>$(AssemblyTitle)</Product>
+    <Description>Internet radio for Windows, after GNOME Shortwave. Station data: radio-browser.info</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ShortwaveCore\ShortwaveCore.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\Shortwave.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Shortwave.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="ShortwaveCommit" Value="$(ShortwaveCommit)" />
+    <AssemblyMetadata Include="ShortwaveBranch" Value="$(ShortwaveBranch)" />
+  </ItemGroup>
+</Project>

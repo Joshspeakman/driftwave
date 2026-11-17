@@ -1,0 +1,138 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Shortwave.Core;
+
+namespace Shortwave.Model;
+
+/// <summary>
+/// User preferences, saved as JSON next to the library. Keys and defaults match the Mac's UserDefaults.
+/// Release and Nightly keep separate settings (as the Mac's bundle IDs do); test runs use their own folder.
+/// A <c>-key value</c> launch argument overrides a setting for that run without saving it.
+/// </summary>
+public sealed class Preferences : Observable
+{
+    private readonly string path;
+    private readonly JsonObject stored;
+    private readonly HashSet<string> overridden = [];
+    private bool loading = true;
+
+    public Preferences(AppPaths paths)
+    {
+        path = Path.Combine(paths.Support, Diagnostics.IsNightly && !Diagnostics.IsTestRun ? "settings-nightly.json" : "settings.json");
+        stored = Load(path);
+
+        recordingMode = RecordingModes.FromRawValue(Get("recordingMode")) ?? RecordingMode.Decide;
+        string? dir = Get("trackDirectory");
+        trackDirectory = string.IsNullOrEmpty(dir) ? AppPaths.DefaultTrackDirectory : dir;
+        minimumDuration = GetInt("recordingMinimumDuration") ?? 30;
+        maximumDuration = GetInt("recordingMaximumDuration") ?? 900;
+        backgroundPlayback = GetBool("backgroundPlayback") ?? true;
+        notifications = GetBool("notifications") ?? false;
+        pastTracksCount = Math.Max(1, GetInt("pastTracksCount") ?? 10);
+        librarySorting = StationSortings.FromRawValue(Get("librarySorting")) ?? StationSorting.Name;
+        libraryAscending = GetBool("libraryAscending") ?? true;
+        volume = Math.Clamp(GetDouble("volume") ?? 1.0, 0, 1);
+        lastStationID = Get("lastStation");
+        discoverCountry = Get("discoverCountry") ?? DefaultCountry();
+        loading = false;
+    }
+
+    static string DefaultCountry()
+    {
+        try { return new RegionInfo(CultureInfo.CurrentCulture.Name).TwoLetterISORegionName; } catch { return "US"; }
+    }
+
+    static JsonObject Load(string path)
+    {
+        try { if (File.Exists(path)) return JsonNode.Parse(File.ReadAllText(path)) as JsonObject ?? []; } catch { }
+        return [];
+    }
+
+    // Launch arguments win over stored values.
+    string? Get(string key)
+    {
+        if (Diagnostics.Value(key) is { } v) { overridden.Add(key); return v; }
+        return stored[key] is JsonValue j && j.TryGetValue(out string? s) ? s : null;
+    }
+    int? GetInt(string key)
+    {
+        if (Diagnostics.Value(key) is { } v) { overridden.Add(key); return int.TryParse(v, out var i) ? i : null; }
+        return stored[key] is JsonValue j && j.TryGetValue(out double d) ? (int)d : null;
+    }
+    double? GetDouble(string key)
+    {
+        if (Diagnostics.Value(key) is { } v) { overridden.Add(key); return double.TryParse(v, CultureInfo.InvariantCulture, out var d) ? d : null; }
+        return stored[key] is JsonValue j && j.TryGetValue(out double x) ? x : null;
+    }
+    bool? GetBool(string key)
+    {
+        if (Diagnostics.Value(key) is { } v) { overridden.Add(key); return v is "1" or "true" or "YES" or "yes"; }
+        return stored[key] is JsonValue j && j.TryGetValue(out bool b) ? b : null;
+    }
+
+    void Store(string key, JsonNode? value)
+    {
+        if (loading) return;
+        overridden.Remove(key);
+        if (value is null) stored.Remove(key); else stored[key] = value;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, stored.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch (Exception e) { Diagnostics.Log("settings save failed: " + e.Message); }
+    }
+
+    private RecordingMode recordingMode;
+    public RecordingMode RecordingMode
+    {
+        get => recordingMode;
+        set { if (Set(ref recordingMode, value)) { Store("recordingMode", value.RawValue()); Raise(nameof(RecorderConfig)); } }
+    }
+
+    private string trackDirectory;
+    public string TrackDirectory { get => trackDirectory; set { if (Set(ref trackDirectory, value)) Store("trackDirectory", value); } }
+
+    private int minimumDuration;
+    public int MinimumDuration
+    {
+        get => minimumDuration;
+        set { if (Set(ref minimumDuration, value)) { Store("recordingMinimumDuration", value); Raise(nameof(RecorderConfig)); } }
+    }
+
+    private int maximumDuration;
+    public int MaximumDuration
+    {
+        get => maximumDuration;
+        set { if (Set(ref maximumDuration, value)) { Store("recordingMaximumDuration", value); Raise(nameof(RecorderConfig)); } }
+    }
+
+    private bool backgroundPlayback;
+    public bool BackgroundPlayback { get => backgroundPlayback; set { if (Set(ref backgroundPlayback, value)) Store("backgroundPlayback", value); } }
+
+    private bool notifications;
+    public bool Notifications { get => notifications; set { if (Set(ref notifications, value)) Store("notifications", value); } }
+
+    private int pastTracksCount;
+    public int PastTracksCount { get => pastTracksCount; set { if (Set(ref pastTracksCount, Math.Clamp(value, 1, 50))) Store("pastTracksCount", pastTracksCount); } }
+
+    private StationSorting librarySorting;
+    public StationSorting LibrarySorting { get => librarySorting; set { if (Set(ref librarySorting, value)) Store("librarySorting", value.RawValue()); } }
+
+    private bool libraryAscending;
+    public bool LibraryAscending { get => libraryAscending; set { if (Set(ref libraryAscending, value)) Store("libraryAscending", value); } }
+
+    private double volume;
+    public double Volume { get => volume; set { if (Set(ref volume, value)) Store("volume", value); } }
+
+    private string? lastStationID;
+    public string? LastStationID { get => lastStationID; set { if (Set(ref lastStationID, value)) Store("lastStation", value); } }
+
+    private string discoverCountry;
+    public string DiscoverCountry { get => discoverCountry; set { if (Set(ref discoverCountry, value)) Store("discoverCountry", value); } }
+
+    public RecorderConfig RecorderConfig => new(RecordingMode, MinimumDuration, MaximumDuration);
+}
