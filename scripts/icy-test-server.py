@@ -62,7 +62,7 @@ class Handler(BaseHTTPRequestHandler):
                 # 2 s burst on connect, then real time
                 ahead = sent / BYTES_PER_SEC - (time.time() - t0) - 2
                 if ahead > 0: time.sleep(ahead)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):  # the last is Windows
             pass
 
 class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):

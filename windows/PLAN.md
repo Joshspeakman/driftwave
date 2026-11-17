@@ -22,7 +22,9 @@ The Mac app is at `nightly` from the 2026-11-17 prep commit, which added this fi
 to the Mac code itself is ce01f9e.
 
 - All 19 core tests pass (`scripts/test.sh` on the Mac).
-- `scripts/smoke-test.sh` and `scripts/recording-test.sh` passed on 2026-11-10.
+- `scripts/smoke-test.sh` and `scripts/recording-test.sh` pass (re-run 2026-11-17 on a fresh build):
+  all five smoke streams play with titles, and the recording test saves about 15 s MP3 and `.m4a`
+  tracks.
 - Josh uses the installed Nightly app.
 - **Not yet confirmed by Josh on the Mac:** Now Playing and media keys, notifications, and AirPlay.
   Treat the Mac app as the reference for what these should do, but not as proof that it does them
@@ -49,7 +51,7 @@ to the Mac code itself is ce01f9e.
 | `ShortwaveCore/ICY.swift` | ICY stream parser, `StreamTitle` extraction, artist/title split, recordable format from Content-Type | Core, 1:1 |
 | `ShortwaveCore/Recording.swift` | Recording modes and states; `SegmentRecorder`, which cuts one file per track | Core, 1:1 |
 | `ShortwaveCore/ID3.swift` | ID3v2.3 tag writer for saved MP3s | Core, 1:1 |
-| `ShortwaveCore/Playlist.swift` | `.pls`, `.m3u` and `.xspf` resolving; safe file names; unique file names | Core, 1:1 (forbidden characters are already the Windows set) |
+| `ShortwaveCore/Playlist.swift` | `.pls`, `.m3u` and `.xspf` resolving; safe file names; unique file names | Core, 1:1. The forbidden characters already match Windows; also avoid reserved names (`CON`, `NUL`, `COM1` ...) and a trailing space or dot |
 | `ShortwaveCore/Storage.swift` | Data paths; `library.json` load and save | Core, with Windows folders (below) |
 | `Shortwave/Audio/IcyStream.swift` | Second HTTP connection that reads ICY titles and feeds the recorder | App: an HTTP client streaming the body on a background thread |
 | `Shortwave/Audio/Player.swift` | Playback, retries, title timing, tracks, notifications, Now Playing, media keys | App: the heart of the port (behaviour below) |
