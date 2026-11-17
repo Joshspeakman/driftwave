@@ -102,14 +102,14 @@ public sealed partial class StationCard : UserControl
             i.Click += (_, _) => a();
             return i;
         }
-        Menu.Items.Add(Item("Play", "", () => app.Play(s)));
-        Menu.Items.Add(Item("Show Station Details", "", () => app.ShowStation(s)));
+        Menu.Items.Add(Item("Play", "\uF5B0", () => app.Play(s)));
+        Menu.Items.Add(Item("Show Station Details", "\uE946", () => app.ShowStation(s)));
         Menu.Items.Add(new MenuFlyoutSeparator());
-        if (app.IsInLibrary(s)) Menu.Items.Add(Item("Remove from Library", "", () => app.RemoveFromLibrary(s)));
-        else Menu.Items.Add(Item("Add to Library", "", () => app.AddToLibrary(s)));
-        Menu.Items.Add(Item("Copy Stream URL", "", () => Ui.Copy(s.StreamURL)));
+        if (app.IsInLibrary(s)) Menu.Items.Add(Item("Remove from Library", "\uE738", () => app.RemoveFromLibrary(s)));
+        else Menu.Items.Add(Item("Add to Library", "\uE710", () => app.AddToLibrary(s)));
+        Menu.Items.Add(Item("Copy Stream URL", "\uE8C8", () => Ui.Copy(s.StreamURL)));
         if (s.Homepage is { } home && Uri.TryCreate(home, UriKind.Absolute, out var url))
-            Menu.Items.Add(Item("Open Homepage", "", () => Ui.Open(url.AbsoluteUri)));
+            Menu.Items.Add(Item("Open Homepage", "\uE774", () => Ui.Open(url.AbsoluteUri)));
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetDoubleClickTime();
