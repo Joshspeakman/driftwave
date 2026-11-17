@@ -3,3 +3,8 @@
 *.xcodeproj
 .swiftpm/
 __pycache__/
+# Windows port
+windows/**/bin/
+windows/**/obj/
+windows/**/*.user
+windows/.vs/

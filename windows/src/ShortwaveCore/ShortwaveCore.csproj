@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Shortwave.Core</RootNamespace>
+    <AssemblyName>ShortwaveCore</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ShortwaveCore.Tests" />
+  </ItemGroup>
+</Project>
