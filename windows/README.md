@@ -36,6 +36,7 @@ run:
 - stays muted unless you pass `-audible`;
 - stays off the media overlay and media keys;
 - skips the single-instance check, so test runs can run side by side.
+- saves tracks to `%APPDATA%\ShortwaveTestRun\Tracks` unless `-trackDirectory` says otherwise.
 
 | Flag | Effect |
 |---|---|
