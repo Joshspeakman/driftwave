@@ -52,7 +52,7 @@ You only need the Xcode Command Line Tools (Swift 6), not Xcode.
 
 | Command | What it does |
 |---|---|
-| `swift test` | Runs the core unit tests |
+| `scripts/test.sh` | Runs the core unit tests (`swift test`, plus the flag that finds the test macros with only the Command Line Tools) |
 | `scripts/build-app.sh --nightly` | Builds `~/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app` |
 | `scripts/install.sh --nightly` | Builds the app and installs it to `/Applications` |
 | `scripts/smoke-test.sh` | Plays real MP3, AAC, HLS, Ogg and `.pls` streams muted and checks that playback and titles work |
@@ -62,9 +62,14 @@ Build output goes to `~/ProjectBuilds/shortwave-macos`, and `.build` is a symlin
 
 Test runs use their own data folder (`ShortwaveTestRun`) and their own preferences. They also stay off Now Playing and the media keys, so they never disturb the installed app. A run counts as a test run when it gets any launch flag from `Sources/Shortwave/Model/Diagnostics.swift`, such as `-muted` or `-playURL`.
 
-### Toolchain note
+### Toolchain notes
 
-In the macOS 27 SDK, SwiftUI's `@State` is a macro whose compiler plugin ships only with Xcode. The code therefore uses `@ViewState`, an alias for the same property-wrapper type.
+- In the macOS 27 SDK, SwiftUI's `@State` is a macro whose compiler plugin ships only with Xcode. The code therefore uses `@ViewState`, an alias for the same property-wrapper type.
+- With the Swift 6.4 Command Line Tools, a bare `swift test` can't find the swift-testing macro plugin. `scripts/test.sh` passes its path.
+
+## Windows
+
+A Windows version is planned in [`windows/PLAN.md`](windows/PLAN.md). It will be built on the `windows` branch.
 
 ## Data
 
