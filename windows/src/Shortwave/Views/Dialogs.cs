@@ -31,7 +31,7 @@ static class Form
             Background = Res("CardBackgroundFillColorDefaultBrush"),
             BorderBrush = Res("CardStrokeColorDefaultBrush"),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
+            CornerRadius = Theming.ThemeManager.CardRadius,
             Padding = new Thickness(14, 10, 14, 10),
             Child = list,
         };

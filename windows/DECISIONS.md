@@ -123,3 +123,31 @@ was never created.
 - **Test runs delete the recording folders of earlier test runs that were killed** (the Mac leaves them).
 - **An idle app isn't in the media overlay.** The system media controls switch on once a station is
   chosen.
+
+## 7. Themes (2026-11-18)
+
+Josh asked for a customisable look and nine built-in themes. The format and the themes are in
+[`../docs/THEMES.md`](../docs/THEMES.md). Choices made:
+
+- **Recolour WinUI's own theme brushes.** They are shared objects, so every stock control, dialog and
+  popup follows without being restyled. Tested in throwaway spikes first:
+  - colours change live and restore exactly;
+  - fonts, control corner radii and the primary text colour can only be set before the first window
+    exists.
+
+  So a theme that changes those shows "Restart to finish", with a button that restarts and resumes
+  playback.
+- **Default stays pixel-identical.** Its renders match the committed ones. The renders are now 12 px
+  taller, because the new background layer fills the window and the render hook used to crop the
+  empty top of the title bar; the content is identical once shifted.
+- **Effects are drawn with XAML shapes, not Win2D,** so `-screenshot` renders show them and there is no
+  native dependency. Glows use a composition drop shadow masked by the text. The render hook can't
+  draw that, so check glows on the real screen. Hard shadows are offset copies of the text.
+- **Names describe the look.** "Neon Noir" stands for Blade Runner, "Retro 64" for the Commodore 64
+  and "Classic Skin" for Winamp, and each description says what it's after. No artwork or fonts come
+  from the originals. The fonts are OFL (Orbitron, Press Start 2P, VT323, Share Tech Mono, Space Mono,
+  Shrikhand), with their licences beside them.
+- **The spectrum bars and VU meters are decorative.** Media Foundation doesn't give the app the
+  decoded audio.
+- **Effects stop when nothing shows them:** while the window is hidden or minimised, while Windows'
+  animation effects are off, or when the Effects switch is off. High Contrast always uses Default.

@@ -2,7 +2,7 @@
     x:Class="Shortwave.Views.TrackRow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Padding="6,5" CornerRadius="8" Background="{ThemeResource SubtleFillColorSecondaryBrush}" ColumnSpacing="8">
+    <Grid Padding="6,5" CornerRadius="{StaticResource ShortwaveCardRadius}" Background="{ThemeResource SubtleFillColorSecondaryBrush}" ColumnSpacing="8">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />

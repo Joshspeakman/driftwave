@@ -7,6 +7,8 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+            <!-- Card corner radius; the theme can change it at launch -->
+            <CornerRadius x:Key="ShortwaveCardRadius">8</CornerRadius>
             <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}">
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>

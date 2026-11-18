@@ -1,0 +1,50 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "retro-64",
+  "name": "Retro 64",
+  "description": "Light blue border, deep blue screen and a blinking cursor. After the Commodore 64.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#352879",
+    "surface": "#352879",
+    "card": "#40338A",
+    "cardStroke": "#6C5EB5",
+    "control": "#40338A",
+    "controlStroke": "#6C5EB5",
+    "subtle": "#406C5EB5",
+    "divider": "#6C5EB5",
+    "text": "#A79DF2",
+    "textSecondary": "#8A7FDA",
+    "textTertiary": "#6C5EB5",
+    "accent": "#6C5EB5",
+    "accentText": "#BDB4FF",
+    "onAccent": "#1C1450",
+    "dialog": "#352879"
+  },
+  "fonts": {
+    "body": "Consolas",
+    "title": "Press Start 2P",
+    "titleSize": 22,
+    "titleUppercase": true
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 0,
+    "card": 0,
+    "cover": 0
+  },
+  "effects": {
+    "frame": {
+      "color": "#6C5EB5",
+      "thickness": 14
+    },
+    "cursor": {
+      "color": "#A79DF2"
+    },
+    "scanlines": {
+      "opacity": 0.16
+    }
+  }
+}

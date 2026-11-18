@@ -1,11 +1,14 @@
 # Renders every main screen of the built app, in light and dark, into docs\design\windows\ (port of
 # scripts/screenshots.sh). Muted test runs with their own library; the real app's data is never touched.
 # The renders are the window's XAML (-screenshot): they leave out Mica and the title bar buttons.
-# Usage: windows\scripts\screenshots.ps1 [name ...]   (default: all)
-param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Names = @())
+# Usage: windows\scripts\screenshots.ps1 [-Theme <id>] [-OutDir <dir>] [name ...]   (default: all, Default theme)
+#   -Theme renders one theme (docs/THEMES.md) into docs\design\windows	hemes\<id>\ unless -OutDir says otherwise.
+[CmdletBinding(PositionalBinding = $false)]
+param([string]$Theme = '', [string]$OutDir = '', [Parameter(ValueFromRemainingArguments = $true)][string[]]$Names = @())
 . "$PSScriptRoot\common.ps1"
 $app = Get-TestApp
-$outDir = Join-Path $RepoRoot 'docs\design\windows'
+$outDir = if ($OutDir) { $OutDir } elseif ($Theme) { Join-Path $RepoRoot "docs\design\windows	hemes\$Theme" } else { Join-Path $RepoRoot 'docs\design\windows' }
+$themeArgs = if ($Theme) { @('-theme', $Theme) } else { @() }
 $logs = New-ScratchDir 'shortwave-shots'
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $testSupport = Join-Path $env:APPDATA 'ShortwaveTestRun'
@@ -32,12 +35,14 @@ function Wanted([string]$Name) { $Names.Count -eq 0 -or $Names -contains $Name }
 
 # name, delay, arguments; -Mini saves the mini player's window instead of the main window.
 function Save-Shot([string]$Name, [int]$Delay, [string[]]$Arguments, [switch]$Mini) {
-    foreach ($look in 'light', 'dark') {
-        $png = Join-Path $outDir "$Name-$look.png"
+    # A theme has its own light or dark base, so it needs one render per screen.
+    $looks = if ($Theme) { @('dark') } else { @('light', 'dark') }
+    foreach ($look in $looks) {
+        $png = if ($Theme) { Join-Path $outDir "$Name.png" } else { Join-Path $outDir "$Name-$look.png" }
         Remove-Item $png -ErrorAction SilentlyContinue
         $target = if ($Mini) { Join-Path $logs "$Name-$look-main.png" } else { $png }
         $log = Join-Path $logs "$Name-$look.log"
-        Invoke-App (@('-muted', '-appearance', $look, '-screenshotDelay', "$Delay", '-screenshot', $target) + $Arguments) $log
+        Invoke-App (@('-muted', '-appearance', $look, '-screenshotDelay', "$Delay", '-screenshot', $target) + $themeArgs + $Arguments) $log
         if ($Mini) {
             $miniPng = Join-Path $logs "$Name-$look-main-mini.png"
             if (Test-Path $miniPng) { Move-Item $miniPng $png -Force }

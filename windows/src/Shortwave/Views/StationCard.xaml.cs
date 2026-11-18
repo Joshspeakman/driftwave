@@ -20,6 +20,7 @@ public sealed partial class StationCard : UserControl
     public StationCard()
     {
         InitializeComponent();
+        if (App.Current?.Model?.Themes is { } themes) Card.CornerRadius = new CornerRadius(themes.StationCardRadius);
         DataContextChanged += (_, e) => { if (e.NewValue is Station s) SetStation(s); };
         Card.Invoked += () => { if (station != null) App.Current?.Model.ShowStation(station); };
         Loaded += (_, _) =>

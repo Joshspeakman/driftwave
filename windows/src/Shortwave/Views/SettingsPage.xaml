@@ -7,7 +7,7 @@
             <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
             <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="{StaticResource ShortwaveCardRadius}" />
             <Setter Property="Padding" Value="16,12" />
         </Style>
     </UserControl.Resources>
@@ -20,12 +20,13 @@
         <ScrollViewer Grid.Row="1">
             <StackPanel Padding="24,4,24,24" Spacing="4" MaxWidth="760" HorizontalAlignment="Stretch">
                 <TextBlock Text="Appearance" FontWeight="SemiBold" Margin="2,8,0,4" />
+                <StackPanel x:Name="ThemeHost" />
                 <Border Style="{StaticResource Card}">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="App Theme" />
-                            <TextBlock Text="Follow Windows’ light or dark setting, or always use one." Style="{StaticResource CaptionSecondaryStyle}" TextWrapping="Wrap" />
+                            <TextBlock Text="Light or dark for the Default theme: follow Windows’ setting, or always use one." Style="{StaticResource CaptionSecondaryStyle}" TextWrapping="Wrap" />
                         </StackPanel>
                         <ComboBox x:Name="ThemeBox" Grid.Column="1" MinWidth="200" VerticalAlignment="Center" SelectionChanged="ThemeBox_SelectionChanged"
                                   AutomationProperties.Name="App Theme" />

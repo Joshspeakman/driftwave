@@ -1,0 +1,54 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "retrowave",
+  "name": "Retrowave",
+  "description": "Neon pink and purple over a synthwave sun and an endless grid.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#12062B",
+    "surface": "#B3180A33",
+    "card": "#B32A1450",
+    "cardStroke": "#55FF2E97",
+    "control": "#CC3A1E66",
+    "controlStroke": "#66FF71CE",
+    "subtle": "#33FF71CE",
+    "divider": "#44FF2E97",
+    "text": "#F3E8FF",
+    "textSecondary": "#C8A8F0",
+    "textTertiary": "#8E72B8",
+    "accent": "#FF2E97",
+    "accentText": "#FF71CE",
+    "onAccent": "#12062B",
+    "dialog": "#1E0B3D"
+  },
+  "fonts": {
+    "title": "Orbitron",
+    "titleSize": 30,
+    "titleWeight": "Bold",
+    "titleUppercase": true,
+    "titleSpacing": 80
+  },
+  "corners": {
+    "control": 2,
+    "overlay": 4,
+    "card": 6,
+    "cover": 0.08
+  },
+  "effects": {
+    "synthwave": {
+      "sunTop": "#FFE45E",
+      "sunBottom": "#FF2E97",
+      "grid": "#FF2E97",
+      "sky": "#3B0F5C"
+    },
+    "titleShadow": {
+      "color": "#FF2E97",
+      "blur": 16
+    },
+    "scanlines": {
+      "opacity": 0.1
+    }
+  }
+}

@@ -12,6 +12,26 @@ public sealed partial class PlayerPanel : UserControl
 {
     private Player? player;
     private Track? track;
+    private List<Theming.PlayerDecor> decor = [];
+    private bool hideTrackText;
+
+    /// <summary>Shows the theme's player decorations (replacing any earlier ones).</summary>
+    public void SetDecor(List<Theming.PlayerDecor> items)
+    {
+        foreach (var d in decor) { Theming.EffectsClock.Remove(d); d.Dispose(); }
+        DecorTop.Children.Clear();
+        DecorMiddle.Children.Clear();
+        decor = items;
+        foreach (var d in items)
+        {
+            (d.Top ? DecorTop : DecorMiddle).Children.Add(d.Root);
+            Theming.EffectsClock.Add(d);
+        }
+        DecorTop.Visibility = DecorTop.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        DecorMiddle.Visibility = DecorMiddle.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        hideTrackText = items.Any(d => d.ReplacesTrackText);
+        Refresh();
+    }
 
     public PlayerPanel()
     {
@@ -68,9 +88,9 @@ public sealed partial class PlayerPanel : UserControl
                 break;
         }
         SongText.Text = song;
-        SongText.Visibility = song.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        SongText.Visibility = song.Length > 0 && !hideTrackText ? Visibility.Visible : Visibility.Collapsed;
         ArtistText.Text = artist;
-        ArtistText.Visibility = artist.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ArtistText.Visibility = artist.Length > 0 && !hideTrackText ? Visibility.Visible : Visibility.Collapsed;
         FailurePanel.Visibility = failed ? Visibility.Visible : Visibility.Collapsed;
         FailureText.Text = player.FailureMessage ?? "";
 

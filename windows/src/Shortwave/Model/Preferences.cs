@@ -40,6 +40,9 @@ public sealed class Preferences : Observable
         lastStationID = Get("lastStation");
         discoverCountry = Get("discoverCountry") ?? DefaultCountry();
         appearance = AppThemes.FromRawValue(Get("appearance")) ?? AppTheme.System;   // -appearance light|dark overrides it
+        themeId = Get("theme") ?? "default";                                             // -theme <id> overrides it
+        effectsEnabled = GetBool("effects") ?? true;
+        effectIntensity = Math.Clamp(GetDouble("effectIntensity") ?? 1.0, 0, 1);
         loading = false;
     }
 
@@ -147,6 +150,17 @@ public sealed class Preferences : Observable
         set { if (Set(ref appearance, value)) { Store("appearance", value.RawValue()); Diagnostics.Log("theme " + value.RawValue()); } }
     }
 
+    private string themeId;
+    /// <summary>The look (docs/THEMES.md): "default" or a theme's id.</summary>
+    public string ThemeId { get => themeId; set { if (Set(ref themeId, value)) Store("theme", value); } }
+
+    private bool effectsEnabled;
+    /// <summary>Animated and decorative theme effects (also off while Windows' animation effects are off).</summary>
+    public bool EffectsEnabled { get => effectsEnabled; set { if (Set(ref effectsEnabled, value)) Store("effects", value); } }
+
+    private double effectIntensity;
+    public double EffectIntensity { get => effectIntensity; set { if (Set(ref effectIntensity, Math.Clamp(value, 0, 1))) Store("effectIntensity", effectIntensity); } }
+
     public RecorderConfig RecorderConfig => new(RecordingMode, MinimumDuration, MaximumDuration);
 }
 
@@ -176,11 +190,4 @@ public static class AppThemes
         AppTheme.Dark => Microsoft.UI.Windowing.TitleBarTheme.Dark,
         _ => Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode,
     };
-
-    /// <summary>Applies the theme to a window: its root element and its title bar buttons.</summary>
-    public static void Apply(this AppTheme t, Microsoft.UI.Xaml.Window window)
-    {
-        if (window.Content is Microsoft.UI.Xaml.FrameworkElement root) root.RequestedTheme = t.ElementTheme();
-        try { window.AppWindow.TitleBar.PreferredTheme = t.TitleBarTheme(); } catch (Exception e) { Diagnostics.Log("title bar theme: " + e.Message); }
-    }
 }

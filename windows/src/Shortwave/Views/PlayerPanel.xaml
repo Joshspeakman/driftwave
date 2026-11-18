@@ -12,6 +12,8 @@
         </StackPanel>
         <ScrollViewer x:Name="ContentScroller" Visibility="Collapsed">
             <StackPanel Padding="16" Spacing="16">
+                <!-- Theme decorations (a tuning dial above the cover; an LCD, bars or meters below the track) -->
+                <StackPanel x:Name="DecorTop" Spacing="8" Visibility="Collapsed" />
                 <Button x:Name="CoverButton" Click="CoverButton_Click" HorizontalAlignment="Center" Padding="0" Background="Transparent"
                         BorderThickness="0" ToolTipService.ToolTip="Show Station Details" AutomationProperties.Name="Show Station Details">
                     <local:StationCover x:Name="Cover" Size="200" />
@@ -28,9 +30,10 @@
                         <TextBlock x:Name="FailureText" Foreground="{ThemeResource SystemFillColorCautionBrush}" TextWrapping="Wrap" MaxWidth="230" />
                     </StackPanel>
                 </StackPanel>
+                <StackPanel x:Name="DecorMiddle" Spacing="10" Visibility="Collapsed" />
                 <local:PlaybackControls Large="True" HorizontalAlignment="Center" />
                 <Button x:Name="RecordingIndicator" Click="RecordingIndicator_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                        Padding="10" CornerRadius="10" Visibility="Collapsed" ToolTipService.ToolTip="Show track details">
+                        Padding="10" CornerRadius="{StaticResource ShortwaveCardRadius}" Visibility="Collapsed" ToolTipService.ToolTip="Show track details">
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />

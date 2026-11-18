@@ -57,6 +57,7 @@ run:
 | `-miniPlayer`, `-addStation` | Open the mini player / the Add Local Station dialog |
 | `-importStations <file>`, `-exportStations <file>` | Import a station file at launch (logs `imported added=N present=M unreadable=K covers=C`), then export the library (`exported N stations to <file>`) |
 | `-appearance light\|dark` | Use that look for this run (not saved) |
+| `-theme <id>`, `-effects false`, `-effectIntensity <0–1>` | Use that theme, effects setting or intensity for this run (not saved). Ids are in `docs/THEMES.md` |
 | `-screenshot <png> [-screenshotDelay <s>]` | After the delay (default 4 s), render the main window and any open dialog to PNG, then quit |
 | `-quitAfter <s>` | Quit after that many seconds |
 | `-mediaControls` | Use the media overlay even in a test run. Only for checking the media session when nothing else is playing |
@@ -93,6 +94,7 @@ Windows flavors share the library but keep separate settings.
 | Mini Player window | Always-on-top mini player |
 | Settings window | Settings page in the navigation pane |
 | Settings > Appearance > App Theme | Same: Use System Setting (follows Windows' light or dark mode), Light or Dark. It applies to every window, dialog and title bar |
+| (Windows only for now) | Settings > Appearance > Theme: Default plus nine built-in themes with their own colours, fonts and effects, and your own themes (Customize Theme, Import, Export). See [`../docs/THEMES.md`](../docs/THEMES.md) |
 | MapKit map | Coordinates plus an "Open Map" link to OpenStreetMap |
 | AirPlay picker | Audio output picker next to the volume |
 | Closing the window | The app keeps running in the notification area. With Background Playback off, closing stops playback. Quit from the tray menu or with Ctrl+Q |
