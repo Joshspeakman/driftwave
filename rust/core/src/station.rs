@@ -173,12 +173,12 @@ fn tag_list(o: &Map<String, Value>) -> Option<Vec<String>> {
     Some(list)
 }
 
-pub(crate) fn str_of(o: &Map<String, Value>, key: &str) -> Option<String> {
+pub fn str_of(o: &Map<String, Value>, key: &str) -> Option<String> {
     o.get(key).and_then(|v| v.as_str()).map(str::to_owned)
 }
 
 /// A number, or a string holding one (sign, decimal point and exponent allowed; no thousands separators).
-pub(crate) fn num_of(o: &Map<String, Value>, key: &str) -> Option<f64> {
+pub fn num_of(o: &Map<String, Value>, key: &str) -> Option<f64> {
     match o.get(key)? {
         Value::Number(n) => n.as_f64(),
         Value::String(s) => parse_number(s),
