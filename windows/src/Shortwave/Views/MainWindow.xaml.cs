@@ -57,6 +57,16 @@ public sealed partial class MainWindow : Window
         app.ShowStationRequested += s => Enqueue(() => new StationDetailDialog(app, s, () => Hwnd));
         app.ShowTrackRequested += t => Enqueue(() => new TrackDetailDialog(app, t));
         app.EditStationRequested += s => Enqueue(() => new LocalStationDialog(app, s, () => Hwnd));
+        app.NoticeRequested += (title, message) => Enqueue(() => new ContentDialog
+        {
+            Title = title,
+            Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
+            CloseButtonText = "OK",
+            DefaultButton = ContentDialogButton.Close,
+        });
+        app.ImportFileRequested += () => _ = ChooseImportFile();
+        app.ExportFileRequested += () => _ = ChooseExportFile();
+        if (Diagnostics.OpenAddStation) app.AddLocalStation();
 
         AddShortcuts();
         ShowPage();
@@ -146,8 +156,23 @@ public sealed partial class MainWindow : Window
         Add(VirtualKey.P, ctrlAlt, () => app.ShowPlayer = !app.ShowPlayer);
         Add(VirtualKey.N, ctrl, app.AddLocalStation);
         Add(VirtualKey.M, ctrlShift, () => App.Current?.ShowMiniPlayer());
+        Add(VirtualKey.I, ctrlShift, app.ChooseImportFile);
+        Add(VirtualKey.E, ctrlShift, app.ChooseExportFile);
         Add(VirtualKey.Q, ctrl, () => App.Current?.Quit());
         Root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
+    }
+
+    /// <summary>Import Stations… (Ctrl+Shift+I, the Library's More menu, the empty library).</summary>
+    async Task ChooseImportFile()
+    {
+        if (await Ui.PickStationFileToOpen(Hwnd) is { } path) app.ImportReporting(path);
+    }
+
+    /// <summary>Export Stations… (Ctrl+Shift+E, the Library's More menu).</summary>
+    async Task ChooseExportFile()
+    {
+        if (app.Library.Count == 0) { app.Notice("Nothing to Export", "Your library is empty."); return; }
+        if (await Ui.PickStationFileToSave(Hwnd, StationExchange.DefaultFileName) is { } path) app.ExportReporting(path);
     }
 
     // ContentDialogs can't overlap, so requests queue up and show one at a time.

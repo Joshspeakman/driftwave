@@ -36,6 +36,29 @@ public static class Ui
         return file?.Path;
     }
 
+    public static async Task<string?> PickStationFileToOpen(nint hwnd)
+    {
+        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary, CommitButtonText = "Import" };
+        picker.FileTypeFilter.Add(".json");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        var file = await picker.PickSingleFileAsync();
+        return file?.Path;
+    }
+
+    public static async Task<string?> PickStationFileToSave(nint hwnd, string suggestedName)
+    {
+        var picker = new FileSavePicker
+        {
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            SuggestedFileName = Path.GetFileNameWithoutExtension(suggestedName),
+            CommitButtonText = "Export",
+        };
+        picker.FileTypeChoices.Add("Shortwave station file", [".json"]);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        var file = await picker.PickSaveFileAsync();
+        return file?.Path;
+    }
+
     public static async Task<string?> PickFolder(nint hwnd)
     {
         var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.MusicLibrary };

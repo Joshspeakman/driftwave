@@ -20,6 +20,12 @@ public sealed class AppModel : Observable
     public event Action<Track>? ShowTrackRequested;
     public event Action<Station?>? EditStationRequested;   // null: add a new local station
     public event Action? LibraryChanged;
+    /// <summary>A message to show (title, text), e.g. the result of an import or export.</summary>
+    public event Action<string, string>? NoticeRequested;
+    /// <summary>Import Stations… / Export Stations…: the window shows a file picker.</summary>
+    public event Action? ImportFileRequested, ExportFileRequested;
+    public void ChooseImportFile() => ImportFileRequested?.Invoke();
+    public void ChooseExportFile() => ExportFileRequested?.Invoke();
 
     private readonly DispatcherQueue ui;
 
@@ -54,6 +60,24 @@ public sealed class AppModel : Observable
             _ => Page.Library,
         };
         if (Diagnostics.SearchText is { } q) { search = search with { Name = q }; SearchChanged(); }
+        if (Diagnostics.ImportStations is { } importPath)
+        {
+            try
+            {
+                var r = ImportStations(importPath);
+                Diagnostics.Log($"imported added={r.Added.Count} present={r.AlreadyPresent} unreadable={r.Unreadable} covers={r.NewCovers.Count}");
+            }
+            catch (Exception e) { Diagnostics.Log("import failed: " + e.Message); }
+        }
+        if (Diagnostics.ExportStations is { } exportPath)
+        {
+            try
+            {
+                ExportStations(exportPath);
+                Diagnostics.Log($"exported {library.Count} stations to {exportPath}");
+            }
+            catch (Exception e) { Diagnostics.Log("export failed: " + e.Message); }
+        }
         if (Diagnostics.PlayURL is { } url) Player.Select(Station.Local("Test Stream", url));
     }
 
@@ -127,6 +151,85 @@ public sealed class AppModel : Observable
         _ = LoadArtworkThenUpdate(station);
     }
 
+    // MARK: Import and export (docs/STATION-EXCHANGE.md)
+
+    /// <summary>Writes the whole library, with custom covers, to an exchange file.</summary>
+    public void ExportStations(string path)
+    {
+        var data = StationExchange.Encode(SortedLibrary, Diagnostics.AppDescription, cover: name =>
+        {
+            try { return File.ReadAllBytes(Path.Combine(Paths.Covers, name)); } catch { return null; }
+        });
+        string full = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        string tmp = full + ".tmp";
+        File.WriteAllBytes(tmp, data);
+        File.Move(tmp, full, overwrite: true);
+    }
+
+    /// <summary>Adds the stations from an exchange file (or a library.json) that the library doesn't have.</summary>
+    public StationExchange.MergeResult ImportStations(string path)
+    {
+        var contents = StationExchange.Decode(File.ReadAllBytes(path));
+        var result = StationExchange.Merge(contents, library, () => Guid.NewGuid().ToString().ToUpperInvariant());
+        if (result.NewCovers.Count > 0) { try { Directory.CreateDirectory(Paths.Covers); } catch { } }
+        foreach (var (name, data) in result.NewCovers)
+        {
+            try { File.WriteAllBytes(Path.Combine(Paths.Covers, name), data); }
+            catch (Exception e)
+            {
+                // Couldn't store the cover: fall back to the station's favicon.
+                Diagnostics.Log($"cover {name}: {e.Message}");
+                foreach (var s in result.Library.Where(s => s.CustomCover == name)) s.CustomCover = null;
+            }
+        }
+        if (result.Added.Count > 0)
+        {
+            library = result.Library;
+            SaveLibrary();
+            _ = RefreshLibrary();
+        }
+        return result;
+    }
+
+    /// <summary>Exports and tells the user how it went.</summary>
+    public void ExportReporting(string path)
+    {
+        try
+        {
+            ExportStations(path);
+            int n = library.Count;
+            Notice("Stations Exported",
+                $"{n} {(n == 1 ? "station was" : "stations were")} saved to “{Path.GetFileName(path)}”. Open it with Import Stations… in Shortwave on another computer.");
+        }
+        catch (Exception e) { Notice("Couldn’t Export Stations", e.Message); }
+    }
+
+    /// <summary>Imports and tells the user how it went.</summary>
+    public void ImportReporting(string path)
+    {
+        try
+        {
+            var r = ImportStations(path);
+            var parts = new List<string>
+            {
+                r.Added.Count == 0 ? "No new stations."
+                    : $"{r.Added.Count} {(r.Added.Count == 1 ? "station was" : "stations were")} added to your library.",
+            };
+            if (r.AlreadyPresent > 0) parts.Add($"{r.AlreadyPresent} {(r.AlreadyPresent == 1 ? "was" : "were")} already there.");
+            if (r.Unreadable > 0) parts.Add($"{r.Unreadable} couldn’t be read.");
+            Notice(r.Added.Count == 0 ? "Nothing Imported" : "Stations Imported", string.Join(" ", parts));
+            if (r.Added.Count > 0) Page = Page.Library;
+        }
+        catch (Exception e) { Notice("Couldn’t Import Stations", e.Message); }
+    }
+
+    public void Notice(string title, string message)
+    {
+        Diagnostics.Log($"notice {title}: {message}");
+        NoticeRequested?.Invoke(title, message);
+    }
+
     private void SaveLibrary()
     {
         try { LibraryFile.Save(library, Paths.Library); } catch (Exception e) { Diagnostics.Log("library save failed: " + e.Message); }
@@ -144,10 +247,12 @@ public sealed class AppModel : Observable
         try { fresh = await Api.StationsByUUIDs(ids); } catch { return; }
         var byID = new Dictionary<string, Station>();
         foreach (var f in fresh) byID.TryAdd(f.Id, f);
+        var asked = ids.ToHashSet();
         bool changed = false;
         library = library.Select(s =>
         {
-            if (s.IsLocal) return s;
+            // Stations added (e.g. imported) while this refresh was waiting get their own refresh.
+            if (s.IsLocal || !asked.Contains(s.Id)) return s;
             if (byID.TryGetValue(s.Id, out var f))
             {
                 var r = s.Refreshed(f);

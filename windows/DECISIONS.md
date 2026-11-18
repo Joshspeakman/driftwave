@@ -73,7 +73,7 @@ If muxing fails, the raw `.aac` is saved instead, as on the Mac.
 | AirPlay counterpart | Output device picker (Windows audio endpoints), next to the volume | Cheap with `MediaPlayer.AudioDevice`. Default is "System default" |
 | Install method | Per-user install to `%LOCALAPPDATA%\Programs\<name>` with a Start menu shortcut and an uninstall script; no admin, no MSIX, no certificate | Easiest to undo. Release (`Shortwave`) and Nightly (`Shortwave Nightly`) install side by side |
 | Settings window | A Settings page in the main window's navigation (Windows convention) | |
-| Library.json fixture | Written by hand in the Mac's exact format | The repo has no captured Mac file. **Still worth checking with a real one from the Mac** |
+| Library.json fixture | Written by hand in the Mac's exact format | The repo had no captured Mac file then. Since round 1 of `docs/MAC-WINDOWS-SYNC.md`, the tests also read `fixtures/exchange/mac-export.json`, which the Mac app wrote (an exchange file is also a valid `library.json`) |
 
 ## 5. Verification status (2026-11-17, built and tested on this PC)
 
@@ -84,7 +84,7 @@ was never created.
 
 | Check | Result |
 |---|---|
-| Core unit tests (`test.ps1`) | 31/31 pass: the 19 Swift tests translated, the Mac-format `library.json` fixture, Windows reserved file names, the frame clock, the M4A muxer (including a real ffmpeg passthrough round trip) and the Ogg reader |
+| Core unit tests (`test.ps1`) | 38/38 pass: the 19 Swift tests translated, the station exchange tests (which read both apps' exports), the Mac-format `library.json` fixture, Windows reserved file names, the frame clock, the M4A muxer (including a real ffmpeg passthrough round trip) and the Ogg reader |
 | Smoke test (`smoke-test.ps1`, installed Nightly) | 5/5 pass: MP3 and AAC with ICY titles, HLS with ID3 titles, Ogg with Vorbis comment titles, `.pls` |
 | Recording test (`recording-test.ps1`, installed Nightly) | Pass. MP3 and AAC are cut at the title change (about 15 s each), tagged and decodable; AAC is saved as `.m4a`. The m4a bitrate (128.0 kbps) matches the stream, so there was no re-encode. The first track is marked `idleIncomplete` |
 | Old Shoutcast `ICY 200 OK` (`recording-test.ps1 -StatusLine icy`) | Pass. Titles are read over the raw-socket fallback, and Media Foundation plays it too |
@@ -121,7 +121,7 @@ was never created.
 - **Local station content-type probe**: a local station whose link is a playlist without a `.pls` or `.m3u`
   extension.
 - **Changing a station cover** (Change Station Cover… / Use Default Cover).
-- **A `library.json` copied from the Mac.** Only the hand-built fixture was tested.
+- **A real `library.json` from Josh's Mac.** The Mac app's export (`fixtures/exchange/mac-export.json`) reads and imports, but Josh's own library hasn't been tried.
 - **Title timing by ear.** The delay is computed from stream position (SomaFM: about 16 s burst), but
   nobody has listened to check that a title changes when the song does.
 

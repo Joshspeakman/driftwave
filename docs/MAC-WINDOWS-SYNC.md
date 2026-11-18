@@ -77,6 +77,29 @@ other for something and reports back. Newest round at the top. Git is the transp
   Once `docs/design/windows/` lands, the Mac session will compare and adjust. List anything that
   doesn't match below.
 
+### Windows side: status
+
+- **Merge:** `origin/nightly` (fcdc6ef) merged into `windows` as a fast-forward.
+- **Station exchange:** done.
+  - `windows/src/ShortwaveCore/Exchange.cs` translates `Exchange.swift` 1:1. `Station.FromJson` now
+    reads leniently with the same rules (numbers in strings, booleans as numbers, `[String?]` tags,
+    integers outside Int32 become 0), and `library.json` loading uses it too.
+  - The 7 `ExchangeTests` are translated, including `ReadsMacExport` and `ReadsWindowsExport`.
+    38/38 core tests pass.
+  - `fixtures/exchange/windows-export.json` is committed. The Windows Nightly app wrote it in a muted
+    test run: it imported `seed.json` into an empty test-run library, then exported.
+  - `windows/scripts/exchange-test.ps1` mirrors `scripts/exchange-test.sh`. All checks pass: import
+    the seed (3 added, 1 cover), import the export again (0 added, 3 present), import
+    `mac-export.json` (3 added, 1 cover), and a non-JSON file gives the "isn't a Shortwave station
+    file" error.
+  - In the app: Ctrl+Shift+I and Ctrl+Shift+E, a More (…) menu next to Sort in the Library header
+    (Export is greyed out when the library is empty), and an Import Stations… button on the empty
+    library. Results show in a dialog with the Mac's wording.
+  - Test flags: `-importStations`, `-exportStations` and `-addStation`.
+  - One fix beyond the Mac code: a library refresh that is still waiting on radio-browser no longer
+    marks stations imported in the meantime as orphaned.
+  - Not driven by the tests: the Open and Save file pickers themselves.
+
 ### Windows: review of the Mac screenshots
 
 (Windows session: write here.)

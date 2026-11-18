@@ -12,8 +12,12 @@ namespace Shortwave;
 ///   -openTrackDetail           show details of the first track being recorded
 ///   -muted / -audible          start muted (the default in test runs) / allow sound in a test run
 ///   -&lt;settingKey&gt; &lt;value&gt;     override a setting for this run (e.g. -recordingMode everything)
-/// Windows-only: -miniPlayer (open the mini player), -screenshot &lt;png&gt; [-screenshotDelay &lt;s&gt;] (save the
-/// main window and exit), -quitAfter &lt;s&gt; (exit after that many seconds), -mediaControls (see below).
+///   -importStations &lt;file&gt;    import a station file at launch; -exportStations &lt;file&gt; then exports the library
+///   -appearance light|dark     force the look for this run (not saved)
+///   -miniPlayer, -addStation   open the mini player / the Add Local Station dialog
+///   -screenshot &lt;png&gt;         after -screenshotDelay s (default 4), save the main window (and dialog) and quit
+///   -quitAfter &lt;s&gt;            quit after that many seconds
+/// Windows-only: -mediaControls (see below).
 /// A test run uses its own data folder and settings, and stays muted and off the system media controls.
 /// </summary>
 public static class Diagnostics
@@ -53,6 +57,9 @@ public static class Diagnostics
     public static bool OpenFirstResult => Has("-openFirstResult");
     public static bool OpenTrackDetail => Has("-openTrackDetail");
     public static bool OpenMiniPlayer => Has("-miniPlayer");
+    public static bool OpenAddStation => Has("-addStation");
+    public static string? ImportStations => Value("importStations");
+    public static string? ExportStations => Value("exportStations");
     public static string? Screenshot => Value("screenshot");
     public static double ScreenshotDelay => double.TryParse(Value("screenshotDelay"), System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : 4;
     public static double? QuitAfter => double.TryParse(Value("quitAfter"), System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
@@ -60,7 +67,7 @@ public static class Diagnostics
     /// <summary>Test runs use their own data folder and settings, so they never touch the real app's data.</summary>
     public static readonly bool IsTestRun =
         Has("-muted") || PlayURL != null || StartPage != null || SearchText != null || OpenFirstResult || OpenTrackDetail
-        || OpenMiniPlayer || Screenshot != null || QuitAfter != null
+        || OpenMiniPlayer || OpenAddStation || Screenshot != null || QuitAfter != null || ImportStations != null || ExportStations != null
         || Environment.GetEnvironmentVariable("SHORTWAVE_TEST") == "1";
 
     /// <summary>
@@ -85,6 +92,19 @@ public static class Diagnostics
     public static string Version =>
         typeof(Diagnostics).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "1.0";
 
-    public static string? Commit =>
-        typeof(Diagnostics).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "ShortwaveCommit")?.Value;
+    public static string? Commit => Metadata("ShortwaveCommit");
+    public static string? Branch => Metadata("ShortwaveBranch");
+
+    static string? Metadata(string key) =>
+        typeof(Diagnostics).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == key)?.Value is { Length: > 0 } v ? v : null;
+
+    /// <summary>"Shortwave for Windows 1.0.15 (nightly 09fd9a9)", written into exported station files.</summary>
+    public static string AppDescription
+    {
+        get
+        {
+            string build = string.Join(" ", new[] { Branch, Commit }.Where(s => !string.IsNullOrEmpty(s)));
+            return $"Shortwave for Windows {Version.Split('+')[0]}" + (build.Length > 0 ? $" ({build})" : "");
+        }
+    }
 }

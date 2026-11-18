@@ -49,4 +49,7 @@ public sealed partial class LibraryPage : UserControl
 
     void Discover_Click(object sender, RoutedEventArgs e) => app.Page = Page.Discover;
     void AddLocal_Click(object sender, RoutedEventArgs e) => app.AddLocalStation();
+    void Import_Click(object sender, RoutedEventArgs e) => app.ChooseImportFile();
+    void Export_Click(object sender, RoutedEventArgs e) => app.ChooseExportFile();
+    void MoreMenu_Opening(object sender, object e) => ExportItem.IsEnabled = app.Library.Count > 0;
 }
