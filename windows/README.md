@@ -1,6 +1,9 @@
-# Shortwave for Windows
+# Driftwave (the Windows app)
 
-The Windows version of the Mac app: same features, same `library.json`, same test flags. It's a
+The Windows version of the Mac app: same features, same `library.json`, same test flags. On Windows it's
+called **Driftwave** (Driftwave Nightly for nightly builds). Its releases are public at
+[github.com/Joshspeakman/driftwave](https://github.com/Joshspeakman/driftwave), where Settings > Updates
+finds them (see "Releases and updates" below). It's a
 C# / WinUI 3 rebuild (see [`DECISIONS.md`](DECISIONS.md) for why, and [`PLAN.md`](PLAN.md) for the
 port plan). The core logic (`src/ShortwaveCore`) is a 1:1 translation of `Sources/ShortwaveCore`.
 
@@ -18,8 +21,8 @@ Run from the repo root in PowerShell (`powershell -ExecutionPolicy Bypass -File 
 | Command | What it does |
 |---|---|
 | `windows\scripts\test.ps1` | Core unit tests: the 19 translated from Swift, plus Windows-only ones, and the station exchange tests that read both apps' exports (38 in total) |
-| `windows\scripts\build.ps1 [-Flavor Nightly\|Release]` | Builds `windows\out\<Flavor>\Shortwave.exe` |
-| `windows\scripts\install.ps1 [-Flavor Nightly\|Release]` | Builds and installs to `%LOCALAPPDATA%\Programs\Shortwave Nightly` (or `Shortwave`), adds a Start menu shortcut and a Settings > Apps entry. No admin needed. Nightly and Release install side by side |
+| `windows\scripts\build.ps1 [-Flavor Nightly\|Release]` | Builds `windows\out\<Flavor>\Driftwave.exe` |
+| `windows\scripts\install.ps1 [-Flavor Nightly\|Release]` | Builds and installs to `%LOCALAPPDATA%\Programs\Driftwave Nightly` (or `Driftwave`), adds a Start menu shortcut and a Settings > Apps entry. No admin needed. Nightly and Release install side by side. Removes an old `Shortwave` install of the same flavor |
 | `uninstall.ps1` in the install folder, or Settings > Apps | Removes the program. Your library, settings and tracks stay |
 | `windows\scripts\smoke-test.ps1` | Plays the five real smoke streams (MP3, AAC, HLS, Ogg, `.pls`) muted and checks playback and titles |
 | `windows\scripts\recording-test.ps1 [-StatusLine icy]` | Local ICY server plus ffmpeg: checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable. `-StatusLine icy` serves `ICY 200 OK` like an old Shoutcast server |
@@ -30,7 +33,7 @@ Run from the repo root in PowerShell (`powershell -ExecutionPolicy Bypass -File 
 | `windows\scripts\shortcut-test.ps1` | **Uses the screen and keyboard for about a minute.** Real key presses on muted test copies. Before each press it checks that a test window has focus. It never presses mute or media keys, and presses Ctrl+Up only in a copy that plays nothing, because Ctrl+Up unmutes |
 | `windows\scripts\cover-test.ps1` | **Uses the screen.** Change Station Cover… (types the image path into the file picker once it has focus) and Use Default Cover |
 
-The test scripts run `windows\out\Nightly\Shortwave.exe` unless `SHORTWAVE_APP` points elsewhere. They
+The test scripts run `windows\out\Nightly\Driftwave.exe` unless `SHORTWAVE_APP` points elsewhere. They
 write logs to `%TEMP%`, or to `SHORTWAVE_SCRATCH` if set.
 
 ## Test runs
@@ -60,23 +63,26 @@ run:
 | `-theme <id>`, `-effects false`, `-effectIntensity <0–1>` | Use that theme, effects setting or intensity for this run (not saved). Ids are in `docs/THEMES.md` |
 | `-screenshot <png> [-screenshotDelay <s>]` | After the delay (default 4 s), render the main window and any open dialog to PNG, then quit |
 | `-quitAfter <s>` | Quit after that many seconds |
+| `-updateFeed <file\|url>` | Check this releases JSON (GitHub's format) instead of GitHub. Test runs never contact GitHub without it |
 | `-mediaControls` | Use the media overlay even in a test run. Only for checking the media session when nothing else is playing |
 
-`Shortwave.exe --quit` asks the running copy of that flavor to quit. The install script uses it.
+`Driftwave.exe --quit` asks the running copy of that flavor to quit. The install script uses it.
 
 ## Data
 
 | Data | Location |
 |---|---|
-| Library (same format as the Mac's) | `%APPDATA%\Shortwave\library.json` |
-| Settings | `%APPDATA%\Shortwave\settings.json` (Release), `settings-nightly.json` (Nightly) |
-| Custom covers | `%APPDATA%\Shortwave\Covers\` |
-| Favicon cache | `%LOCALAPPDATA%\Shortwave\Favicons\` |
-| Temporary recordings | `%LOCALAPPDATA%\Shortwave\Recording\` (cleared at launch) |
-| Saved tracks (default) | `Music\Shortwave` |
+| Library (same format as the Mac's) | `%APPDATA%\Driftwave\library.json` |
+| Settings | `%APPDATA%\Driftwave\settings.json` (Release), `settings-nightly.json` (Nightly) |
+| Custom covers | `%APPDATA%\Driftwave\Covers\` |
+| Favicon cache | `%LOCALAPPDATA%\Driftwave\Favicons\` |
+| Temporary recordings and update downloads | `%LOCALAPPDATA%\Driftwave\Recording\`, `...\Updates\` |
+| Saved tracks (default) | `Music\Driftwave` |
 
-To move the library from the Mac, copy `~/Library/Application Support/Shortwave/library.json` (and
-the `Covers` folder) into `%APPDATA%\Shortwave\`. Like the Mac's Release and Nightly builds, the two
+The first launch of Driftwave copies the old `%APPDATA%\Shortwave` folder to `%APPDATA%\Driftwave` (if
+Driftwave has none yet) and keeps saving tracks to `Music\Shortwave` if that was the default before. The old
+folders are left in place. To move the library from the Mac, copy
+`~/Library/Application Support/Shortwave/library.json` (and the `Covers` folder) into `%APPDATA%\Driftwave\`. Like the Mac's Release and Nightly builds, the two
 Windows flavors share the library but keep separate settings.
 
 ## Mac features on Windows
@@ -103,3 +109,19 @@ Shortcuts: play/stop Ctrl+Enter · volume Ctrl+Up/Down · mute Ctrl+Alt+M · pre
 station Ctrl+Left/Right · Library Ctrl+1 · Discover Ctrl+2 · Search Ctrl+F · show/hide player
 Ctrl+Alt+P · add local station Ctrl+N · import stations Ctrl+Shift+I · export stations Ctrl+Shift+E · mini player Ctrl+Shift+M · quit Ctrl+Q. Space doesn't
 play or stop playback.
+
+## Releases and updates
+
+`windows\scripts\publish-release.ps1 [-Flavor Nightly|Release] [-DryRun] [-NotesFile <md>]` builds without debug
+symbols (and with source paths mapped away), packages the app with `Install.ps1` (from `install-files.ps1`),
+`uninstall.ps1` and a README, refuses to publish if it finds local paths in the package, writes a `.sha256`, and
+creates the GitHub release: `nightly-<version>` (a pre-release) or `v<version>`. Release notes are the Windows
+commits since the previous release unless `-NotesFile` is given.
+
+In the app, Settings > Updates (and a quiet check at launch, at most daily) reads the releases of
+`Joshspeakman/driftwave` for its own channel and offers only newer versions. It downloads only that repo's
+release files over HTTPS and checks the SHA-256. Then a small script waits for the app to quit, backs up the
+install folder, mirrors the new files in (restoring the backup if anything fails), updates the Settings > Apps
+version, and starts the app again with the same arguments, so a playing station resumes. Only an installed copy
+(a folder with `uninstall.ps1`) updates itself. The checksum catches a damaged download, not a forged release,
+since it sits beside the zip; the builds aren't code-signed.

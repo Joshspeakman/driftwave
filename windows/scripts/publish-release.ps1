@@ -2,14 +2,16 @@
 # the app's Settings > Updates finds it. Nightly: tag nightly-<version>, a pre-release. Release: tag v<version>.
 # The zip holds the app (no .pdb files), Install.ps1, uninstall.ps1 and a README; a .sha256 file sits beside it.
 # The package is scanned for personal paths first and the script stops if it finds any.
-# Usage: windows\scripts\publish-release.ps1 [-Flavor Nightly|Release] [-DryRun] [-NoBuild] [-OutDir <folder>]
+# Usage: windows\scripts\publish-release.ps1 [-Flavor Nightly|Release] [-DryRun] [-NoBuild] [-OutDir <folder>] [-NotesFile <md>]
+#   -NotesFile: the "What's new" part of the notes (default: the Windows commits since the last release).
 #   -DryRun builds and packages into a scratch folder without publishing.
 param(
     [ValidateSet('Nightly', 'Release')][string]$Flavor = 'Nightly',
     [switch]$DryRun,
     [switch]$NoBuild,
     [string]$Repo = 'Joshspeakman/driftwave',
-    [string]$OutDir = ''
+    [string]$OutDir = '',
+    [string]$NotesFile = ''
 )
 . "$PSScriptRoot\common.ps1"
 if (-not $NoBuild) { & "$PSScriptRoot\build.ps1" -Flavor $Flavor -NoSymbols | Out-Host }
@@ -73,7 +75,7 @@ try {
 }
 catch { Write-Output "No earlier release found on $Repo (first release?)." }
 $range = if ($previous) { "$previous..$commit" } else { "-15 $commit" }
-$changes = @(git -C $RepoRoot log --no-merges --pretty='- %s' $range.Split(' ') -- windows themes docs/THEMES.md 2>$null)
+$changes = if ($NotesFile) { @((Get-Content -Raw $NotesFile).Trim()) } else { @(git -C $RepoRoot log --no-merges --pretty='- %s' $range.Split(' ') -- windows themes docs/THEMES.md 2>$null) }
 if (-not $changes) { $changes = @('- Maintenance build') }
 $notes = @"
 ## What's new
@@ -86,15 +88,15 @@ The ``.sha256`` file lets the app check the download arrived intact.
 
 Commit: $commit
 "@
-$notesFile = Join-Path $stage 'notes.md'
-Set-Content -Path $notesFile -Value $notes -Encoding utf8
+$notesOut = Join-Path $stage 'notes.md'
+Set-Content -Path $notesOut -Value $notes -Encoding utf8
 
 Write-Output "Package: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
 Write-Output "SHA-256: $sha"
 Write-Output "Tag: $tag"
-if ($DryRun) { Write-Output "Dry run: not published. Notes: $notesFile"; return }
+if ($DryRun) { Write-Output "Dry run: not published. Notes: $notesOut"; return }
 
-$flags = @('--repo', $Repo, '--title', $title, '--notes-file', $notesFile)
+$flags = @('--repo', $Repo, '--title', $title, '--notes-file', $notesOut)
 if ($nightly) { $flags += '--prerelease' } else { $flags += '--latest' }
 gh release create $tag $zip "$zip.sha256" @flags
 if ($LASTEXITCODE -ne 0) { throw "gh release create failed ($LASTEXITCODE)" }

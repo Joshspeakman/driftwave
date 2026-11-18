@@ -2,12 +2,12 @@
 # scripts/screenshots.sh). Muted test runs with their own library; the real app's data is never touched.
 # The renders are the window's XAML (-screenshot): they leave out Mica and the title bar buttons.
 # Usage: windows\scripts\screenshots.ps1 [-Theme <id>] [-OutDir <dir>] [name ...]   (default: all, Default theme)
-#   -Theme renders one theme (docs/THEMES.md) into docs\design\windows	hemes\<id>\ unless -OutDir says otherwise.
+#   -Theme renders one theme (docs/THEMES.md) into docs\design\windows\themes\<id>\ unless -OutDir says otherwise.
 [CmdletBinding(PositionalBinding = $false)]
 param([string]$Theme = '', [string]$OutDir = '', [Parameter(ValueFromRemainingArguments = $true)][string[]]$Names = @())
 . "$PSScriptRoot\common.ps1"
 $app = Get-TestApp
-$outDir = if ($OutDir) { $OutDir } elseif ($Theme) { Join-Path $RepoRoot "docs\design\windows	hemes\$Theme" } else { Join-Path $RepoRoot 'docs\design\windows' }
+$outDir = if ($OutDir) { $OutDir } elseif ($Theme) { Join-Path $RepoRoot "docs\design\windows\themes\$Theme" } else { Join-Path $RepoRoot 'docs\design\windows' }
 $themeArgs = if ($Theme) { @('-theme', $Theme) } else { @() }
 $logs = New-ScratchDir 'shortwave-shots'
 New-Item -ItemType Directory -Force $outDir | Out-Null

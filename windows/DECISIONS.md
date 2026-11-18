@@ -71,7 +71,7 @@ If muxing fails, the raw `.aac` is saved instead, as on the Mac.
 |---|---|---|
 | Map in station details | Coordinates plus an "Open Map" link to OpenStreetMap | WinUI's MapControl needs an Azure Maps key. The plan allows "any map or a map link" |
 | AirPlay counterpart | Output device picker (Windows audio endpoints), next to the volume | Cheap with `MediaPlayer.AudioDevice`. Default is "System default" |
-| Install method | Per-user install to `%LOCALAPPDATA%\Programs\<name>` with a Start menu shortcut and an uninstall script; no admin, no MSIX, no certificate | Easiest to undo. Release (`Shortwave`) and Nightly (`Shortwave Nightly`) install side by side |
+| Install method | Per-user install to `%LOCALAPPDATA%\Programs\<name>` with a Start menu shortcut and an uninstall script; no admin, no MSIX, no certificate | Easiest to undo. Release (`Driftwave`) and Nightly (`Driftwave Nightly`) install side by side |
 | Settings window | A Settings page in the main window's navigation (Windows convention) | |
 | Library.json fixture | Written by hand in the Mac's exact format | The repo had no captured Mac file then. Since round 1 of `docs/MAC-WINDOWS-SYNC.md`, the tests also read `fixtures/exchange/mac-export.json`, which the Mac app wrote (an exchange file is also a valid `library.json`) |
 
@@ -151,3 +151,20 @@ Josh asked for a customisable look and nine built-in themes. The format and the 
   decoded audio.
 - **Effects stop when nothing shows them:** while the window is hidden or minimised, while Windows'
   animation effects are off, or when the Effects switch is off. High Contrast always uses Default.
+
+## 8. Driftwave: the public name, and updates from GitHub
+
+Josh wanted Settings to check for new releases on GitHub and update with one click, with the releases public
+under a name other than Shortwave, crediting GNOME Shortwave as the inspiration and saying no code or assets came
+from it (true: the Mac app is a new SwiftUI app, and this is a port of that). He chose **Driftwave** and to rename
+the app too, not only the releases.
+
+| Decision | Choice | Why |
+|---|---|---|
+| Where releases live | A separate public repo, `Joshspeakman/driftwave` (README, site, notices, releases; no source) | This repo stays private. The updater can read public releases without a token |
+| What's renamed | Window and tray names, exe (`Driftwave.exe`, `DriftwaveCore.dll`), AUMIDs (`Joshspeakman.Driftwave[.Nightly]`), data folders, icon file names | One name everywhere a user sees it. Internal namespaces, the `ShortwaveTestRun` test folders and the file-format ids (`shortwave-stations`, `shortwave-theme`) stay, so files move between the Mac and Windows apps unchanged |
+| Old data | Copied to `%APPDATA%\Driftwave` on first launch; never moved or overwritten | Nothing is lost if anything goes wrong; the old folder is a backup |
+| Old install | `Install.ps1` removes the `Shortwave` install of the same flavor | One install per flavor on the PC |
+| Package | Zip plus `.sha256`; `Install.ps1` for a first install | No MSIX or certificate needed; easy to undo |
+| Applying an update | A PowerShell script: wait for the app to exit, back up, mirror, restore on failure, relaunch | A running exe can't replace itself. Mirroring means a future rewrite (Rust) can replace this build cleanly |
+| Trust | HTTPS downloads from the repo's release URLs only; SHA-256 against damage | No code signing yet; noted in the public README |
