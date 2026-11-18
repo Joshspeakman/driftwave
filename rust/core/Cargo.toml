@@ -1,0 +1,17 @@
+[package]
+name = "driftwave-core"
+description = "Driftwave's platform-independent logic: stations, library, exchange, ICY, playlists, recording, tag writers"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "driftwave_core"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+ureq.workspace = true
+base64.workspace = true
