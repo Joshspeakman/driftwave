@@ -36,6 +36,14 @@ final class AppModel {
     private(set) var library: [Station] = []
     var showPlayer = true
 
+    /// Result of an import or export, shown as an alert.
+    struct Notice: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+    var notice: Notice?
+
     // Sheets
     var detailStation: Station?
     var detailTrack: Track?
@@ -75,6 +83,25 @@ final class AppModel {
         Diagnostics.log("launch testRun=\(Diagnostics.isTestRun) muted=\(player.isMuted)")
         if let p = Diagnostics.startPage.flatMap(Page.init(rawValue:)) { page = p }
         if let q = Diagnostics.searchText { search.name = q; searchChanged() }
+        if let path = Diagnostics.importStations {
+            do {
+                let r = try importStations(from: URL(fileURLWithPath: path))
+                Diagnostics.log("imported added=\(r.added.count) present=\(r.alreadyPresent) unreadable=\(r.unreadable) covers=\(r.newCovers.count)")
+            } catch {
+                Diagnostics.log("import failed: \(error.localizedDescription)")
+            }
+        }
+        if let path = Diagnostics.exportStations {
+            do {
+                try exportStations(to: URL(fileURLWithPath: path))
+                Diagnostics.log("exported \(library.count) stations to \(path)")
+            } catch {
+                Diagnostics.log("export failed: \(error.localizedDescription)")
+            }
+        }
+        if let seconds = Diagnostics.quitAfter {
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { NSApp.terminate(nil) }
+        }
         if let url = Diagnostics.playURL {
             player.select(Station.local(name: "Test Stream", streamURL: url))
         }
@@ -123,6 +150,84 @@ final class AppModel {
             if (try? png.write(to: paths.covers.appendingPathComponent(name))) != nil { station.customCover = name }
         }
         update(station)
+    }
+
+    // MARK: Import and export (docs/STATION-EXCHANGE.md)
+
+    static var appDescription: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "dev"
+        let branch = info["ShortwaveBranch"] as? String ?? ""
+        let commit = info["ShortwaveCommit"] as? String ?? ""
+        let build = [branch, commit].filter { !$0.isEmpty }.joined(separator: " ")
+        return "Shortwave for macOS \(version)" + (build.isEmpty ? "" : " (\(build))")
+    }
+
+    /// Writes the whole library, with custom covers, to an exchange file.
+    func exportStations(to url: URL) throws {
+        let data = try StationExchange.encode(sortedLibrary, app: Self.appDescription) { [paths] name in
+            try? Data(contentsOf: paths.covers.appendingPathComponent(name))
+        }
+        try data.write(to: url, options: .atomic)
+    }
+
+    /// Adds the stations from an exchange file (or a library.json) that the library doesn't have.
+    @discardableResult
+    func importStations(from url: URL) throws -> StationExchange.MergeResult {
+        let contents = try StationExchange.decode(try Data(contentsOf: url))
+        var result = StationExchange.merge(contents, into: library) { UUID().uuidString }
+        if !result.newCovers.isEmpty {
+            try? FileManager.default.createDirectory(at: paths.covers, withIntermediateDirectories: true)
+        }
+        for (name, data) in result.newCovers where (try? data.write(to: paths.covers.appendingPathComponent(name))) == nil {
+            // Couldn't store the cover: fall back to the station's favicon.
+            if let i = result.library.firstIndex(where: { $0.customCover == name }) { result.library[i].customCover = nil }
+        }
+        if !result.added.isEmpty {
+            library = result.library
+            saveLibrary()
+            Task { await refreshLibrary() }
+        }
+        return result
+    }
+
+    func chooseExportFile() {
+        guard !library.isEmpty else {
+            notice = Notice(title: "Nothing to Export", message: "Your library is empty.")
+            return
+        }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = StationExchange.defaultFileName
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+        panel.message = "Export your saved stations to open them in Shortwave on another Mac or on Windows."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try exportStations(to: url)
+            notice = Notice(title: "Stations Exported",
+                            message: "\(library.count) \(library.count == 1 ? "station was" : "stations were") saved to “\(url.lastPathComponent)”. Open it with Import Stations… in Shortwave on another computer.")
+        } catch {
+            notice = Notice(title: "Couldn’t Export Stations", message: error.localizedDescription)
+        }
+    }
+
+    func chooseImportFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.canChooseDirectories = false
+        panel.message = "Choose a station file exported from Shortwave on a Mac or on Windows."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let r = try importStations(from: url)
+            var parts: [String] = []
+            parts.append(r.added.isEmpty ? "No new stations." : "\(r.added.count) \(r.added.count == 1 ? "station was" : "stations were") added to your library.")
+            if r.alreadyPresent > 0 { parts.append("\(r.alreadyPresent) \(r.alreadyPresent == 1 ? "was" : "were") already there.") }
+            if r.unreadable > 0 { parts.append("\(r.unreadable) couldn’t be read.") }
+            notice = Notice(title: r.added.isEmpty ? "Nothing Imported" : "Stations Imported", message: parts.joined(separator: " "))
+            if !r.added.isEmpty { page = .library }
+        } catch {
+            notice = Notice(title: "Couldn’t Import Stations", message: error.localizedDescription)
+        }
     }
 
     private func saveLibrary() {

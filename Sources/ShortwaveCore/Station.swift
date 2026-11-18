@@ -65,6 +65,44 @@ public struct Station: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
+extension Station {
+    enum CodingKeys: String, CodingKey {
+        case id, name, streamURL, homepage, faviconURL, tags, country, countryCode, state, language, codec
+        case bitrate, votes, isHLS, latitude, longitude, isLocal, isOrphaned, customCover
+    }
+
+    /// Lenient, like the Windows reader: only `id`, `name` and `streamURL` are required; anything
+    /// missing or of the wrong type takes its default. Library files and exchange files both use it.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func str(_ k: CodingKeys) -> String? { try? c.decodeIfPresent(String.self, forKey: k) }
+        func num(_ k: CodingKeys) -> Double? {
+            if let d = try? c.decodeIfPresent(Double.self, forKey: k) { return d }
+            if let s = str(k) { return Double(s) }
+            return nil
+        }
+        func bool(_ k: CodingKeys) -> Bool {
+            if let b = try? c.decodeIfPresent(Bool.self, forKey: k) { return b }
+            return (num(k) ?? 0) != 0
+        }
+        func int(_ k: CodingKeys) -> Int {
+            guard let d = num(k), d.isFinite, abs(d) < Double(Int32.max) else { return 0 }
+            return Int(d)
+        }
+        guard let id = str(.id), let name = str(.name), let url = str(.streamURL) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "A station needs id, name and streamURL."))
+        }
+        self.init(
+            id: id, name: name, streamURL: url, homepage: str(.homepage), faviconURL: str(.faviconURL),
+            tags: ((try? c.decodeIfPresent([String?].self, forKey: .tags)) ?? nil)?.compactMap { $0 } ?? [],
+            country: str(.country) ?? "", countryCode: str(.countryCode) ?? "", state: str(.state) ?? "",
+            language: str(.language) ?? "", codec: str(.codec) ?? "", bitrate: int(.bitrate), votes: int(.votes),
+            isHLS: bool(.isHLS), latitude: num(.latitude), longitude: num(.longitude),
+            isLocal: bool(.isLocal), isOrphaned: bool(.isOrphaned), customCover: str(.customCover)
+        )
+    }
+}
+
 /// Raw station JSON as returned by radio-browser.info.
 struct APIStation: Decodable {
     var stationuuid: String

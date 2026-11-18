@@ -22,6 +22,10 @@ which lists over 50,000 stations.
 | MPRIS media controls | macOS Now Playing and media keys. Next/previous keys step through the library |
 | Google Cast | AirPlay picker in the player sidebar |
 
+### Moving stations between computers
+
+File > Export Stations… (⇧⌘E) saves your library, with custom covers, to `Shortwave Stations.json`. File > Import Stations… (⇧⌘I) adds the stations from such a file, from the Windows app or another Mac, without changing the ones you have. The format is in [`docs/STATION-EXCHANGE.md`](docs/STATION-EXCHANGE.md).
+
 ### Mac-specific features
 
 - A menu bar extra to play/stop and switch stations
@@ -56,6 +60,7 @@ You only need the Xcode Command Line Tools (Swift 6), not Xcode.
 | `scripts/build-app.sh --nightly` | Builds `~/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app` |
 | `scripts/install.sh --nightly` | Builds the app and installs it to `/Applications` |
 | `scripts/smoke-test.sh` | Plays real MP3, AAC, HLS, Ogg and `.pls` streams muted and checks that playback and titles work |
+| `scripts/exchange-test.sh` | Imports `fixtures/exchange/seed.json` into an empty test-run library, exports it, checks a re-import adds nothing, and imports the Windows app's export |
 | `scripts/recording-test.sh` | Runs a local Icecast-style server (`scripts/icy-test-server.py`, needs ffmpeg) and checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable |
 
 Build output goes to `~/ProjectBuilds/shortwave-macos`, and `.build` is a symlink to it.
