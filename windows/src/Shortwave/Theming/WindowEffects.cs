@@ -50,7 +50,6 @@ public sealed class WindowEffects
                 "concrete" => new Concrete(o, theme),
                 "grain" => new Grain(o),
                 "vignette" => new Vignette(o),
-                "flicker" => new Flicker(o, theme),
                 "scanlines" => new Scanlines(o),
                 "spotlight" => new Spotlight(o, pointerSource),
                 _ => null,
@@ -434,24 +433,15 @@ public sealed class WindowEffects
         }
     }
 
-    /// <summary>Film grain over everything, re-rolled a dozen times a second.</summary>
+    /// <summary>
+    /// Film grain over everything: a still texture. Never animated: swapping noise frames read as flicker, and
+    /// nothing in a theme may flash or strobe (docs/THEMES.md).
+    /// </summary>
     sealed class Grain(JsonObject o) : Effect
     {
-        readonly Image image = new() { Stretch = Stretch.UniformToFill };
-        readonly WriteableBitmap[] frames = [Noise(640, 400, 11, 255, dark: false), Noise(640, 400, 23, 255, dark: true), Noise(640, 400, 37, 255, dark: false)];
-        double next;
-        int index;
-        public override bool Animated => true;
+        readonly Image image = new() { Stretch = Stretch.UniformToFill, Source = Noise(640, 400, 11, 255, dark: false) };
         public override IEnumerable<(UIElement, bool)> Elements() { yield return (image, true); }
         public override void Resize(double w, double h) => image.Opacity = Opt(o, "opacity", 0.06) * Intensity;
-
-        public override void Tick(double t, double dt)
-        {
-            if (image.Source != null && t < next) return;
-            next = t + 0.08;
-            index = (index + 1) % frames.Length;
-            image.Source = frames[index];
-        }
     }
 
     sealed class Vignette(JsonObject o) : Effect
@@ -473,35 +463,6 @@ public sealed class WindowEffects
                     new GradientStop { Color = A(c, Opt(o, "opacity", 0.4) * Intensity), Offset = 1 },
                 },
             };
-        }
-    }
-
-    /// <summary>Liminal Space: a faint fluorescent hum, and now and then the tubes stutter.</summary>
-    sealed class Flicker(JsonObject o, Theme theme) : Effect
-    {
-        readonly Rectangle rect = new();
-        double nextEvent = 9, eventEnd;
-        public override bool Animated => true;
-        public override IEnumerable<(UIElement, bool)> Elements() { yield return (rect, true); }
-
-        public override void Resize(double w, double h)
-        {
-            rect.Width = w; rect.Height = h;
-            rect.Fill = Brush(theme.IsDark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black);
-        }
-
-        public override void Tick(double t, double dt)
-        {
-            double max = Opt(o, "opacity", 0.05) * Intensity;
-            double hum = max * 0.12 * (0.5 + 0.5 * Math.Sin(t * 2 * Math.PI * 7.3));
-            if (dt == 0) { rect.Opacity = 0; return; }
-            if (t > nextEvent)
-            {
-                eventEnd = t + 0.35 + Random.Shared.NextDouble() * 0.5;
-                nextEvent = t + 8 + Random.Shared.NextDouble() * 14;
-            }
-            double flick = t < eventEnd && Random.Shared.NextDouble() < 0.5 ? max * (1 + Random.Shared.NextDouble() * 2) : 0;
-            rect.Opacity = hum + flick;
         }
     }
 

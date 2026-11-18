@@ -3,7 +3,7 @@
   "version": 1,
   "id": "retro-64",
   "name": "Retro 64",
-  "description": "Light blue border, deep blue screen and a blinking cursor. After the Commodore 64.",
+  "description": "Light blue border, deep blue screen and a block cursor. After the Commodore 64.",
   "base": "dark",
   "backdrop": "none",
   "colors": {

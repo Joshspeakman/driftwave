@@ -37,9 +37,6 @@
     "vignette": {
       "opacity": 0.35,
       "color": "#3A3018"
-    },
-    "flicker": {
-      "opacity": 0.05
     }
   }
 }

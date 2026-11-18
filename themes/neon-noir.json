@@ -44,8 +44,7 @@
     },
     "titleShadow": {
       "color": "#00E5FF",
-      "blur": 14,
-      "flicker": true
+      "blur": 14
     },
     "grain": {
       "opacity": 0.05
