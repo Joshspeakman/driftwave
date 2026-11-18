@@ -160,5 +160,14 @@ Josh said "go ahead and rebuild it in rust" and chose:
    exe name, zip and tags, `uninstall.ps1` marker, AUMIDs, data folders and file formats. The last C#
    release stays on GitHub as a fallback; the C# and Swift code is frozen.
 
+**Progress:**
+- **Phase 1 done (2026-11-18).** `driftwave-core` has 13 modules: station, storage, migration, exchange, icy,
+  playlist, radio_browser, id3, audio_frames, m4a, ogg, recording and theme. 62 tests pass, plus one live
+  radio-browser test (`--ignored`), which also passes. They cover:
+  - every C# core test;
+  - both shared exchange fixtures and the Mac `library.json` fixture;
+  - the ffmpeg round trip of real AAC through the M4A muxer;
+  - all nine built-in themes, including a check that none of them flashes.
+
 **Where the code lives:** branch `rust`, folder `rust/` (a Cargo workspace; `rust/core` is
 `driftwave-core`). Run cargo through `rust\cargo.ps1`, which sets the toolchain for that process only.
