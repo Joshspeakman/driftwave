@@ -101,7 +101,8 @@ public sealed class Updater : Observable
             else
             {
                 State = UpdateState.Available;
-                Message = $"{Diagnostics.AppName} {best.Version} is available (you have {CurrentVersion}).";
+                string name = best.Title.StartsWith("Driftwave", StringComparison.Ordinal) ? best.Title : $"{Diagnostics.AppName} {best.Version}";
+                Message = $"{name} is available (you have {CurrentVersion}).";
             }
             Diagnostics.Log($"update check: current {CurrentVersion}, latest {(best?.Version.ToString() ?? "none newer")}");
         }
@@ -127,7 +128,11 @@ public sealed class Updater : Observable
             if (r.TryGetProperty("draft", out var d) && d.GetBoolean()) continue;
             string tag = r.GetProperty("tag_name").GetString() ?? "";
             if (!tag.StartsWith(TagPrefix, StringComparison.Ordinal)) continue;
-            if (!Version.TryParse(tag[TagPrefix.Length..], out var version)) continue;
+            // v1.0.41 or v1.0.41-beta.1: the number decides what's newer; the label is only shown.
+            string versionText = tag[TagPrefix.Length..];
+            int dash = versionText.IndexOf('-');
+            if (dash >= 0) versionText = versionText[..dash];
+            if (!Version.TryParse(versionText, out var version)) continue;
             string? zip = null, sha = null;
             long size = 0;
             foreach (var a in r.GetProperty("assets").EnumerateArray())

@@ -4,6 +4,8 @@
 # The package is scanned for personal paths first and the script stops if it finds any.
 # Usage: windows\scripts\publish-release.ps1 [-Flavor Nightly|Release] [-DryRun] [-NoBuild] [-OutDir <folder>] [-NotesFile <md>]
 #   -NotesFile: the "What's new" part of the notes (default: the Windows commits since the last release).
+#   -Label 'Beta 1': a Release-channel pre-release: tag v<version>-beta.1, title "Driftwave 1.0 Beta 1".
+#     The app compares the version number only, so later betas and the final release still count as newer.
 #   -DryRun builds and packages into a scratch folder without publishing.
 param(
     [ValidateSet('Nightly', 'Release')][string]$Flavor = 'Nightly',
@@ -11,7 +13,8 @@ param(
     [switch]$NoBuild,
     [string]$Repo = 'Joshspeakman/driftwave',
     [string]$OutDir = '',
-    [string]$NotesFile = ''
+    [string]$NotesFile = '',
+    [string]$Label = ''
 )
 . "$PSScriptRoot\common.ps1"
 if (-not $NoBuild) { & "$PSScriptRoot\build.ps1" -Flavor $Flavor -NoSymbols | Out-Host }
@@ -22,8 +25,10 @@ $product = (Get-Item $exe).VersionInfo.ProductVersion
 $version = $product.Split('+')[0]
 $commit = if ($product.Contains('+')) { $product.Split('+')[1] } else { (git -C $RepoRoot rev-parse --short HEAD) }
 $nightly = $Flavor -eq 'Nightly'
-$tag = if ($nightly) { "nightly-$version" } else { "v$version" }
-$title = if ($nightly) { "Driftwave Nightly $version" } else { "Driftwave $version" }
+if ($Label -and $nightly) { throw '-Label is for the Release channel (-Flavor Release).' }
+$labelTag = if ($Label) { '-' + (($Label.ToLowerInvariant() -replace '[^a-z0-9]+', '.').Trim('.')) } else { '' }
+$tag = if ($nightly) { "nightly-$version" } else { "v$version$labelTag" }
+$title = if ($nightly) { "Driftwave Nightly $version" } elseif ($Label) { "Driftwave $($version.Split('.')[0..1] -join '.') $Label" } else { "Driftwave $version" }
 $zipName = if ($nightly) { "Driftwave-Nightly-$version-win-x64.zip" } else { "Driftwave-$version-win-x64.zip" }
 
 $stage = if ($OutDir) { New-Item -ItemType Directory -Force $OutDir | Select-Object -ExpandProperty FullName } else { New-ScratchDir 'driftwave-release' }
@@ -98,7 +103,7 @@ Write-Output "Tag: $tag"
 if ($DryRun) { Write-Output "Dry run: not published. Notes: $notesOut"; return }
 
 $flags = @('--repo', $Repo, '--title', $title, '--notes-file', $notesOut)
-if ($nightly) { $flags += '--prerelease' } else { $flags += '--latest' }
+if ($nightly -or $Label) { $flags += '--prerelease' } else { $flags += '--latest' }
 gh release create $tag $zip "$zip.sha256" @flags
 if ($LASTEXITCODE -ne 0) { throw "gh release create failed ($LASTEXITCODE)" }
 Write-Output "Published ${title}: https://github.com/$Repo/releases/tag/$tag"

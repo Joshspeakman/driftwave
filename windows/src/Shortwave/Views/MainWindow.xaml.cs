@@ -87,7 +87,7 @@ public sealed partial class MainWindow : Window
             {
                 if (app.Updates.State == UpdateState.Available && app.Updates.Latest is { } r && Updater.CanInstall)
                 {
-                    UpdateBar.Message = $"{Diagnostics.AppName} {r.Version} is ready to install. Your station carries on after the restart.";
+                    UpdateBar.Message = $"{(r.Title.StartsWith("Driftwave", StringComparison.Ordinal) ? r.Title : $"{Diagnostics.AppName} {r.Version}")} is ready to install. Your station carries on after the restart.";
                     UpdateBar.IsOpen = true;
                 }
                 else if (app.Updates.State is UpdateState.Failed && UpdateBar.IsOpen) UpdateBar.Message = app.Updates.Message;
