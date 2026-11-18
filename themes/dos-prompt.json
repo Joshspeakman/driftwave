@@ -1,0 +1,161 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "dos-prompt",
+  "name": "C:\\ Prompt",
+  "description": "A homage to DOS: grey text on black, box-drawn frames, a blue setup screen and a prompt that answers back.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#000000",
+    "surface": "#000000",
+    "card": "#0000AA",
+    "cardStroke": "#AAAAAA",
+    "control": "#0000AA",
+    "controlStroke": "#AAAAAA",
+    "subtle": "#335555FF",
+    "divider": "#555555",
+    "text": "#AAAAAA",
+    "textSecondary": "#AAAAAA",
+    "textTertiary": "#555555",
+    "accent": "#55FFFF",
+    "accentText": "#55FFFF",
+    "onAccent": "#000000",
+    "dialog": "#0000AA",
+    "pane": "#000000"
+  },
+  "fonts": {
+    "body": "Consolas",
+    "title": "VT323",
+    "titleSize": 34,
+    "titleUppercase": true
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 0,
+    "card": 0,
+    "cover": 0
+  },
+  "effects": {
+    "cursor": {
+      "color": "#AAAAAA"
+    },
+    "scanlines": {
+      "opacity": 0.08
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "text",
+          "text": "C:\\DRIFTWAVE>",
+          "x": 130,
+          "y": 12,
+          "size": 22,
+          "color": "#AAAAAA",
+          "font": "VT323",
+          "in": "titlebar"
+        },
+        {
+          "type": "text",
+          "text": "╔══════════════════════════════════════════════════════════╗",
+          "x": 8,
+          "y": -118,
+          "size": 16,
+          "color": "#55FFFF",
+          "font": "Consolas",
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "║  DRIFTWAVE.EXE    640K should be enough for anybody's  ║",
+          "x": 8,
+          "y": -100,
+          "size": 16,
+          "color": "#55FFFF",
+          "font": "Consolas",
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "║  radio. Type DIR, VER or HELP anywhere outside a box.  ║",
+          "x": 8,
+          "y": -82,
+          "size": 16,
+          "color": "#55FFFF",
+          "font": "Consolas",
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "╚══════════════════════════════════════════════════════════╝",
+          "x": 8,
+          "y": -64,
+          "size": 16,
+          "color": "#55FFFF",
+          "font": "Consolas",
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "C:\\>_",
+          "x": 8,
+          "y": -36,
+          "size": 18,
+          "color": "#AAAAAA",
+          "font": "VT323",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKK",
+            ".KWWWWWK.",
+            "..KYYYK..",
+            "...KYK...",
+            "....K....",
+            "...KWK...",
+            "..KWYWK..",
+            ".KYYYYYK.",
+            "KKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#AAAAAA",
+            "Y": "#55FFFF"
+          },
+          "x": -40,
+          "y": -48,
+          "scale": 3,
+          "in": "content"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "type:dir",
+          "say": " Volume in drive C is DRIFTWAVE\n LIBRARY  <DIR>\n COVERS   <DIR>\n SONGS    <DIR>\n        3 dir(s)  plenty free",
+          "seconds": 7
+        },
+        {
+          "trigger": "type:ver",
+          "say": "Driftwave Version 1.0 Beta 1",
+          "seconds": 4
+        },
+        {
+          "trigger": "type:help",
+          "say": "DIR  VER  HELP  CLS  and one secret involving arrows.",
+          "seconds": 5
+        },
+        {
+          "trigger": "type:format",
+          "say": "Nice try.",
+          "seconds": 3
+        },
+        {
+          "trigger": "konami",
+          "run": "pong",
+          "seconds": 12
+        }
+      ]
+    }
+  }
+}

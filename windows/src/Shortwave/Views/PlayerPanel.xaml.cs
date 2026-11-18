@@ -36,23 +36,25 @@ public sealed partial class PlayerPanel : UserControl
     public PlayerPanel()
     {
         InitializeComponent();
+        PastList.ElementPrepared += (_, e) =>
+        {
+            if (player != null && enteringTrack != null && e.Index >= 0 && e.Index < player.PastTracks.Count && ReferenceEquals(player.PastTracks[e.Index], enteringTrack))
+            {
+                enteringTrack = null;
+                Motion.Entrance(e.Element, rise: -10);
+            }
+            else Motion.Reset(e.Element);
+        };
+        PastList.ElementClearing += (_, e) => Motion.Glide(e.Element, false);
         Loaded += (_, _) =>
         {
             player = App.Current?.Model.Player;
             if (player is null) return;
+            player.PropertyChanged -= OnChanged;
             player.PropertyChanged += OnChanged;
+            player.PastTracks.CollectionChanged -= OnPastChanged;
             player.PastTracks.CollectionChanged += OnPastChanged;
             PastList.ItemsSource = player.PastTracks;
-            PastList.ElementPrepared += (_, e) =>
-            {
-                if (enteringTrack != null && e.Index >= 0 && e.Index < player.PastTracks.Count && ReferenceEquals(player.PastTracks[e.Index], enteringTrack))
-                {
-                    enteringTrack = null;
-                    Motion.Entrance(e.Element, rise: -10);
-                }
-                else Motion.Reset(e.Element);
-            };
-            PastList.ElementClearing += (_, e) => Motion.Glide(e.Element, false);
             Refresh();
         };
         Unloaded += (_, _) =>

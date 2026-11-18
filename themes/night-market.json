@@ -1,0 +1,555 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "night-market",
+  "name": "Night Market",
+  "description": "Rain over a neon-soaked Japanese street at night: noodle-bar lanterns, vertical signs, steam and wet reflections.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#05070C",
+    "surface": "#8C0A0E16",
+    "card": "#AA101826",
+    "cardStroke": "#3337E0FF",
+    "control": "#CC111A28",
+    "controlStroke": "#4437E0FF",
+    "subtle": "#2237E0FF",
+    "divider": "#2237E0FF",
+    "text": "#E8F0FF",
+    "textSecondary": "#A8B8D0",
+    "textTertiary": "#6A7A92",
+    "accent": "#FF4F8B",
+    "accentText": "#37E0FF",
+    "onAccent": "#05070C",
+    "dialog": "#0B111C",
+    "pane": "#070A12"
+  },
+  "fonts": {
+    "body": "Yu Gothic UI",
+    "title": "Yu Gothic UI",
+    "titleSize": 30,
+    "titleWeight": "Bold",
+    "titleSpacing": 60
+  },
+  "corners": {
+    "control": 2,
+    "overlay": 4,
+    "card": 4,
+    "cover": 0.06
+  },
+  "effects": {
+    "rain": {},
+    "grain": {
+      "opacity": 0.03
+    },
+    "vignette": {
+      "opacity": 0.45
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "text",
+          "text": "夜市  NIGHT MARKET",
+          "x": 132,
+          "y": 12,
+          "size": 16,
+          "color": "#FF4F8B",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "glow": "#FF4F8B",
+          "in": "titlebar"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 0,
+          "y": "80%",
+          "anchor": "bottom",
+          "w": 60,
+          "h": "62%",
+          "fill": "#0A0F1A",
+          "repeat": {
+            "n": 16,
+            "dx": 62
+          },
+          "jitter": {
+            "h": 0.7,
+            "w": 0.3
+          }
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 30,
+          "y": "80%",
+          "anchor": "bottom",
+          "w": 44,
+          "h": "40%",
+          "fill": "#111A2A",
+          "repeat": {
+            "n": 16,
+            "dx": 62
+          },
+          "jitter": {
+            "h": 0.8
+          }
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 6,
+          "y": "12%",
+          "w": 3,
+          "h": 4,
+          "scatter": {
+            "n": 260,
+            "seed": 11,
+            "w": "100%",
+            "h": "60%",
+            "colors": [
+              "#FFD27A",
+              "#7AE3FF",
+              "#FF8FB0",
+              "#FFF2C2"
+            ],
+            "fade": true
+          },
+          "skip": 0.35
+        },
+        {
+          "type": "text",
+          "text": "ラーメン",
+          "x": "6%",
+          "y": "14%",
+          "size": 28,
+          "color": "#FF4F8B",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "vertical": true,
+          "glow": "#FF4F8B",
+          "glowRadius": 3,
+          "motion": {
+            "kind": "breathe",
+            "min": 0.75,
+            "max": 1,
+            "seconds": 7
+          }
+        },
+        {
+          "type": "text",
+          "text": "居酒屋",
+          "x": "18%",
+          "y": "8%",
+          "size": 26,
+          "color": "#37E0FF",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "vertical": true,
+          "glow": "#37E0FF",
+          "glowRadius": 3,
+          "motion": {
+            "kind": "breathe",
+            "min": 0.8,
+            "max": 1,
+            "seconds": 9
+          }
+        },
+        {
+          "type": "text",
+          "text": "電脳",
+          "x": "58%",
+          "y": "10%",
+          "size": 30,
+          "color": "#FFD23F",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "vertical": true,
+          "glow": "#FFB000",
+          "glowRadius": 3
+        },
+        {
+          "type": "text",
+          "text": "ホテル",
+          "x": "72%",
+          "y": "16%",
+          "size": 22,
+          "color": "#B57BFF",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "vertical": true,
+          "glow": "#B57BFF",
+          "glowRadius": 2,
+          "motion": {
+            "kind": "breathe",
+            "min": 0.7,
+            "max": 1,
+            "seconds": 11
+          }
+        },
+        {
+          "type": "text",
+          "text": "薬",
+          "x": "84%",
+          "y": "26%",
+          "size": 34,
+          "color": "#5CFF9D",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "glow": "#5CFF9D",
+          "glowRadius": 3
+        },
+        {
+          "type": "text",
+          "text": "24時間",
+          "x": "40%",
+          "y": "20%",
+          "size": 18,
+          "color": "#37E0FF",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "glow": "#37E0FF"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "28%",
+          "y": "66%",
+          "w": "40%",
+          "h": 14,
+          "fill": [
+            [
+              "#7A1F2B",
+              0
+            ],
+            [
+              "#3A0D14",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "28%",
+          "y": "70%",
+          "w": "40%",
+          "h": 4,
+          "fill": "#FF4F8B",
+          "opacity": 0.5
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            ".KKKK.",
+            "KRRRRK",
+            "RRRRRR",
+            "RRWWRR",
+            "RRWWRR",
+            "RRRRRR",
+            "RRRRRR",
+            "KRRRRK",
+            ".KKKK.",
+            "..YY.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFB37A",
+            "Y": "#FFD27A",
+            "R": "#E8402E"
+          },
+          "x": "30%",
+          "y": "58%",
+          "scale": 3,
+          "in": "content",
+          "motion": {
+            "kind": "sway",
+            "angle": 4,
+            "seconds": 5,
+            "offset": 0
+          }
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            ".KKKK.",
+            "KRRRRK",
+            "RRRRRR",
+            "RRWWRR",
+            "RRWWRR",
+            "RRRRRR",
+            "RRRRRR",
+            "KRRRRK",
+            ".KKKK.",
+            "..YY.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFB37A",
+            "Y": "#FFD27A",
+            "R": "#E8402E"
+          },
+          "x": "39%",
+          "y": "58%",
+          "scale": 3,
+          "in": "content",
+          "motion": {
+            "kind": "sway",
+            "angle": 4,
+            "seconds": 6,
+            "offset": 1
+          }
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            ".KKKK.",
+            "KRRRRK",
+            "RRRRRR",
+            "RRWWRR",
+            "RRWWRR",
+            "RRRRRR",
+            "RRRRRR",
+            "KRRRRK",
+            ".KKKK.",
+            "..YY.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFB37A",
+            "Y": "#FFD27A",
+            "R": "#E8402E"
+          },
+          "x": "48%",
+          "y": "58%",
+          "scale": 3,
+          "in": "content",
+          "motion": {
+            "kind": "sway",
+            "angle": 4,
+            "seconds": 7,
+            "offset": 2
+          }
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            ".KKKK.",
+            "KRRRRK",
+            "RRRRRR",
+            "RRWWRR",
+            "RRWWRR",
+            "RRRRRR",
+            "RRRRRR",
+            "KRRRRK",
+            ".KKKK.",
+            "..YY.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFB37A",
+            "Y": "#FFD27A",
+            "R": "#E8402E"
+          },
+          "x": "57%",
+          "y": "58%",
+          "scale": 3,
+          "in": "content",
+          "motion": {
+            "kind": "sway",
+            "angle": 4,
+            "seconds": 8,
+            "offset": 3
+          }
+        },
+        {
+          "type": "text",
+          "text": "らーめん",
+          "x": "40%",
+          "y": "62%",
+          "size": 18,
+          "color": "#FFE3B0",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "glow": "#FF7A3A"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "28%",
+          "y": "72%",
+          "w": "40%",
+          "h": 34,
+          "fill": "#140A0E"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "....S..S..S...",
+            "...S..S..S....",
+            "....S..S..S...",
+            "..............",
+            "RRRRRRRRRRRRRR",
+            "RWYYWYYWYYWYYR",
+            ".RWWWWWWWWWWR.",
+            "..RRRRRRRRRR..",
+            "....RRRRRR...."
+          ],
+          "palette": {
+            "W": "#F2E6C8",
+            "Y": "#E8B24A",
+            "R": "#B23A2E",
+            "S": "#E8E8E8"
+          },
+          "x": "38%",
+          "y": "73%",
+          "scale": 3,
+          "in": "content",
+          "id": "bowl",
+          "clickable": true
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": "40%",
+          "y": "64%",
+          "w": 30,
+          "h": 30,
+          "fill": "#33FFFFFF",
+          "repeat": {
+            "n": 4,
+            "dx": 18
+          },
+          "motion": {
+            "kind": "drift",
+            "y": -60,
+            "x": 8,
+            "seconds": 6,
+            "offset": 1.5
+          }
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 0,
+          "y": "80%",
+          "w": "100%",
+          "h": "20%",
+          "fill": [
+            [
+              "#0B1424",
+              0
+            ],
+            [
+              "#05070C",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "6%",
+          "y": "82%",
+          "w": 20,
+          "h": 60,
+          "fill": [
+            [
+              "#88FF4F8B",
+              0
+            ],
+            [
+              "#00FF4F8B",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "18%",
+          "y": "82%",
+          "w": 18,
+          "h": 70,
+          "fill": [
+            [
+              "#7737E0FF",
+              0
+            ],
+            [
+              "#0037E0FF",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "58%",
+          "y": "82%",
+          "w": 22,
+          "h": 56,
+          "fill": [
+            [
+              "#77FFD23F",
+              0
+            ],
+            [
+              "#00FFD23F",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "72%",
+          "y": "82%",
+          "w": 16,
+          "h": 64,
+          "fill": [
+            [
+              "#77B57BFF",
+              0
+            ],
+            [
+              "#00B57BFF",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "二つで十分ですよ！",
+          "x": "36%",
+          "y": "50%",
+          "size": 22,
+          "color": "#FFFFFF",
+          "font": "Yu Gothic UI",
+          "weight": "bold",
+          "glow": "#FF4F8B",
+          "id": "two",
+          "hidden": true,
+          "in": "content"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "click:bowl",
+          "show": "two",
+          "say": "Four bowls? Two is enough.",
+          "seconds": 6
+        },
+        {
+          "trigger": "type:noodles",
+          "show": "two",
+          "seconds": 6
+        },
+        {
+          "trigger": "idle:120",
+          "say": "The rain never stops here. Neither does the radio.",
+          "seconds": 6
+        }
+      ]
+    }
+  }
+}

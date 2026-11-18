@@ -29,6 +29,9 @@ public sealed class TitleDecor
         /// <summary>A hard shadow (blur 0): an offset copy of the title, drawn with plain XAML.</summary>
         public TextBlock? Copy;
         public double Ox, Oy;
+        /// <summary>Handlers on the title, removed in Clear: the title outlives its decoration (pages are cached).</summary>
+        public SizeChangedEventHandler? Sized;
+        public RoutedEventHandler? Loaded;
         public double BaseOpacity = 1;
         /// <summary>Nothing here animates: no flicker and no blinking (no theme may flash or strobe).</summary>
         public bool Animated => false;
@@ -60,6 +63,8 @@ public sealed class TitleDecor
         foreach (var a in attached)
         {
             EffectsClock.Remove(a);
+            if (a.Sized != null) a.Title.SizeChanged -= a.Sized;
+            if (a.Loaded != null) a.Title.Loaded -= a.Loaded;
             (a.Host.Parent as Panel)?.Children.Remove(a.Host);
         }
         attached.Clear();
@@ -156,9 +161,11 @@ public sealed class TitleDecor
             a.Cursor = new Rectangle { Fill = new SolidColorBrush(c) };
             host.Children.Add(a.Cursor);
         }
-        title.SizeChanged += (_, _) => Layout(a);
+        a.Sized = (_, _) => Layout(a);
+        a.Loaded = (_, _) => Layout(a);
+        title.SizeChanged += a.Sized;
         host.SizeChanged += (_, _) => Layout(a);   // the first measurement comes before the host is laid out
-        title.Loaded += (_, _) => Layout(a);
+        title.Loaded += a.Loaded;
         Layout(a);
         attached.Add(a);
         if (a.Animated) EffectsClock.Add(a); else a.Tick(EffectsClock.StillTime, 0);

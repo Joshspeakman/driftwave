@@ -1,0 +1,290 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "program-manager",
+  "name": "Program Manager",
+  "description": "A homage to Windows 3.1: a white workspace, navy title bars, chunky bevels and program groups waiting below.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#C0C0C0",
+    "surface": "#E6FFFFFF",
+    "card": "#FFFFFF",
+    "cardStroke": "#000000",
+    "control": "#C0C0C0",
+    "controlStroke": "#000000",
+    "subtle": "#330000A8",
+    "divider": "#808080",
+    "text": "#000000",
+    "textSecondary": "#202020",
+    "textTertiary": "#606060",
+    "accent": "#000080",
+    "accentText": "#000080",
+    "onAccent": "#FFFFFF",
+    "dialog": "#FFFFFF",
+    "pane": "#FFFFFF"
+  },
+  "fonts": {
+    "body": "Microsoft Sans Serif",
+    "title": "Microsoft Sans Serif",
+    "titleSize": 22,
+    "titleWeight": "Bold"
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 0,
+    "card": 0,
+    "cover": 0
+  },
+  "effects": {
+    "frame": {
+      "color": "#000080",
+      "thickness": 4
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": "#000080",
+          "in": "titlebar"
+        },
+        {
+          "type": "bevel",
+          "in": "titlebar",
+          "x": 130,
+          "y": 12,
+          "w": 24,
+          "h": 24,
+          "fill": "#C0C0C0",
+          "edge": 2
+        },
+        {
+          "type": "rect",
+          "x": 136,
+          "y": 22,
+          "w": 12,
+          "h": 3,
+          "fill": "#000000",
+          "in": "titlebar"
+        },
+        {
+          "type": "text",
+          "text": "Program Manager",
+          "x": "50%",
+          "y": 13,
+          "size": 15,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "weight": "bold",
+          "in": "titlebar"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKK.......",
+            ".KYYYYYK......",
+            "KKKKKKKKKKKKKK",
+            "KYYYYYYYYYYYYK",
+            "KYWWWWWWWWWWYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KDDDDDDDDDDDDK",
+            "KKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "Y": "#FFD34E",
+            "D": "#B08A2E"
+          },
+          "x": 30,
+          "y": -96,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "Main",
+          "x": 24,
+          "y": -62,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKK.......",
+            ".KYYYYYK......",
+            "KKKKKKKKKKKKKK",
+            "KYYYYYYYYYYYYK",
+            "KYWWWWWWWWWWYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KDDDDDDDDDDDDK",
+            "KKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "Y": "#FFD34E",
+            "D": "#B08A2E"
+          },
+          "x": 110,
+          "y": -96,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "Accessories",
+          "x": 104,
+          "y": -62,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKK.......",
+            ".KYYYYYK......",
+            "KKKKKKKKKKKKKK",
+            "KYYYYYYYYYYYYK",
+            "KYWWWWWWWWWWYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KDDDDDDDDDDDDK",
+            "KKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "Y": "#FFD34E",
+            "D": "#B08A2E"
+          },
+          "x": 210,
+          "y": -96,
+          "scale": 3,
+          "in": "content",
+          "id": "games",
+          "clickable": true
+        },
+        {
+          "type": "text",
+          "text": "Games",
+          "x": 204,
+          "y": -62,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKK.......",
+            ".KYYYYYK......",
+            "KKKKKKKKKKKKKK",
+            "KYYYYYYYYYYYYK",
+            "KYWWWWWWWWWWYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KDDDDDDDDDDDDK",
+            "KKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "Y": "#FFD34E",
+            "D": "#B08A2E"
+          },
+          "x": 290,
+          "y": -96,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "Startup",
+          "x": 284,
+          "y": -62,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKK",
+            ".KWWWWWK.",
+            "..KYYYK..",
+            "...KYK...",
+            "....K....",
+            "...KWK...",
+            "..KWYWK..",
+            ".KYYYYYK.",
+            "KKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "Y": "#FFD34E"
+          },
+          "x": -70,
+          "y": -96,
+          "scale": 4,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "Busy...",
+          "x": -76,
+          "y": -56,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "bevel",
+          "in": "content",
+          "x": 20,
+          "y": -30,
+          "w": "60%",
+          "h": 2,
+          "style": "sunken",
+          "fill": "#C0C0C0"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "type:solitaire",
+          "run": "cascade",
+          "seconds": 9
+        },
+        {
+          "trigger": "click:games",
+          "say": "Games group: Solitaire, Minesweeper... and one very patient radio.",
+          "seconds": 5
+        },
+        {
+          "trigger": "type:win",
+          "say": "C:\\> win  -- loading Driftwave for Workgroups...",
+          "seconds": 5
+        }
+      ]
+    }
+  }
+}

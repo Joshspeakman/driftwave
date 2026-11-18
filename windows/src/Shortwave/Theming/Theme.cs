@@ -58,6 +58,7 @@ public sealed class Theme
         ("accentText", "Accent text and links"),
         ("onAccent", "Text on accent"),
         ("dialog", "Dialogs and menus"),
+        ("pane", "Navigation pane"),
     ];
 
     /// <summary>The decorative effects, with the label the editor shows.</summary>
@@ -79,6 +80,7 @@ public sealed class Theme
         ("analyzer", "Spectrum bars (decorative)"),
         ("dial", "Tuning dial"),
         ("vu", "VU meter (decorative)"),
+        ("scene", "Theme scene and easter eggs"),
     ];
 
     public Color? Get(string token) => Colors.TryGetValue(token, out var c) ? c : null;

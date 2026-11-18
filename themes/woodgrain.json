@@ -1,0 +1,191 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "woodgrain",
+  "name": "Woodgrain",
+  "description": "A homage to the woodgrain consoles of 1977: walnut veneer, ribbed black plastic, chunky pixels and a joystick.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#1A120B",
+    "surface": "#E01C1410",
+    "card": "#EE141010",
+    "cardStroke": "#55E07A1F",
+    "control": "#E0201812",
+    "controlStroke": "#66E07A1F",
+    "subtle": "#33E07A1F",
+    "divider": "#44E07A1F",
+    "text": "#F4E6CF",
+    "textSecondary": "#D4B48C",
+    "textTertiary": "#9C7E5C",
+    "accent": "#E07A1F",
+    "accentText": "#F2A65A",
+    "onAccent": "#1A120B",
+    "dialog": "#20160E",
+    "pane": "#100B07"
+  },
+  "fonts": {
+    "body": "Segoe UI",
+    "title": "Press Start 2P",
+    "titleSize": 20,
+    "titleUppercase": true
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 2,
+    "card": 0,
+    "cover": 0
+  },
+  "effects": {
+    "wood": {},
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "in": "titlebar",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": "#0E0E0E"
+        },
+        {
+          "type": "line",
+          "in": "titlebar",
+          "x": 0,
+          "y": 4,
+          "x2": "100%",
+          "y2": 0,
+          "stroke": "#262626",
+          "repeat": {
+            "n": 10,
+            "dy": 4
+          }
+        },
+        {
+          "type": "rect",
+          "x": -260,
+          "y": 0,
+          "w": 12,
+          "h": 48,
+          "fill": "#D8342C",
+          "in": "titlebar"
+        },
+        {
+          "type": "rect",
+          "x": -242,
+          "y": 0,
+          "w": 12,
+          "h": 48,
+          "fill": "#E8782A",
+          "in": "titlebar"
+        },
+        {
+          "type": "rect",
+          "x": -224,
+          "y": 0,
+          "w": 12,
+          "h": 48,
+          "fill": "#F2C230",
+          "in": "titlebar"
+        },
+        {
+          "type": "rect",
+          "x": -206,
+          "y": 0,
+          "w": 12,
+          "h": 48,
+          "fill": "#4A9A3A",
+          "in": "titlebar"
+        },
+        {
+          "type": "text",
+          "text": "DRIFTWAVE",
+          "x": 132,
+          "y": 16,
+          "size": 12,
+          "color": "#F2A65A",
+          "font": "Press Start 2P",
+          "in": "titlebar"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            ".....RR.....",
+            "....RRRR....",
+            "....RRRR....",
+            ".....KK.....",
+            ".....KK.....",
+            ".....KK.....",
+            "KKKKKKKKKKKK",
+            "KWWWWWWWWWRK",
+            "KWWWWWWWWWWK",
+            "KKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "R": "#D8342C"
+          },
+          "x": -80,
+          "y": -80,
+          "scale": 4,
+          "in": "content",
+          "id": "stick",
+          "clickable": true
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKKKKKKKKK",
+            "KWWWWWWWWWWWWWWK",
+            "KWRRRRRRRRRRRRWK",
+            "KWWWWWWWWWWWWWWK",
+            "KWWKKKWWWWKKKWWK",
+            "KWKWWWKWWKWWWKWK",
+            "KWWKKKWWWWKKKWWK",
+            "KWWWWWWWWWWWWWWK",
+            "KWWWKKKKKKKKWWWK",
+            "KKKKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "R": "#E07A1F"
+          },
+          "x": -170,
+          "y": -64,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "GAME 1\n1 PLAYER",
+          "x": 16,
+          "y": -60,
+          "size": 10,
+          "color": "#F2A65A",
+          "font": "Press Start 2P",
+          "in": "content"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "click:stick",
+          "run": "pong",
+          "seconds": 12
+        },
+        {
+          "trigger": "konami",
+          "run": "pong",
+          "seconds": 12
+        },
+        {
+          "trigger": "type:adventure",
+          "say": "You found the secret room. The radio is in here.",
+          "seconds": 5
+        }
+      ]
+    }
+  }
+}

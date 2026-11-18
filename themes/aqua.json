@@ -1,0 +1,347 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "aqua",
+  "name": "Aqua",
+  "description": "A homage to Mac OS X: lickable gel buttons, pinstripes, brushed edges and water-blue everything.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#E8EBEF",
+    "surface": "#E6F5F7FA",
+    "card": "#FFFFFF",
+    "cardStroke": "#9FB3CC",
+    "control": "#F3F6FA",
+    "controlStroke": "#8EA4C0",
+    "subtle": "#33479BE8",
+    "divider": "#C5CED9",
+    "text": "#111111",
+    "textSecondary": "#3A3F47",
+    "textTertiary": "#7A818B",
+    "accent": "#1F7CE8",
+    "accentText": "#1366CC",
+    "onAccent": "#FFFFFF",
+    "dialog": "#F4F6F9",
+    "pane": "#DFE5EC"
+  },
+  "fonts": {
+    "body": "Lucida Sans Unicode",
+    "title": "Lucida Sans Unicode",
+    "titleSize": 24,
+    "titleWeight": "Bold"
+  },
+  "corners": {
+    "control": 10,
+    "overlay": 8,
+    "card": 10,
+    "cover": 0.18
+  },
+  "effects": {
+    "scene": {
+      "layers": [
+        {
+          "type": "line",
+          "in": "content",
+          "x": 0,
+          "y": 0,
+          "x2": "100%",
+          "y2": 0,
+          "stroke": "#14000000",
+          "strokeWidth": 1,
+          "repeat": {
+            "n": 260,
+            "dy": 4
+          }
+        },
+        {
+          "type": "rect",
+          "in": "titlebar",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": [
+            [
+              "#F7F7F7",
+              0
+            ],
+            [
+              "#D6D6D6",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "line",
+          "in": "titlebar",
+          "x": 0,
+          "y": 6,
+          "x2": "100%",
+          "y2": 0,
+          "stroke": "#18000000",
+          "repeat": {
+            "n": 10,
+            "dy": 4
+          }
+        },
+        {
+          "type": "radial",
+          "in": "titlebar",
+          "x": 128,
+          "y": 16,
+          "w": 16,
+          "h": 16,
+          "fill": [
+            [
+              "#FFC2BC",
+              0
+            ],
+            [
+              "#FF5F57",
+              0.5
+            ],
+            [
+              "#C1342C",
+              1
+            ]
+          ],
+          "id": "red",
+          "clickable": true
+        },
+        {
+          "type": "radial",
+          "in": "titlebar",
+          "x": 150,
+          "y": 16,
+          "w": 16,
+          "h": 16,
+          "fill": [
+            [
+              "#FFE7B3",
+              0
+            ],
+            [
+              "#FEBC2E",
+              0.5
+            ],
+            [
+              "#C08A12",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "radial",
+          "in": "titlebar",
+          "x": 172,
+          "y": 16,
+          "w": 16,
+          "h": 16,
+          "fill": [
+            [
+              "#C9F7C2",
+              0
+            ],
+            [
+              "#28C840",
+              0.5
+            ],
+            [
+              "#178A2A",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "18%",
+          "y": -64,
+          "w": "64%",
+          "h": 52,
+          "fill": [
+            [
+              "#AAFFFFFF",
+              0
+            ],
+            [
+              "#66BFD4EA",
+              1
+            ]
+          ],
+          "radius": 10,
+          "stroke": "#88FFFFFF"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKKKKK",
+            "KWWWWWWWWWWK",
+            "KWKKKKKKKKWK",
+            "KWKWWWWWWKWK",
+            "KWKWKWWKWKWK",
+            "KWKWWWWWWKWK",
+            "KWKWKWWKWKWK",
+            "KWKWWKKWWKWK",
+            "KWKWWWWWWKWK",
+            "KWKKKKKKKKWK",
+            "KWWWWWWWWWWK",
+            "KWWWWWKKKKWK",
+            "KWWWWWWWWWWK",
+            "KKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF"
+          },
+          "x": "22%",
+          "y": -58,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "....KKKK",
+            "....KYYK",
+            "....K..K",
+            "....K..K",
+            "....K..K",
+            "KKKKK..K",
+            "KYYYK..K",
+            "KYYYKKKK",
+            "KKKKKYYK",
+            "....KKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "Y": "#1F7CE8"
+          },
+          "x": "34%",
+          "y": -58,
+          "scale": 4,
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKK.......",
+            ".KYYYYYK......",
+            "KKKKKKKKKKKKKK",
+            "KYYYYYYYYYYYYK",
+            "KYWWWWWWWWWWYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KYYYYYYYYYYYYK",
+            "KDDDDDDDDDDDDK",
+            "KKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "Y": "#8CC4FF",
+            "D": "#4F8FD8"
+          },
+          "x": "44%",
+          "y": -54,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKKKKKKKKK",
+            "KWWWWWWWWWWWWWWK",
+            "KWRRRRRRRRRRRRWK",
+            "KWWWWWWWWWWWWWWK",
+            "KWWKKKWWWWKKKWWK",
+            "KWKWWWKWWKWWWKWK",
+            "KWWKKKWWWWKKKWWK",
+            "KWWWWWWWWWWWWWWK",
+            "KWWWKKKKKKKKWWWK",
+            "KKKKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "R": "#D83A3A"
+          },
+          "x": "56%",
+          "y": -54,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "...KKKKKK...",
+            "KKKKKKKKKKKK",
+            "KWWWWWWWWWWK",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWWWWWWWWK.",
+            "..KKKKKKKK.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "G": "#C0C0C0"
+          },
+          "x": "70%",
+          "y": -58,
+          "scale": 4,
+          "in": "content"
+        },
+        {
+          "type": "radial",
+          "in": "content",
+          "x": "45%",
+          "y": "34%",
+          "w": 120,
+          "h": 120,
+          "fill": [
+            [
+              "#FFE6F2FF",
+              0
+            ],
+            [
+              "#FF63A4F0",
+              0.35
+            ],
+            [
+              "#FF1F5FCC",
+              0.8
+            ],
+            [
+              "#00000000",
+              1
+            ]
+          ],
+          "id": "gel",
+          "hidden": true
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "click:red",
+          "say": "That one's just for looks. The real close button is over on the right.",
+          "seconds": 5
+        },
+        {
+          "trigger": "type:lick",
+          "show": "gel",
+          "say": "Lickable. (Please don't.)",
+          "seconds": 5
+        },
+        {
+          "trigger": "konami",
+          "say": "Think the radio was different. It was.",
+          "seconds": 5
+        }
+      ]
+    }
+  }
+}

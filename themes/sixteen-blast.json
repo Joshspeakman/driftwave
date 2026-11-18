@@ -1,0 +1,185 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "sixteen-blast",
+  "name": "Sixteen Blast",
+  "description": "A homage to the black 16-bit console that did what the others didn't: glossy black, red and gold, speed lines.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#0A0A0C",
+    "surface": "#E6101014",
+    "card": "#EE16161C",
+    "cardStroke": "#55E8262B",
+    "control": "#E01A1A20",
+    "controlStroke": "#66E8262B",
+    "subtle": "#33E8262B",
+    "divider": "#44E8262B",
+    "text": "#F2F2F2",
+    "textSecondary": "#BDBDC6",
+    "textTertiary": "#80808C",
+    "accent": "#E8262B",
+    "accentText": "#FF5A5E",
+    "onAccent": "#FFFFFF",
+    "dialog": "#141418",
+    "pane": "#050506"
+  },
+  "fonts": {
+    "body": "Segoe UI",
+    "title": "Orbitron",
+    "titleSize": 28,
+    "titleWeight": "Black",
+    "titleUppercase": true,
+    "titleSpacing": 60
+  },
+  "corners": {
+    "control": 2,
+    "overlay": 4,
+    "card": 4,
+    "cover": 0.06
+  },
+  "effects": {
+    "titleShadow": {
+      "color": "#E8262B",
+      "blur": 0,
+      "offsetX": 2,
+      "offsetY": 2
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "in": "titlebar",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": [
+            [
+              "#1E1E24",
+              0
+            ],
+            [
+              "#050506",
+              1
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "16-BIT",
+          "x": 132,
+          "y": 10,
+          "size": 22,
+          "color": "#FFD24A",
+          "font": "Orbitron",
+          "weight": "black",
+          "in": "titlebar"
+        },
+        {
+          "type": "line",
+          "in": "titlebar",
+          "x": 132,
+          "y": 40,
+          "x2": 120,
+          "y2": 0,
+          "stroke": "#E8262B",
+          "strokeWidth": 3
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "-30%",
+          "y": 0,
+          "w": 160,
+          "h": 2,
+          "fill": [
+            [
+              "#00FFFFFF",
+              0
+            ],
+            [
+              "#88FFFFFF",
+              1
+            ]
+          ],
+          "angle": "h",
+          "scatter": {
+            "n": 26,
+            "seed": 3,
+            "w": "100%",
+            "h": "100%"
+          },
+          "motion": {
+            "kind": "scroll",
+            "x": 1600,
+            "seconds": 3.5,
+            "randomOffset": 3.5
+          }
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": -120,
+          "y": -120,
+          "w": 60,
+          "h": 60,
+          "stroke": "#FFD24A",
+          "strokeWidth": 8,
+          "repeat": {
+            "n": 3,
+            "dx": 30
+          },
+          "motion": {
+            "kind": "drift",
+            "y": -8,
+            "seconds": 3,
+            "offset": 0.5
+          }
+        },
+        {
+          "type": "text",
+          "text": "PRESS START",
+          "x": "40%",
+          "y": -40,
+          "size": 18,
+          "color": "#FFFFFF",
+          "font": "Orbitron",
+          "weight": "bold",
+          "motion": {
+            "kind": "breathe",
+            "min": 0.35,
+            "max": 1,
+            "seconds": 4
+          }
+        },
+        {
+          "type": "text",
+          "text": "BLAST PROCESSING ENGAGED",
+          "x": "26%",
+          "y": "42%",
+          "size": 22,
+          "color": "#FFD24A",
+          "font": "Orbitron",
+          "weight": "black",
+          "id": "blast",
+          "hidden": true,
+          "in": "content"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "type:blast",
+          "show": "blast",
+          "seconds": 5
+        },
+        {
+          "trigger": "konami",
+          "show": "blast",
+          "say": "Level select unlocked: every station is level 1.",
+          "seconds": 6
+        }
+      ]
+    }
+  }
+}

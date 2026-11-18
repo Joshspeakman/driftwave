@@ -1,0 +1,227 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "super-16",
+  "name": "Super 16",
+  "description": "A homage to the 16-bit era's grey-and-purple console: soft greys, purple accents, four coloured buttons and a star.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#C9C9D4",
+    "surface": "#E6E4E4EC",
+    "card": "#F2F2F7",
+    "cardStroke": "#7C76B8",
+    "control": "#E8E8F0",
+    "controlStroke": "#7C76B8",
+    "subtle": "#334F43AE",
+    "divider": "#A9A9BC",
+    "text": "#26243A",
+    "textSecondary": "#4A4766",
+    "textTertiary": "#7A7896",
+    "accent": "#4F43AE",
+    "accentText": "#4F43AE",
+    "onAccent": "#FFFFFF",
+    "dialog": "#ECECF3",
+    "pane": "#B8B8C6"
+  },
+  "fonts": {
+    "body": "Segoe UI",
+    "title": "Press Start 2P",
+    "titleSize": 18
+  },
+  "corners": {
+    "control": 10,
+    "overlay": 12,
+    "card": 14,
+    "cover": 0.12
+  },
+  "effects": {
+    "scene": {
+      "layers": [
+        {
+          "type": "text",
+          "text": "SUPER 16",
+          "x": 132,
+          "y": 16,
+          "size": 12,
+          "color": "#4F43AE",
+          "font": "Press Start 2P",
+          "in": "titlebar"
+        },
+        {
+          "type": "ellipse",
+          "in": "titlebar",
+          "x": -232,
+          "y": 4,
+          "w": 16,
+          "h": 16,
+          "fill": "#2E9E4F"
+        },
+        {
+          "type": "ellipse",
+          "in": "titlebar",
+          "x": -250,
+          "y": 16,
+          "w": 16,
+          "h": 16,
+          "fill": "#3D5FD9"
+        },
+        {
+          "type": "ellipse",
+          "in": "titlebar",
+          "x": -214,
+          "y": 16,
+          "w": 16,
+          "h": 16,
+          "fill": "#D93D3D"
+        },
+        {
+          "type": "ellipse",
+          "in": "titlebar",
+          "x": -232,
+          "y": 28,
+          "w": 16,
+          "h": 16,
+          "fill": "#E8C43A"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 40,
+          "y": -110,
+          "w": 220,
+          "h": 86,
+          "fill": "#DADAE4",
+          "radius": 43,
+          "stroke": "#9A9AB0"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 70,
+          "y": -82,
+          "w": 42,
+          "h": 14,
+          "fill": "#3A3A44",
+          "radius": 2
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 84,
+          "y": -96,
+          "w": 14,
+          "h": 42,
+          "fill": "#3A3A44",
+          "radius": 2
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": 196,
+          "y": -96,
+          "w": 18,
+          "h": 18,
+          "fill": "#2E9E4F"
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": 178,
+          "y": -80,
+          "w": 18,
+          "h": 18,
+          "fill": "#3D5FD9"
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": 214,
+          "y": -80,
+          "w": 18,
+          "h": 18,
+          "fill": "#D93D3D"
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": 196,
+          "y": -64,
+          "w": 18,
+          "h": 18,
+          "fill": "#E8C43A"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 128,
+          "y": -66,
+          "w": 18,
+          "h": 6,
+          "fill": "#7A7896",
+          "radius": 3,
+          "rotate": -25
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 150,
+          "y": -66,
+          "w": 18,
+          "h": 6,
+          "fill": "#7A7896",
+          "radius": 3,
+          "rotate": -25
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "....Y....",
+            "....Y....",
+            "...YYY...",
+            "YYYYYYYYY",
+            ".YYYYYYY.",
+            "..YYYYY..",
+            ".YYY.YYY.",
+            ".YY...YY.",
+            "YY.....YY"
+          ],
+          "palette": {
+            "Y": "#FFD34E"
+          },
+          "x": -60,
+          "y": -60,
+          "scale": 4,
+          "in": "content",
+          "id": "walker",
+          "hidden": true
+        },
+        {
+          "type": "text",
+          "text": "30 LIVES",
+          "x": "40%",
+          "y": "40%",
+          "size": 20,
+          "color": "#4F43AE",
+          "font": "Press Start 2P",
+          "id": "lives",
+          "hidden": true,
+          "in": "content"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "konami",
+          "show": "lives",
+          "run": "walk:walker",
+          "seconds": 8
+        },
+        {
+          "trigger": "type:blow",
+          "say": "Blowing on the cartridge never really helped. It still feels right.",
+          "seconds": 5
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "big-glass",
+  "name": "Big Glass",
+  "description": "A homage to today's Mac: full frosted glass over a soft wallpaper, a menu bar, a floating dock and generous corners.",
+  "base": "light",
+  "backdrop": "acrylic",
+  "colors": {
+    "background": "#10F4F6FB",
+    "surface": "#26FFFFFF",
+    "card": "#55FFFFFF",
+    "cardStroke": "#44FFFFFF",
+    "control": "#44FFFFFF",
+    "controlStroke": "#55FFFFFF",
+    "subtle": "#22FFFFFF",
+    "divider": "#33000000",
+    "text": "#1D1D1F",
+    "textSecondary": "#3C3C43",
+    "textTertiary": "#6E6E73",
+    "accent": "#0A84FF",
+    "accentText": "#0066CC",
+    "onAccent": "#FFFFFF",
+    "dialog": "#EEF7F7FA"
+  },
+  "fonts": {
+    "body": "Segoe UI Variable Text",
+    "title": "Segoe UI Variable Display",
+    "titleSize": 34,
+    "titleWeight": "Bold"
+  },
+  "corners": {
+    "control": 10,
+    "overlay": 14,
+    "card": 18,
+    "cover": 0.22
+  },
+  "effects": {
+    "aurora": {
+      "colors": [
+        "#FF8FB8",
+        "#8F9BFF",
+        "#7FE0D8"
+      ]
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "text",
+          "text": "●  Driftwave    File    Edit    View    Station    Window    Help",
+          "x": 128,
+          "y": 15,
+          "size": 13,
+          "color": "#1D1D1F",
+          "font": "Segoe UI Variable Text",
+          "weight": "semibold",
+          "in": "titlebar"
+        },
+        {
+          "type": "text",
+          "text": "{date}  {time}",
+          "x": -330,
+          "y": 15,
+          "size": 13,
+          "color": "#1D1D1F",
+          "font": "Segoe UI Variable Text",
+          "in": "titlebar"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "22%",
+          "y": -72,
+          "w": "56%",
+          "h": 60,
+          "fill": "#55FFFFFF",
+          "radius": 20,
+          "stroke": "#88FFFFFF"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "25%",
+          "y": -64,
+          "w": 44,
+          "h": 44,
+          "fill": [
+            [
+              "#FF6CB6",
+              0
+            ],
+            [
+              "#A35CFF",
+              1
+            ]
+          ],
+          "radius": 11
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "....KKKK",
+            "....KYYK",
+            "....K..K",
+            "....K..K",
+            "....K..K",
+            "KKKKK..K",
+            "KYYYK..K",
+            "KYYYKKKK",
+            "KKKKKYYK",
+            "....KKKK"
+          ],
+          "palette": {
+            "K": "#FFFFFF",
+            "Y": "#FFFFFF"
+          },
+          "x": "26.5%",
+          "y": -58,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "36%",
+          "y": -64,
+          "w": 44,
+          "h": 44,
+          "fill": [
+            [
+              "#5AC8FA",
+              0
+            ],
+            [
+              "#007AFF",
+              1
+            ]
+          ],
+          "radius": 11
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "47%",
+          "y": -64,
+          "w": 44,
+          "h": 44,
+          "fill": [
+            [
+              "#FFD60A",
+              0
+            ],
+            [
+              "#FF9F0A",
+              1
+            ]
+          ],
+          "radius": 11
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "58%",
+          "y": -64,
+          "w": 44,
+          "h": 44,
+          "fill": [
+            [
+              "#30D158",
+              0
+            ],
+            [
+              "#0E9F3A",
+              1
+            ]
+          ],
+          "radius": 11
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": "69%",
+          "y": -64,
+          "w": 44,
+          "h": 44,
+          "fill": [
+            [
+              "#E5E5EA",
+              0
+            ],
+            [
+              "#AEAEB2",
+              1
+            ]
+          ],
+          "radius": 11,
+          "id": "trash",
+          "clickable": true
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "...KKKKKK...",
+            "KKKKKKKKKKKK",
+            "KWWWWWWWWWWK",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWWWWWWWWK.",
+            "..KKKKKKKK.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "G": "#C0C0C0"
+          },
+          "x": "70.3%",
+          "y": -59,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "ellipse",
+          "in": "content",
+          "x": "48.7%",
+          "y": -8,
+          "w": 4,
+          "h": 4,
+          "fill": "#1D1D1F"
+        },
+        {
+          "type": "text",
+          "text": "hello",
+          "x": "34%",
+          "y": "28%",
+          "size": 96,
+          "color": "#E6FFFFFF",
+          "font": "Segoe Script",
+          "id": "hello",
+          "hidden": true,
+          "in": "content"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "type:hello",
+          "show": "hello",
+          "seconds": 6
+        },
+        {
+          "trigger": "click:trash",
+          "say": "Nothing to empty. Driftwave never throws a song away unless you ask.",
+          "seconds": 5
+        },
+        {
+          "trigger": "konami",
+          "say": "One more thing: it's still playing.",
+          "seconds": 5
+        }
+      ]
+    }
+  }
+}

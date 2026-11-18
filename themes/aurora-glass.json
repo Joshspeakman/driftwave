@@ -1,0 +1,199 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "aurora-glass",
+  "name": "Aurora Glass",
+  "description": "A homage to Windows Vista: smoky glass, an aurora of greens and blues, and a gadget sidebar with a real clock.",
+  "base": "dark",
+  "backdrop": "acrylic",
+  "colors": {
+    "background": "#33081620",
+    "surface": "#33000000",
+    "card": "#55102030",
+    "cardStroke": "#5582C8FF",
+    "control": "#55203040",
+    "controlStroke": "#6682C8FF",
+    "subtle": "#3382C8FF",
+    "divider": "#4482C8FF",
+    "text": "#FFFFFF",
+    "textSecondary": "#C8DCF0",
+    "textTertiary": "#8FA8C0",
+    "accent": "#3FA0E8",
+    "accentText": "#7FC8FF",
+    "onAccent": "#00121F",
+    "dialog": "#E6101C28"
+  },
+  "fonts": {
+    "body": "Segoe UI",
+    "title": "Segoe UI Light",
+    "titleSize": 32
+  },
+  "corners": {
+    "control": 4,
+    "overlay": 6,
+    "card": 6,
+    "cover": 0.08
+  },
+  "effects": {
+    "aurora": {
+      "colors": [
+        "#2FBF71",
+        "#2F7FD8",
+        "#1BC6C6"
+      ]
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "in": "content",
+          "x": -170,
+          "y": 24,
+          "w": 150,
+          "h": 150,
+          "fill": [
+            [
+              "#AA1E3C5A",
+              0
+            ],
+            [
+              "#AA0B1626",
+              1
+            ]
+          ],
+          "radius": 14,
+          "stroke": "#5582C8FF"
+        },
+        {
+          "type": "text",
+          "text": "{time}",
+          "x": -150,
+          "y": 70,
+          "size": 30,
+          "color": "#FFFFFF",
+          "font": "Segoe UI Light",
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "{date}",
+          "x": -148,
+          "y": 112,
+          "size": 13,
+          "color": "#B8D4F0",
+          "font": "Segoe UI",
+          "in": "content"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": -170,
+          "y": 190,
+          "w": 150,
+          "h": 90,
+          "fill": [
+            [
+              "#AA1E3C5A",
+              0
+            ],
+            [
+              "#AA0B1626",
+              1
+            ]
+          ],
+          "radius": 14,
+          "stroke": "#5582C8FF"
+        },
+        {
+          "type": "text",
+          "text": "Now on air",
+          "x": -156,
+          "y": 202,
+          "size": 12,
+          "color": "#9CC8F0",
+          "font": "Segoe UI",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "....KKKK",
+            "....KYYK",
+            "....K..K",
+            "....K..K",
+            "....K..K",
+            "KKKKK..K",
+            "KYYYK..K",
+            "KYYYKKKK",
+            "KKKKKYYK",
+            "....KKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "Y": "#7FC8FF"
+          },
+          "x": -150,
+          "y": 228,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": -120,
+          "y": 240,
+          "w": 80,
+          "h": 6,
+          "fill": "#557FC8FF",
+          "radius": 3
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": -120,
+          "y": 252,
+          "w": 56,
+          "h": 6,
+          "fill": "#337FC8FF",
+          "radius": 3
+        },
+        {
+          "type": "radial",
+          "in": "content",
+          "x": 16,
+          "y": -70,
+          "w": 54,
+          "h": 54,
+          "fill": [
+            [
+              "#AAFFFFFF",
+              0
+            ],
+            [
+              "#663FA0E8",
+              0.5
+            ],
+            [
+              "#22000000",
+              1
+            ]
+          ],
+          "id": "orb",
+          "clickable": true
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "click:orb",
+          "say": "The wow starts... whenever you press play.",
+          "seconds": 5
+        },
+        {
+          "trigger": "type:wow",
+          "say": "Wow.",
+          "seconds": 3
+        }
+      ]
+    }
+  }
+}

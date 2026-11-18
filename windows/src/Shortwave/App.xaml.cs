@@ -25,7 +25,17 @@ public partial class App : Application
     {
         InitializeComponent();
         UnhandledException += (_, e) => Diagnostics.Log("unhandled: " + e.Exception);
+        // Test runs with SHORTWAVE_MEMLOG=<seconds>: log memory every so often, for the leak checks.
+        if (Diagnostics.IsTestRun && int.TryParse(Environment.GetEnvironmentVariable("SHORTWAVE_MEMLOG"), out int every) && every > 0)
+            memoryLog = new Timer(_ =>
+            {
+                long managed = GC.GetTotalMemory(forceFullCollection: true);
+                using var me = System.Diagnostics.Process.GetCurrentProcess();
+                Diagnostics.Log($"memory managed={managed / 1024}K private={me.PrivateMemorySize64 / 1024}K ws={me.WorkingSet64 / 1024}K handles={me.HandleCount} threads={me.Threads.Count} gen2={GC.CollectionCount(2)}");
+            }, null, TimeSpan.FromSeconds(every), TimeSpan.FromSeconds(every));
     }
+
+    static Timer? memoryLog;
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {

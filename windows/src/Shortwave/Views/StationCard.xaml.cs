@@ -26,7 +26,7 @@ public sealed partial class StationCard : UserControl
         Loaded += (_, _) =>
         {
             player = App.Current?.Model.Player;
-            if (player != null) player.PropertyChanged += OnPlayerChanged;
+            if (player != null) { player.PropertyChanged -= OnPlayerChanged; player.PropertyChanged += OnPlayerChanged; }
             Refresh();
         };
         Unloaded += (_, _) => { if (player != null) player.PropertyChanged -= OnPlayerChanged; };

@@ -277,6 +277,7 @@ public sealed class Player : Observable
             }
         };
         currentItem = item;
+        currentSource = source;
         currentItemGen = gen;
         playerRequestedAt = DateTime.UtcNow;
         ApplyOutput();
@@ -336,6 +337,8 @@ public sealed class Player : Observable
         }
     }
 
+    private Windows.Media.Core.MediaSource? currentSource;
+
     private void StopStreams()
     {
         icy?.Stop();
@@ -343,6 +346,8 @@ public sealed class Player : Observable
         icyHasTitles = false;
         currentItem = null;
         try { mp.Pause(); mp.Source = null; } catch { }
+        try { currentSource?.Dispose(); } catch { }
+        currentSource = null;
     }
 
     private void StreamFailed(string message, int gen)
