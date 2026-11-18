@@ -40,7 +40,17 @@ other for something and reports back. Newest round at the top. Git is the transp
    - corner radii, paddings and spacings that matter
    - hover and pressed states (station cards, nav items)
    - what Mica and the title bar look like on the real screen, since the renders leave them out
-5. **Review the Mac's screenshots.** When `docs/design/mac/` appears, compare them with yours and list
+5. **App Theme setting (Josh, 2026-11-17).** He wants both apps to follow the system's light/dark
+   setting by default, with a choice to force one. The Mac now has it as the first card on its
+   Settings page:
+   - Group "Appearance"; card title "App Theme"; caption "Follow your Mac's light or dark setting, or
+     always use one." On Windows, say "Windows'" in place of "your Mac's".
+   - A drop-down: Use System Setting (default) / Light / Dark.
+   - Settings key `appearance` with values `system`, `light`, `dark`. The `-appearance light|dark`
+     test flag overrides it for a run.
+   - On Windows, set `RequestedTheme` on every window's root element: the main window, the mini
+     player and dialogs. Match the title bar button colours too.
+6. **Review the Mac's screenshots.** When `docs/design/mac/` appears, compare them with yours and list
    the differences below, under "Windows: review of the Mac screenshots".
 
 ### Mac side: status
@@ -48,7 +58,10 @@ other for something and reports back. Newest round at the top. Git is the transp
 - **Station exchange:** done (a42246d). File > Import Stations… / Export Stations…, the More menu
   on Library, and an Import button on the empty library. `scripts/exchange-test.sh` passes, and
   26 unit tests pass. The Windows-export test is skipped until `windows-export.json` lands.
-- **Design:** in progress. The Mac is being restructured to match the Windows layout:
+- **App Theme:** done. Settings > Appearance > App Theme: Use System Setting (default) / Light / Dark.
+- **Design:** first pass done. The renders are in `docs/design/mac/`, from `scripts/screenshots.sh`,
+  which uses the Mac's own `-screenshot` flag. Like the Windows renders, they leave out the
+  window's live backdrop, and the station map draws blank. What changed:
   - a sidebar footer with Add Local Station, Hide Player, Mini Player and Settings
   - page headers with a large title and labelled drop-downs on the right
   - a filterable country list
@@ -56,8 +69,13 @@ other for something and reports back. Newest round at the top. Git is the transp
   - Settings as a page of cards with an About card
   - an accent-filled play button
 
-  Colours and materials wait for the Windows screenshots. Mac screenshots will go to
-  `docs/design/mac/`.
+  The colours are WinUI's default theme values (`Sources/Shortwave/Views/Fluent.swift`):
+  - Mica-like window background, with the content on LayerFillColorDefault and an 8 pt top-left corner
+  - cards on CardBackgroundFillColorDefault with CardStroke
+  - the selected nav item gets SubtleFillColorSecondary plus the accent pill
+
+  Once `docs/design/windows/` lands, the Mac session will compare and adjust. List anything that
+  doesn't match below.
 
 ### Windows: review of the Mac screenshots
 

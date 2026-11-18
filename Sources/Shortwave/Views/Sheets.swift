@@ -13,7 +13,7 @@ struct StationDetailSheet: View {
             HStack(alignment: .top, spacing: 16) {
                 StationCover(station: station, size: 112)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(station.name).font(.title2.bold()).textSelection(.enabled)
+                    Text(station.name).font(Fluent.subtitleFont).textSelection(.enabled)
                     if !station.tags.isEmpty {
                         Text(station.tags.prefix(8).joined(separator: " · ")).foregroundStyle(.secondary).lineLimit(2)
                     }
@@ -217,7 +217,7 @@ struct TrackDetailSheet: View {
             HStack(spacing: 14) {
                 StationCover(station: track.station, size: 64)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(track.songTitle).font(.title3.bold()).textSelection(.enabled)
+                    Text(track.songTitle).font(Fluent.subtitleFont).textSelection(.enabled)
                     if let artist = track.artist { Text(artist).textSelection(.enabled) }
                     Text(track.station.name).foregroundStyle(.secondary)
                 }

@@ -15,22 +15,21 @@ struct ShortwaveApp: App {
         Window("Shortwave", id: "main") {
             MainView().environment(app)
         }
-        .defaultSize(width: 1080, height: 700)
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1180, height: 760)
+        .defaultLaunchBehavior(.presented)
         .commands { ShortwaveCommands(app: app) }
 
         Window("Mini Player", id: "mini") {
-            MiniPlayer()
-                .frame(width: 380)
+            MiniPlayerWindow()
+                .frame(width: 430)
                 .environment(app)
         }
         .windowResizability(.contentSize)
         .windowLevel(.floating)
         .windowStyle(.hiddenTitleBar)
         .defaultPosition(.topTrailing)
-
-        Settings {
-            SettingsView().environment(app)
-        }
+        .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {
             MenuBarContent().environment(app)
@@ -44,7 +43,20 @@ struct ShortwaveCommands: Commands {
     let app: AppModel
     @Environment(\.openWindow) private var openWindow
 
+    private func registerOpenWindow() {
+        let open = openWindow
+        app.openWindowByID = { open(id: $0) }
+    }
+
     var body: some Commands {
+        let _ = registerOpenWindow()
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") {
+                openWindow(id: "main")
+                app.page = .settings
+            }
+            .keyboardShortcut(",")
+        }
         CommandGroup(replacing: .newItem) {
             Button("Add Local Station…") {
                 openWindow(id: "main")
@@ -64,7 +76,10 @@ struct ShortwaveCommands: Commands {
         CommandGroup(after: .sidebar) {
             Button("Library") { app.page = .library }.keyboardShortcut("1")
             Button("Discover") { app.page = .discover }.keyboardShortcut("2")
-            Button("Search Stations") { app.page = .search }.keyboardShortcut("f")
+            Button("Search Stations") {
+                if app.page == .search { app.searchFocusRequest += 1 } else { app.page = .search }
+            }
+            .keyboardShortcut("f")
             Divider()
             Button(app.showPlayer ? "Hide Player" : "Show Player") { app.showPlayer.toggle() }
                 .keyboardShortcut("p", modifiers: [.command, .option])

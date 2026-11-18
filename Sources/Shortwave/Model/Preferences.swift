@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SwiftUI
@@ -6,6 +7,27 @@ import ShortwaveCore
 /// `@State` is a macro in the macOS 27 SDK whose plugin ships only with Xcode; the property
 /// wrapper type itself still works when reached through an alias.
 typealias ViewState<V> = SwiftUICore.State<V>
+
+/// The app's light or dark look: the Mac's own setting (the default), or always light or dark.
+enum AppTheme: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .system: "Use System Setting"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+
+    @MainActor func apply() {
+        switch self {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+}
 
 /// User preferences, persisted in UserDefaults.
 @Observable @MainActor
@@ -24,6 +46,8 @@ final class Preferences {
     var volume: Double { didSet { d.set(volume, forKey: "volume") } }
     var lastStationID: String? { didSet { d.set(lastStationID, forKey: "lastStation") } }
     var discoverCountry: String { didSet { d.set(discoverCountry, forKey: "discoverCountry") } }
+    /// The `-appearance light|dark` test flag overrides this key for a run.
+    var theme: AppTheme { didSet { d.set(theme.rawValue, forKey: "appearance"); theme.apply(); Diagnostics.log("theme \(theme.rawValue)") } }
 
     init() {
         d.register(defaults: [
@@ -53,6 +77,7 @@ final class Preferences {
         volume = min(1, max(0, d.double(forKey: "volume")))
         lastStationID = d.string(forKey: "lastStation")
         discoverCountry = d.string(forKey: "discoverCountry") ?? (Locale.current.region?.identifier ?? "US")
+        theme = AppTheme(rawValue: d.string(forKey: "appearance") ?? "") ?? .system
     }
 
     var recorderConfig: SegmentRecorder.Config {

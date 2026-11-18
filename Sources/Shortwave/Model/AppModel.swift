@@ -6,20 +6,32 @@ import UniformTypeIdentifiers
 import UserNotifications
 
 enum Page: String, Hashable, CaseIterable, Identifiable {
-    case library, discover, search
+    case library, discover, search, settings
     var id: String { rawValue }
+    /// The pages at the top of the navigation pane (Settings sits at the bottom).
+    static let main: [Page] = [.library, .discover, .search]
     var title: String {
         switch self {
         case .library: "Library"
         case .discover: "Discover"
         case .search: "Search"
+        case .settings: "Settings"
         }
     }
     var symbol: String {
         switch self {
         case .library: "books.vertical"
-        case .discover: "sparkles"
+        case .discover: "safari"
         case .search: "magnifyingglass"
+        case .settings: "gearshape"
+        }
+    }
+    var shortcut: String {
+        switch self {
+        case .library: " (⌘1)"
+        case .discover: " (⌘2)"
+        case .search: " (⌘F)"
+        case .settings: " (⌘,)"
         }
     }
 }
@@ -33,6 +45,8 @@ final class AppModel {
     let player: Player
 
     var page: Page = .library
+    /// Bumped to move keyboard focus to the search field (⌘F while on Search).
+    var searchFocusRequest = 0
     private(set) var library: [Station] = []
     var showPlayer = true
 
@@ -43,6 +57,8 @@ final class AppModel {
         let message: String
     }
     var notice: Notice?
+    /// Opens a window by scene id; set by the menu commands, which have SwiftUI's openWindow action.
+    @ObservationIgnored var openWindowByID: ((String) -> Void)?
 
     // Sheets
     var detailStation: Station?
@@ -98,6 +114,22 @@ final class AppModel {
             } catch {
                 Diagnostics.log("export failed: \(error.localizedDescription)")
             }
+        }
+        DispatchQueue.main.async {
+            self.settings.theme.apply()
+            Screenshot.scheduleIfAsked { [weak self] in self?.openWindowByID?("main") }
+            // SwiftUI doesn't always present the main window at launch (seen with copies started
+            // from a script); make sure it's there.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                if !NSApp.windows.contains(where: { $0.isVisible && $0.identifier?.rawValue.contains("main") == true }) {
+                    Diagnostics.log("opening the main window")
+                    self?.openWindowByID?("main")
+                }
+            }
+            if Diagnostics.openMiniPlayer {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.openWindowByID?("mini") }
+            }
+            if Diagnostics.openAddStation { self.showingAddStation = true }
         }
         if let seconds = Diagnostics.quitAfter {
             DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { NSApp.terminate(nil) }
