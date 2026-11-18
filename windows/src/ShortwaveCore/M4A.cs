@@ -135,7 +135,7 @@ public static class M4A
         items.AddRange(TagItem("©nam", title));
         if (!string.IsNullOrEmpty(artist)) items.AddRange(TagItem("©ART", artist));
         if (!string.IsNullOrEmpty(album)) items.AddRange(TagItem("©alb", album));
-        items.AddRange(TagItem("©too", "Shortwave"));
+        items.AddRange(TagItem("©too", "Driftwave"));
         byte[] metaHdlr = FullBox("hdlr", 0, 0, [.. U32(0), .. Ascii("mdir"), .. Ascii("appl"), .. new byte[8], 0]);
         byte[] meta = FullBox("meta", 0, 0, [.. metaHdlr, .. Box("ilst", [.. items])]);
         byte[] udta = Box("udta", meta);

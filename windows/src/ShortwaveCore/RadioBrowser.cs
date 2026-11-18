@@ -40,7 +40,7 @@ public sealed record Facet(string Name, int StationCount, string? Iso3166_1)
 /// <summary>Client for the community station database at radio-browser.info.</summary>
 public sealed class RadioBrowser
 {
-    public const string UserAgent = "ShortwaveWindows/1.0";
+    public const string UserAgent = "Driftwave/1.0 (Windows)";
     public const string LookupHost = "all.api.radio-browser.info";
     internal static readonly string[] FallbackServers = ["de1.api.radio-browser.info", "de2.api.radio-browser.info", "fi1.api.radio-browser.info"];
 

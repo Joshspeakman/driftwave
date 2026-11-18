@@ -4,7 +4,7 @@
     <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <RootNamespace>Shortwave</RootNamespace>
-    <AssemblyName>Shortwave</AssemblyName>
+    <AssemblyName>Driftwave</AssemblyName>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
@@ -19,10 +19,10 @@
     <Flavor Condition="'$(Flavor)' == ''">Nightly</Flavor>
     <DefineConstants Condition="'$(Flavor)' == 'Nightly'">$(DefineConstants);NIGHTLY</DefineConstants>
     <Version Condition="'$(Version)' == ''">1.0.0</Version>
-    <AssemblyTitle Condition="'$(Flavor)' == 'Nightly'">Shortwave Nightly</AssemblyTitle>
-    <AssemblyTitle Condition="'$(Flavor)' != 'Nightly'">Shortwave</AssemblyTitle>
+    <AssemblyTitle Condition="'$(Flavor)' == 'Nightly'">Driftwave Nightly</AssemblyTitle>
+    <AssemblyTitle Condition="'$(Flavor)' != 'Nightly'">Driftwave</AssemblyTitle>
     <Product>$(AssemblyTitle)</Product>
-    <Description>Internet radio for Windows, after GNOME Shortwave. Station data: radio-browser.info</Description>
+    <Description>Driftwave: internet radio for Windows, inspired by GNOME Shortwave. Station data: radio-browser.info</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.6.4" />

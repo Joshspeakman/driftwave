@@ -4,7 +4,7 @@ $WindowsRoot = Split-Path -Parent $PSScriptRoot
 $RepoRoot = Split-Path -Parent $WindowsRoot
 
 function Get-ShortwaveName([string]$Flavor) {
-    if ($Flavor -eq 'Release') { 'Shortwave' } else { 'Shortwave Nightly' }
+    if ($Flavor -eq 'Release') { 'Driftwave' } else { 'Driftwave Nightly' }
 }
 
 # Where scripts\build.ps1 puts a build.
@@ -13,7 +13,7 @@ function Get-BuildDir([string]$Flavor) { Join-Path $WindowsRoot "out\$Flavor" }
 # The app the test scripts run: $env:SHORTWAVE_APP, else the Nightly build.
 function Get-TestApp {
     if ($env:SHORTWAVE_APP) { return $env:SHORTWAVE_APP }
-    $exe = Join-Path (Get-BuildDir 'Nightly') 'Shortwave.exe'
+    $exe = Join-Path (Get-BuildDir 'Nightly') 'Driftwave.exe'
     if (-not (Test-Path $exe)) { throw "No build at $exe. Run windows\scripts\build.ps1 first, or set SHORTWAVE_APP." }
     return $exe
 }

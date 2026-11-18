@@ -1,8 +1,10 @@
-# Builds Shortwave for Windows into windows\out\<Flavor> (framework-dependent, x64).
-# Usage: windows\scripts\build.ps1 [-Flavor Nightly|Release] [-Configuration Release|Debug]
+# Builds Driftwave (the Windows app, formerly Shortwave for Windows) into windows\out\<Flavor> (framework-dependent, x64).
+# Usage: windows\scripts\build.ps1 [-Flavor Nightly|Release] [-Configuration Release|Debug] [-NoSymbols]
+#   -NoSymbols: no debug info at all, so no local paths are recorded in the DLLs (release packages).
 param(
     [ValidateSet('Nightly', 'Release')][string]$Flavor = 'Nightly',
-    [ValidateSet('Release', 'Debug')][string]$Configuration = 'Release'
+    [ValidateSet('Release', 'Debug')][string]$Configuration = 'Release',
+    [switch]$NoSymbols
 )
 . "$PSScriptRoot\common.ps1"
 
@@ -21,12 +23,14 @@ try {
 finally { Pop-Location }
 
 $out = Get-BuildDir $Flavor
+# A package build starts clean, so nothing from an earlier (symbol) build carries over.
+if ($NoSymbols) { foreach ($p in 'src\Shortwave', 'src\ShortwaveCore') { Remove-Item -Recurse -Force (Join-Path $WindowsRoot "$p\obj\$Configuration"), (Join-Path $WindowsRoot "$p\bin\$Configuration") -ErrorAction SilentlyContinue } }
 if (Test-Path $out) { Remove-Item -Recurse -Force $out }
 $project = Join-Path $WindowsRoot 'src\Shortwave\Shortwave.csproj'
 & dotnet publish $project -c $Configuration -r win-x64 --self-contained false -o $out `
     "-p:Flavor=$Flavor" "-p:Version=$version.$buildNo" "-p:InformationalVersion=$version.$buildNo+$commit" `
-    "-p:ShortwaveCommit=$commit" "-p:ShortwaveBranch=$branch" -nologo -v:minimal
+    "-p:ShortwaveCommit=$commit" "-p:ShortwaveBranch=$branch" $(if ($NoSymbols) { '-p:DebugType=none' }) -nologo -v:minimal
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
-$exe = Join-Path $out 'Shortwave.exe'
+$exe = Join-Path $out 'Driftwave.exe'
 if (-not (Test-Path $exe)) { throw "Build output missing: $exe" }
 Write-Output $exe

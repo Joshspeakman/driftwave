@@ -38,10 +38,10 @@ public sealed class TrayIcon : IDisposable
             cbSize = (uint)Marshal.SizeOf<WNDCLASSEX>(),
             lpfnWndProc = Marshal.GetFunctionPointerForDelegate(proc),
             hInstance = GetModuleHandle(null),
-            lpszClassName = "ShortwaveTray" + Environment.ProcessId,
+            lpszClassName = "DriftwaveTray" + Environment.ProcessId,
         };
         RegisterClassEx(ref wc);
-        hwnd = CreateWindowEx(0, wc.lpszClassName, "Shortwave tray", 0, 0, 0, 0, 0, 0, 0, wc.hInstance, 0);
+        hwnd = CreateWindowEx(0, wc.lpszClassName, "Driftwave tray", 0, 0, 0, 0, 0, 0, 0, wc.hInstance, 0);
         taskbarCreated = RegisterWindowMessage("TaskbarCreated");
         int size = GetSystemMetrics(49 /* SM_CXSMICON */);
         icon = LoadImage(0, iconPath, 1 /* IMAGE_ICON */, size, size, 0x10 /* LR_LOADFROMFILE */);

@@ -76,6 +76,23 @@ public sealed partial class MainWindow : Window
         app.ImportFileRequested += () => _ = ChooseImportFile();
         app.ExportFileRequested += () => _ = ChooseExportFile();
         if (Diagnostics.OpenAddStation) app.AddLocalStation();
+        // The check at launch found a new version: say so once, without a dialog.
+        var updateNow = new Button { Content = "Update Now", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        updateNow.Click += async (_, _) => { UpdateBar.IsOpen = false; await app.Updates.DownloadAndInstall(); };
+        UpdateBar.ActionButton = updateNow;
+        app.Updates.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(Updater.State)) return;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (app.Updates.State == UpdateState.Available && app.Updates.Latest is { } r && Updater.CanInstall)
+                {
+                    UpdateBar.Message = $"{Diagnostics.AppName} {r.Version} is ready to install. Your station carries on after the restart.";
+                    UpdateBar.IsOpen = true;
+                }
+                else if (app.Updates.State is UpdateState.Failed && UpdateBar.IsOpen) UpdateBar.Message = app.Updates.Message;
+            });
+        };
 
         AddShortcuts();
         ShowPage();

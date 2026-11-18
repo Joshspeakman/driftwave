@@ -11,7 +11,7 @@ public sealed class AppPaths
     /// <summary>%LOCALAPPDATA%\&lt;appFolder&gt;: favicon cache, temporary recordings.</summary>
     public string Caches { get; }
 
-    public AppPaths(string appFolder = "Shortwave")
+    public AppPaths(string appFolder = "Driftwave")
     {
         Support = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), appFolder);
         Caches = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appFolder);
@@ -25,7 +25,7 @@ public sealed class AppPaths
     public string Recording => Path.Combine(Caches, "Recording");
 
     public static string DefaultTrackDirectory =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Shortwave");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Driftwave");
 }
 
 /// <summary>The saved stations, stored as JSON so they survive the station vanishing from the database.</summary>

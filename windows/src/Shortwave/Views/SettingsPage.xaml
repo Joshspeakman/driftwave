@@ -115,12 +115,15 @@
                     </Border>
                 </StackPanel>
 
+                <TextBlock Text="Updates" FontWeight="SemiBold" Margin="2,20,0,4" />
+                <StackPanel x:Name="UpdateHost" />
+
                 <TextBlock Text="About" FontWeight="SemiBold" Margin="2,20,0,4" />
                 <Border Style="{StaticResource Card}">
                     <StackPanel Spacing="4">
                         <TextBlock x:Name="AboutTitle" FontWeight="SemiBold" />
                         <TextBlock Style="{StaticResource CaptionSecondaryStyle}" TextWrapping="Wrap"
-                                   Text="Internet radio for Windows, after GNOME Shortwave by Felix Häcker and contributors. It contains none of Shortwave’s code or artwork." />
+                                   Text="Internet radio for Windows, inspired by GNOME Shortwave by Felix Häcker and contributors. It contains none of Shortwave’s code or artwork." />
                         <HyperlinkButton Content="Station data: radio-browser.info" NavigateUri="https://www.radio-browser.info" Padding="0" />
                     </StackPanel>
                 </Border>

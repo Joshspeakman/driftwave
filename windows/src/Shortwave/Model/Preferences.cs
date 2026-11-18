@@ -43,6 +43,8 @@ public sealed class Preferences : Observable
         themeId = Get("theme") ?? "default";                                             // -theme <id> overrides it
         effectsEnabled = GetBool("effects") ?? true;
         effectIntensity = Math.Clamp(GetDouble("effectIntensity") ?? 1.0, 0, 1);
+        checkForUpdates = GetBool("checkForUpdates") ?? true;
+        lastUpdateCheck = Get("lastUpdateCheck");
         loading = false;
     }
 
@@ -160,6 +162,13 @@ public sealed class Preferences : Observable
 
     private double effectIntensity;
     public double EffectIntensity { get => effectIntensity; set { if (Set(ref effectIntensity, Math.Clamp(value, 0, 1))) Store("effectIntensity", effectIntensity); } }
+
+    private bool checkForUpdates;
+    /// <summary>Look for a new release at launch (at most once a day).</summary>
+    public bool CheckForUpdates { get => checkForUpdates; set { if (Set(ref checkForUpdates, value)) Store("checkForUpdates", value); } }
+
+    private string? lastUpdateCheck;
+    public string? LastUpdateCheck { get => lastUpdateCheck; set { if (Set(ref lastUpdateCheck, value)) Store("lastUpdateCheck", value); } }
 
     public RecorderConfig RecorderConfig => new(RecordingMode, MinimumDuration, MaximumDuration);
 }

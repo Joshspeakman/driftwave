@@ -70,7 +70,7 @@ public sealed class Track : Observable
                 if (format == RecordableFormat.Mp3)
                 {
                     string d = FileNames.UniqueFilePath(directory, name, "mp3");
-                    byte[] tag = ID3.Tag(song, artist, station, $"Recorded with Shortwave from {station}");
+                    byte[] tag = ID3.Tag(song, artist, station, $"Recorded with Driftwave from {station}");
                     WriteAtomic(d, [.. tag, .. audio]);
                     return d;
                 }

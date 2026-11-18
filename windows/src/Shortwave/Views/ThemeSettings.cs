@@ -122,7 +122,7 @@ public sealed class ThemeSettings : StackPanel
         BuildGallery();
         var t = themes.Current;
         restart.IsOpen = themes.RestartNeeded;
-        restart.Message = $"{(t.IsDefault ? "Going back to Default" : t.Name)} changes fonts, corners or the text colour, which Shortwave sets when it starts. Playback resumes after the restart.";
+        restart.Message = $"{(t.IsDefault ? "Going back to Default" : t.Name)} changes fonts, corners or the text colour, which Driftwave sets when it starts. Playback resumes after the restart.";
         effects.IsOn = app.Settings.EffectsEnabled;
         intensity.Value = Math.Round(app.Settings.EffectIntensity * 100);
         intensity.IsEnabled = effects.IsOn;
@@ -384,13 +384,13 @@ public sealed class ThemeSettings : StackPanel
             app.Settings.ThemeId = t.Id;
             Refresh();
         }
-        catch (Exception e) { app.Notice("Couldn’t Import Theme", e is FormatException or System.Text.Json.JsonException ? "This file isn’t a Shortwave theme." : e.Message); }
+        catch (Exception e) { app.Notice("Couldn’t Import Theme", e is FormatException or System.Text.Json.JsonException ? "This file isn’t a Driftwave theme." : e.Message); }
     }
 
     async Task ExportTheme(Theme t)
     {
         string? path;
-        try { path = await Ui.PickJsonToSave(hwnd(), t.Name + ".json", "Shortwave theme"); }
+        try { path = await Ui.PickJsonToSave(hwnd(), t.Name + ".json", "Driftwave theme"); }
         catch (Exception e) { app.Notice("Couldn’t Export Theme", e.Message); return; }
         if (path is null) return;
         try { ThemeManager.Export(t, path); }
