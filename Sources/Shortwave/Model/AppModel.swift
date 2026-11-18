@@ -21,7 +21,7 @@ enum Page: String, Hashable, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .library: "books.vertical"
-        case .discover: "safari"
+        case .discover: "globe"
         case .search: "magnifyingglass"
         case .settings: "gearshape"
         }
@@ -271,9 +271,12 @@ final class AppModel {
         let ids = library.filter { !$0.isLocal }.map(\.id)
         guard !ids.isEmpty, let fresh = try? await api.stations(byUUIDs: ids) else { return }
         let byID = Dictionary(fresh.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let asked = Set(ids)
         var changed = false
         library = library.map { s in
-            guard !s.isLocal else { return s }
+            // Stations added while the request was out (an import) weren't asked about: leave them
+            // to their own refresh rather than calling them orphaned.
+            guard !s.isLocal, asked.contains(s.id) else { return s }
             if let f = byID[s.id] {
                 let r = s.refreshed(from: f)
                 if r != s { changed = true }

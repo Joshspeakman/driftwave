@@ -40,7 +40,7 @@ struct PlayerPanel: View {
                 .frame(maxWidth: .infinity)
             }
         } else {
-            EmptyState(symbol: "dot.radiowaves.left.and.right", title: "No Playback",
+            EmptyState(symbol: "antenna.radiowaves.left.and.right", title: "No Playback",
                        text: "Choose a station from your library or discover new ones.")
                 .frame(maxWidth: 260)
                 .frame(maxWidth: .infinity)
@@ -82,13 +82,13 @@ struct PlaybackControls: View {
             // Accent-filled round button, like the Windows app's.
             Button { player.togglePlayback() } label: {
                 ZStack {
-                    Circle().fill(player.station == nil ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.tint))
+                    Circle().fill(player.station == nil ? AnyShapeStyle(.quaternary) : AnyShapeStyle(Fluent.accentFill))
                     if player.state == .loading {
-                        ProgressView().controlSize(large ? .regular : .small).tint(.white)
+                        ProgressView().controlSize(large ? .regular : .small).tint(Fluent.onAccent)
                     } else if player.isPlaying {
-                        RoundedRectangle(cornerRadius: 2).fill(.white).frame(width: large ? 16 : 10, height: large ? 16 : 10)
+                        RoundedRectangle(cornerRadius: 2).fill(Fluent.onAccent).frame(width: large ? 16 : 10, height: large ? 16 : 10)
                     } else {
-                        Image(systemName: "play.fill").font(.system(size: large ? 20 : 13, weight: .bold)).foregroundStyle(.white)
+                        Image(systemName: "play.fill").font(.system(size: large ? 20 : 13, weight: .bold)).foregroundStyle(Fluent.onAccent)
                             .offset(x: large ? 2 : 1)
                     }
                 }
@@ -119,6 +119,7 @@ struct VolumeControl: View {
             .buttonStyle(.plain)
             .help(player.isMuted ? "Unmute" : "Mute")
             Slider(value: $player.volume, in: 0...1)
+                .tint(.accentColor)
                 .frame(width: large ? 120 : 90)
                 .controlSize(.small)
                 .accessibilityLabel("Volume")
@@ -250,7 +251,8 @@ struct MiniPlayerWindow: View {
                 .frame(height: 28)
             MiniPlayer()
         }
-        .background(.regularMaterial)
-        .ignoresSafeArea(.container, edges: .top)
+        // The caption sits in the title bar's 28 pt, so the window is only as tall as its content.
+        .padding(.top, -28)
+        .background(.regularMaterial, ignoresSafeAreaEdges: .all)
     }
 }

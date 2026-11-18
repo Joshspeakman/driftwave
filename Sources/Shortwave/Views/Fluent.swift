@@ -32,6 +32,16 @@ enum Fluent {
     /// DividerStrokeColorDefault.
     static let divider = dynamic(light: black(0.08), dark: white(0.08))
 
+    /// TextFillColorTertiary: empty-state icons and chevrons.
+    static let tertiaryText = dynamic(light: black(0.447), dark: white(0.53))
+    /// AccentFillColorDefault: the accent, but the lighter shade in dark mode (WinUI's rule), so
+    /// glyphs on it are white in light mode and black in dark mode.
+    static let accentFill = Color(nsColor: NSColor(name: nil) { a in
+        let accent = NSColor.controlAccentColor.usingColorSpace(.sRGB) ?? .systemBlue
+        return a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? accent.blended(withFraction: 0.45, of: .white) ?? accent : accent
+    })
+    static let onAccent = dynamic(light: .white, dark: .black)
+
     static let titleFont = Font.system(size: 28, weight: .semibold)
     static let subtitleFont = Font.system(size: 20, weight: .semibold)
 }
@@ -45,7 +55,7 @@ struct PageHeader<Trailing: View>: View {
         HStack(spacing: 16) {
             Text(title).font(Fluent.titleFont).lineLimit(1).fixedSize()
             Spacer(minLength: 0)
-            HStack(spacing: 6) { trailing }
+            HStack(spacing: 6) { trailing }.controlSize(.large)
         }
         .frame(minHeight: 40)
         .padding(EdgeInsets(top: 12, leading: 24, bottom: 8, trailing: 16))
@@ -90,7 +100,7 @@ struct EmptyState<Actions: View>: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: symbol).font(.system(size: iconSize, weight: .light)).foregroundStyle(.tertiary)
+            Image(systemName: symbol).font(.system(size: iconSize, weight: .light)).foregroundStyle(Fluent.tertiaryText)
                 .padding(.bottom, 2)
             Text(title).font(Fluent.subtitleFont).multilineTextAlignment(.center)
             if !text.isEmpty {

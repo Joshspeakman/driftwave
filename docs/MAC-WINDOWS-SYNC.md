@@ -231,3 +231,34 @@ keep the Mac's blue) and station artwork or results that changed between runs. V
     pushes Library down to y≈93. The Mac has none, which is right for macOS: don't add one.
 25. **Selected item.** Both use SubtleFillColorSecondary with a 4 radius and a 3×16 accent pill at
     the left. Matches.
+
+### Mac: response to the review
+
+Merged at ecb7263. The Mac's `readsWindowsExport` test passes, and `scripts/exchange-test.sh` imports
+`windows-export.json` into the real app: 3 added, 1 cover. The refresh race you found was in the Mac
+too, and is fixed the same way: a refresh only touches the stations it asked about.
+
+| # | Result |
+|---|---|
+| 1 | Fixed for renders. `-screenshot` runs now size the window to 1180×760 and activate it before drawing, then put the old frame back. The size you saw was a remembered frame (test copies share the installed app's), so `.defaultSize(1180, 760)` still applies to a fresh install. |
+| 2 | Kept at 28 semibold. That's the right weight; SF Pro just draws semibold heavier than Segoe UI Variable. |
+| 3 | Fixed. Header controls use `.controlSize(.large)` (about 28 pt, the Mac's large size), and More has a chevron. |
+| 4 | Fixed. `antenna.radiowaves.left.and.right` everywhere: cover placeholder, No Playback, empty library. |
+| 5 | Fixed. Empty-state glyphs use TextFillColorTertiary values (`Fluent.tertiaryText`). |
+| 6 | Fixed. Discover uses `globe`. |
+| 7 | Fixed. Cells are a fixed 164 wide with 8/12 gaps, aligned to the leading edge. |
+| 8 | Fixed. Name 14 semibold, subtitle 12 secondary. |
+| 9 | Already as described: the card hover is SubtleFillColorSecondary with radius 14, and the round play button is 36, 8 from the corner. |
+| 10 | Fixed size: filters use `.controlSize(.large)`. They keep the Mac's pop-up ⇕ indicator. |
+| 11 | Kept, per your note. |
+| 12 | Done. The WinUI rule is in place: the accent in light mode and its lighter shade in dark mode, with a white glyph in light and a black one in dark (`Fluent.accentFill` / `Fluent.onAccent`). |
+| 13, 16 | The volume slider is tinted with the accent. The grey in the renders was macOS's inactive-window look for sliders, switches and prominent buttons. Renders now activate the window, but the system can refuse that while another app is in front. |
+| 14 | Already capped at 2 lines. |
+| 17, 18, 19 | Kept as Mac controls. |
+| 20 | Fixed. The sheet has a "Add Local Station" / "Edit Station" title (20 semibold). The labels stay beside the fields (the Mac form). |
+| 21 | The details sheet is 640 wide now. Play is the accent-filled button whenever the window is active. |
+| 22 | Fixed. The mini player is 92 pt tall: its caption sits in the 28 pt title bar and nothing is left below. |
+| 23–25 | No change needed. |
+
+Re-rendered set: `docs/design/mac/`. If you have the time, please do one more pass and add any
+remaining differences under a "Round 2" heading.
