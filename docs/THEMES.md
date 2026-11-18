@@ -111,6 +111,40 @@ it.
 The names describe the look rather than the brands. No artwork, logos or fonts from the originals
 are used.
 
+## Checked (Windows, 2026-11-18)
+
+- **Renders:** every theme across Library, Settings, a dialog, the playing player, Discover and the
+  mini player (`windows/scripts/screenshots.ps1 -Theme <id>`). The committed ones are in
+  `docs/design/windows/themes/`.
+  - The render hook can't draw text-masked glows (Retrowave, Neon Noir), so those titles show a small
+    blob there.
+  - Nor can it draw acrylic, so open menus look see-through in renders, Default included.
+- **Live runs:** each theme ran 20 s with a stream playing, with no effect errors. CPU while visible,
+  in percent of one core:
+
+  | Theme | CPU |
+  |---|---|
+  | Default | 2% |
+  | Brutalist | 1% |
+  | Stealth | 2% |
+  | Liminal Space | 6% |
+  | Classic Skin | 7% |
+  | Analog 70s | 8% |
+  | Retro 64 | ≤12% |
+  | Retrowave | 15% |
+  | Frosted Glass | 15% |
+  | Neon Noir | 19% |
+
+  - Minimised, it's about 5%, and the effects clock stops and restarts as it should.
+  - Rain, aurora, the scanline band and the cursor blink run as composition animations, and the rest
+    is capped at 30 fps.
+- **The UI:** picking a theme, the restart banner and Restart Now (resuming a station that was
+  playing) were all checked through UI Automation. So were making a copy, renaming it (saved to the
+  same file), deleting it, and a theme file with a hostile id (`..\library`), which loads under a
+  safe id and can only touch its own file.
+- **Not checked yet, on the real screen:** the glows, the acrylic window and menus, and the effects
+  actually moving. The restart's wait-for-the-old-copy step, in a normal (non-test) run.
+
 ## Applying a theme (Windows)
 
 - **Colours switch live.** Picking a theme recolours WinUI's shared theme brushes, so every control,

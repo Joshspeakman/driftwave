@@ -1,7 +1,8 @@
 # Captures the real window from the screen (Mica, title bar and all), not a -screenshot render. A muted test
 # copy with the design library comes to the front in light and in dark, and its window area is copied from
 # the screen into docs\design\windows\screen-<light|dark>.png. Needs the display on and unlocked.
-# Usage: windows\scripts\screen-capture.ps1
+# Usage: windows\scripts\screen-capture.ps1 [-Theme <id>]   (with -Theme: screen-<id>.png, one capture)
+param([string]$Theme = '')
 . "$PSScriptRoot\common.ps1"
 Add-Type -AssemblyName System.Drawing
 Add-Type -Namespace SW -Name Cap -MemberDefinition @'
@@ -27,8 +28,10 @@ Remove-Item -LiteralPath $library -Force -ErrorAction SilentlyContinue
 Invoke-Quick @('-muted', '-quitAfter', '2', '-importStations', "`"$(Join-Path $RepoRoot 'fixtures\exchange\seed.json')`"")
 Invoke-Quick @('-muted', '-quitAfter', '2', '-importStations', "`"$(Join-Path $RepoRoot 'fixtures\design\library.json')`"")
 try {
-    foreach ($look in 'light', 'dark') {
-        $p = Start-Process -FilePath $app -ArgumentList @('-muted', '-appearance', $look, '-page', 'library', '-quitAfter', '20') -PassThru
+    $looks = if ($Theme) { @($Theme) } else { @('light', 'dark') }
+    foreach ($look in $looks) {
+        $lookArgs = if ($Theme) { @('-theme', $Theme) } else { @('-appearance', $look) }
+        $p = Start-Process -FilePath $app -ArgumentList (@('-muted', '-page', 'library', '-quitAfter', '20') + $lookArgs) -PassThru
         Start-Sleep -Seconds 4
         $h = $p.MainWindowHandle
         for ($i = 0; $i -lt 5 -and [SW.Cap]::GetForegroundWindow() -ne $h; $i++) {

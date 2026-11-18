@@ -96,6 +96,40 @@ public sealed class WindowEffects
     internal static SolidColorBrush Brush(Color c) => new(c);
     internal static Color A(Color c, double alpha) => Theme.WithAlpha(c, alpha);
 
+    /// <summary>
+    /// A looping composition animation on an element's Translation: it runs on the compositor, so it costs the UI
+    /// thread nothing per frame. Not started when effects are frozen (screenshots, animations off).
+    /// </summary>
+    internal static void Loop(UIElement e, string property, float from, float to, double seconds)
+    {
+        if (EffectsClock.Frozen || seconds <= 0) return;
+        Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.SetIsTranslationEnabled(e, true);
+        var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(e);
+        var c = visual.Compositor;
+        var anim = c.CreateScalarKeyFrameAnimation();
+        anim.InsertKeyFrame(0f, from);
+        anim.InsertKeyFrame(1f, to, c.CreateLinearEasingFunction());
+        anim.Duration = TimeSpan.FromSeconds(seconds);
+        anim.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
+        visual.StartAnimation(property, anim);
+    }
+
+    /// <summary>A slow composition loop through <paramref name="points"/> (translations) and back to the start.</summary>
+    internal static void LoopPath(UIElement e, IList<System.Numerics.Vector3> points, double seconds)
+    {
+        if (EffectsClock.Frozen || points.Count == 0) return;
+        Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.SetIsTranslationEnabled(e, true);
+        var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(e);
+        var c = visual.Compositor;
+        var anim = c.CreateVector3KeyFrameAnimation();
+        anim.InsertKeyFrame(0f, System.Numerics.Vector3.Zero);
+        for (int i = 0; i < points.Count; i++) anim.InsertKeyFrame((i + 1f) / (points.Count + 1), points[i]);
+        anim.InsertKeyFrame(1f, System.Numerics.Vector3.Zero);
+        anim.Duration = TimeSpan.FromSeconds(seconds);
+        anim.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
+        visual.StartAnimation("Translation", anim);
+    }
+
     /// <summary>A grey noise image, premultiplied BGRA; <paramref name="smooth"/> adds soft blotches (concrete).</summary>
     internal static WriteableBitmap Noise(int w, int h, int seed, byte maxAlpha, bool dark, bool smooth = false)
     {
@@ -238,21 +272,19 @@ public sealed class WindowEffects
         }
     }
 
-    /// <summary>Neon Noir: rain streaks over a hazy amber-and-cyan city glow.</summary>
+    /// <summary>
+    /// Neon Noir: rain over a hazy amber-and-cyan city glow. The drops are three sheets scrolled by composition
+    /// animations (no per-frame work on the UI thread); each sheet holds its drops twice, so the loop is seamless.
+    /// </summary>
     sealed class Rain(JsonObject o) : Effect
     {
         readonly Canvas glow = new(), drops = new();
-        readonly List<(Line Line, double Speed, double Len)> lines = [];
-        readonly List<Ellipse> blobs = [];
-        double w, h;
-        public override bool Animated => true;
         public override IEnumerable<(UIElement, bool)> Elements() { yield return (glow, false); yield return (drops, true); }
 
-        public override void Resize(double width, double height)
+        public override void Resize(double w, double h)
         {
-            w = width; h = height;
             if (w < 1 || h < 1) return;
-            glow.Children.Clear(); drops.Children.Clear(); lines.Clear(); blobs.Clear();
+            glow.Children.Clear(); drops.Children.Clear();
             var a = Opt(o, "glowA", Color.FromArgb(255, 255, 138, 30));
             var b = Opt(o, "glowB", Color.FromArgb(255, 0, 229, 255));
             var rnd = new Random(7);
@@ -268,75 +300,66 @@ public sealed class WindowEffects
                 Canvas.SetLeft(e, rnd.NextDouble() * w - d / 2);
                 Canvas.SetTop(e, h * (0.45 + rnd.NextDouble() * 0.55) - d * 0.35);
                 glow.Children.Add(e);
-                blobs.Add(e);
             }
             var color = Opt(o, "color", Color.FromArgb(255, 159, 216, 255));
             int n = (int)Opt(o, "drops", 90);
-            for (int i = 0; i < n; i++)
+            double[] speeds = [820, 1080, 1400];
+            const double slant = 0.18;
+            for (int layer = 0; layer < speeds.Length; layer++)
             {
-                double len = 12 + rnd.NextDouble() * 22, speed = 700 + rnd.NextDouble() * 700;
-                var line = new Line { Stroke = Brush(A(color, (0.12 + rnd.NextDouble() * 0.28) * Intensity)), StrokeThickness = rnd.NextDouble() < 0.2 ? 1.5 : 1 };
-                line.X1 = rnd.NextDouble() * (w + 200);
-                line.Y1 = rnd.NextDouble() * h;
-                Place(line, line.X1, line.Y1, len);
-                drops.Children.Add(line);
-                lines.Add((line, speed, len));
+                var sheet = new Canvas { Width = w + h * slant + 40, Height = 2 * h };
+                for (int k = 0; k < n / speeds.Length; k++)
+                {
+                    double len = 12 + rnd.NextDouble() * 22 + layer * 4;
+                    double x = rnd.NextDouble() * sheet.Width, y = rnd.NextDouble() * h;
+                    var brush = Brush(A(color, (0.10 + rnd.NextDouble() * 0.22 + layer * 0.05) * Intensity));
+                    double thick = layer == 2 ? 1.5 : 1;
+                    foreach (double yy in new[] { y, y + h })
+                        sheet.Children.Add(new Line { X1 = x, Y1 = yy, X2 = x - len * slant, Y2 = yy + len, Stroke = brush, StrokeThickness = thick });
+                }
+                Canvas.SetLeft(sheet, 0);
+                Canvas.SetTop(sheet, -h);
+                drops.Children.Add(sheet);
+                double seconds = h / speeds[layer];
+                Loop(sheet, "Translation.Y", 0, (float)h, seconds);
+                Loop(sheet, "Translation.X", 0, (float)(-h * slant), seconds);   // the streaks lean down-left
             }
-        }
-
-        static void Place(Line l, double x, double y, double len) { l.X1 = x; l.Y1 = y; l.X2 = x - len * 0.18; l.Y2 = y + len; }
-
-        public override void Tick(double t, double dt)
-        {
-            if (dt <= 0) return;
-            var rnd = Random.Shared;
-            foreach (var (line, speed, len) in lines)
-            {
-                double y = line.Y1 + speed * dt, x = line.X1 - speed * dt * 0.18;
-                if (y > h) { y = -len - rnd.NextDouble() * 60; x = rnd.NextDouble() * (w + 200); }
-                Place(line, x, y, len);
-            }
-            for (int i = 0; i < blobs.Count; i++) blobs[i].Opacity = 0.85 + 0.15 * Math.Sin(t * (0.4 + i * 0.13) + i);
         }
     }
 
-    /// <summary>Frosted Glass: big soft colour blobs drifting behind the translucent panes.</summary>
+    /// <summary>Frosted Glass: big soft colour blobs drifting behind the translucent panes (composition animations).</summary>
     sealed class Aurora(JsonObject o) : Effect
     {
         readonly Canvas canvas = new();
-        readonly List<Ellipse> blobs = [];
-        double w, h;
-        public override bool Animated => true;
         public override IEnumerable<(UIElement, bool)> Elements() { yield return (canvas, false); }
 
-        public override void Resize(double width, double height)
+        public override void Resize(double w, double h)
         {
-            w = width; h = height;
-            canvas.Children.Clear(); blobs.Clear();
+            canvas.Children.Clear();
+            if (w < 1 || h < 1) return;
             var colors = (o["colors"] as JsonArray)?.Select(n => Theme.ParseColor((string?)n)).OfType<Color>().ToList() ?? [];
             if (colors.Count == 0) colors = [Color.FromArgb(255, 125, 211, 252), Color.FromArgb(255, 196, 181, 253), Color.FromArgb(255, 249, 168, 212)];
             double op = Opt(o, "opacity", 0.55) * Intensity;
-            foreach (var c in colors)
+            for (int i = 0; i < colors.Count; i++)
             {
+                var c = colors[i];
                 double d = Math.Max(w, h) * 0.75;
                 var e = new Ellipse
                 {
                     Width = d, Height = d,
                     Fill = new RadialGradientBrush { GradientStops = { new GradientStop { Color = A(c, op), Offset = 0 }, new GradientStop { Color = A(c, 0), Offset = 1 } } },
                 };
+                int index = i;
+                // Start where the still frame has it, then wander through a few points and back.
+                Point P(double k) => new(w * (0.5 + 0.38 * Math.Sin(k + index * 2.1)) - d / 2, h * (0.5 + 0.34 * Math.Cos(k * 1.3 + index * 1.7)) - d / 2);
+                double k0 = EffectsClock.StillTime * (0.05 + i * 0.02);
+                var start = P(k0);
+                Canvas.SetLeft(e, start.X);
+                Canvas.SetTop(e, start.Y);
                 canvas.Children.Add(e);
-                blobs.Add(e);
-            }
-        }
-
-        public override void Tick(double t, double dt)
-        {
-            for (int i = 0; i < blobs.Count; i++)
-            {
-                var e = blobs[i];
-                double s = 0.05 + i * 0.02;
-                Canvas.SetLeft(e, w * (0.5 + 0.38 * Math.Sin(t * s + i * 2.1)) - e.Width / 2);
-                Canvas.SetTop(e, h * (0.5 + 0.34 * Math.Cos(t * s * 1.3 + i * 1.7)) - e.Height / 2);
+                var path = Enumerable.Range(1, 4).Select(k => P(k0 + k * 1.4))
+                    .Select(p => new System.Numerics.Vector3((float)(p.X - start.X), (float)(p.Y - start.Y), 0)).ToList();
+                LoopPath(e, path, 60 + i * 17);
             }
         }
     }
@@ -482,18 +505,15 @@ public sealed class WindowEffects
         }
     }
 
-    /// <summary>CRT scanlines, with a faint bright band rolling down.</summary>
+    /// <summary>CRT scanlines, with a faint bright band rolling down (a composition animation).</summary>
     sealed class Scanlines(JsonObject o) : Effect
     {
         readonly Rectangle lines = new(), band = new() { Height = 140 };
         readonly Canvas canvas = new();
-        double h;
-        public override bool Animated => true;
         public override IEnumerable<(UIElement, bool)> Elements() { yield return (canvas, true); }
 
         public override void Resize(double w, double height)
         {
-            h = height;
             canvas.Children.Clear();
             double a = Opt(o, "opacity", 0.12) * Intensity;
             lines.Width = w; lines.Height = height;
@@ -519,11 +539,11 @@ public sealed class WindowEffects
                     new GradientStop { Color = A(Microsoft.UI.Colors.White, 0), Offset = 1 },
                 },
             };
+            Canvas.SetTop(band, -140);
             canvas.Children.Add(lines);
             canvas.Children.Add(band);
+            Loop(band, "Translation.Y", 0, (float)(height + 280), 7);
         }
-
-        public override void Tick(double t, double dt) => Canvas.SetTop(band, (t / 7 % 1) * (h + 280) - 140);
     }
 
     /// <summary>Stealth: the dark closes in except where the pointer is.</summary>

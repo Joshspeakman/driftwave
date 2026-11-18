@@ -50,6 +50,7 @@ public static class EffectsClock
         bool want = subscribers.Count > 0 && windowVisible && !Frozen;
         if (want == running) return;
         running = want;
+        Diagnostics.Log(want ? "effects clock running" : "effects clock stopped");
         if (want)
         {
             last = DateTime.UtcNow;
@@ -61,6 +62,8 @@ public static class EffectsClock
     static void OnFrame(object? sender, object e)
     {
         var now = DateTime.UtcNow;
+        // 30 frames a second is plenty for these effects and halves their cost.
+        if ((now - last).TotalSeconds < 1 / 31.0) return;
         double dt = Math.Min(0.1, (now - last).TotalSeconds);
         last = now;
         double t = StillTime + (now - start).TotalSeconds;

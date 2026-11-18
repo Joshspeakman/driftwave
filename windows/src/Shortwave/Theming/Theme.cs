@@ -31,6 +31,13 @@ public sealed class Theme
     public Dictionary<string, JsonObject> Effects { get; set; } = [];
 
     public bool IsDefault => Id == DefaultId;
+    /// <summary>The file a user theme was loaded from (save and delete use it; never written to the JSON).</summary>
+    public string? SourcePath { get; set; }
+
+    /// <summary>Ids are lower-case letters, digits and hyphens: they become file names.</summary>
+    public static bool IsValidId(string? id) =>
+        !string.IsNullOrEmpty(id) && id.Length <= 64 && id.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-');
+    public static string NewCustomId() => "custom-" + Guid.NewGuid().ToString("N")[..8];
     public bool IsDark => Base == "dark";
 
     /// <summary>The colour tokens a theme can set, with the label the editor shows.</summary>
