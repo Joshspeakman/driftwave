@@ -9,13 +9,14 @@
     </Window.SystemBackdrop>
     <Grid x:Name="Root">
         <Grid.RowDefinitions>
-            <RowDefinition Height="40" />
+            <!-- 48: Windows' tall caption buttons (AppWindow.TitleBar.PreferredHeightOption = Tall) -->
+            <RowDefinition Height="48" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <!-- Theme layers: background colour, effects behind the UI, effects in front of it (no clicks) -->
         <Border x:Name="BackdropFill" Grid.RowSpan="2" />
         <Grid x:Name="EffectsBack" Grid.RowSpan="2" IsHitTestVisible="False" />
-        <Grid x:Name="AppTitleBar" Padding="14,0,0,0">
+        <Grid x:Name="AppTitleBar" Padding="16,0,0,0">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                 <Image x:Name="TitleIcon" Width="16" Height="16" />
                 <TextBlock x:Name="TitleText" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
@@ -24,6 +25,12 @@
         <NavigationView x:Name="Nav" Grid.Row="1" PaneDisplayMode="Left" IsBackButtonVisible="Collapsed" IsSettingsVisible="True"
                         OpenPaneLength="200" CompactModeThresholdWidth="900" ExpandedModeThresholdWidth="1000"
                         SelectionChanged="Nav_SelectionChanged" ItemInvoked="Nav_ItemInvoked" IsTitleBarAutoPaddingEnabled="False">
+            <!-- The pane's surface: clear over Mica (Default); themes give it their own colour (MainWindow.ApplyLook), so
+                 window effects stay behind the content instead of running under the menu -->
+            <NavigationView.Resources>
+                <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
+                <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
+            </NavigationView.Resources>
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Library" Tag="Library" ToolTipService.ToolTip="Library (Ctrl+1)">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon>
@@ -63,15 +70,22 @@
                     <!-- A new version was found by the check at launch -->
                     <InfoBar x:Name="UpdateBar" VerticalAlignment="Bottom" Margin="16" IsOpen="False" Severity="Informational"
                              Title="Update available" IsClosable="True" />
-                    <Border x:Name="BottomBar" Grid.Row="1" Visibility="Collapsed" BorderThickness="0,1,0,0"
-                            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorAltBrush}">
+                    <!-- With the player hidden: the station on a floating card at the bottom -->
+                    <Border x:Name="BottomBar" Grid.Row="1" Visibility="Collapsed" Margin="8,0,8,8" BorderThickness="1"
+                            CornerRadius="{StaticResource ShortwaveCardRadius}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <local:MiniPlayerView />
                     </Border>
                 </Grid>
-                <Border x:Name="PlayerPane" Grid.Column="1" Width="300" BorderThickness="1,0,0,0"
-                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
-                    <local:PlayerPanel />
-                </Border>
+                <!-- The player: a floating card beside the page (no hard divider). The outer grid slides its width when
+                     the player is shown or hidden; the card keeps its width and is clipped, so it slides out whole. -->
+                <Grid x:Name="PlayerPane" Grid.Column="1" Width="312">
+                    <Border x:Name="PlayerCard" Width="300" HorizontalAlignment="Left" Margin="4,8,8,8" BorderThickness="1"
+                            CornerRadius="{StaticResource ShortwaveCardRadius}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <local:PlayerPanel />
+                    </Border>
+                </Grid>
             </Grid>
         </NavigationView>
         <Grid x:Name="EffectsFront" Grid.RowSpan="2" IsHitTestVisible="False" />

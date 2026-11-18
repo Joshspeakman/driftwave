@@ -105,6 +105,7 @@ public sealed class StationDetailDialog : ContentDialog
     private readonly AppModel app;
     private Station station;
     private readonly Func<nint> hwnd;
+    private bool popLibraryButton;
 
     public StationDetailDialog(AppModel app, Station station, Func<nint> hwnd)
     {
@@ -143,12 +144,19 @@ public sealed class StationDetailDialog : ContentDialog
         var play = Form.LabeledButton("\uF5B0", IsActive ? "Playing" : "Play", () => app.Play(station), accent: true);
         play.IsEnabled = !IsActive;
         buttons.Children.Add(play);
-        buttons.Children.Add(Form.LabeledButton(inLibrary ? "\uE738" : "\uE710", inLibrary ? "Remove from Library" : "Add to Library", () =>
+        var libraryButton = Form.LabeledButton(inLibrary ? "\uE738" : "\uE710", inLibrary ? "Remove from Library" : "Add to Library", () =>
         {
             app.ToggleLibrary(station);
             station = app.LibraryVersion(station);
+            popLibraryButton = true;
             Build();
-        }));
+        });
+        if (popLibraryButton)
+        {
+            popLibraryButton = false;
+            libraryButton.Loaded += (_, _) => Motion.Pop(libraryButton, 1.08f);
+        }
+        buttons.Children.Add(libraryButton);
         if (inLibrary)
         {
             var more = new DropDownButton { Content = new FontIcon { Glyph = "\uE712", FontSize = 14 } };

@@ -18,7 +18,7 @@
                         BorderThickness="0" ToolTipService.ToolTip="Show Station Details" AutomationProperties.Name="Show Station Details">
                     <local:StationCover x:Name="Cover" Size="200" />
                 </Button>
-                <StackPanel Spacing="4" HorizontalAlignment="Stretch">
+                <StackPanel x:Name="TitleBlock" Spacing="4" HorizontalAlignment="Stretch">
                     <TextBlock x:Name="StationName" Style="{StaticResource SubtitleTextBlockStyle}" TextAlignment="Center"
                                TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
                     <TextBlock x:Name="SongText" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True"

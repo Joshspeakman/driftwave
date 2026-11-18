@@ -62,8 +62,8 @@ public sealed partial class StationCard : UserControl
         Card.Background = hovering ? Ui.ThemeBrush("SubtleFillColorSecondaryBrush") : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
     }
 
-    void Card_PointerEntered(object sender, PointerRoutedEventArgs e) { hovering = true; Refresh(); }
-    void Card_PointerExited(object sender, PointerRoutedEventArgs e) { hovering = false; Refresh(); }
+    void Card_PointerEntered(object sender, PointerRoutedEventArgs e) { hovering = true; Refresh(); Motion.Lift(CoverHost, true); }
+    void Card_PointerExited(object sender, PointerRoutedEventArgs e) { hovering = false; Refresh(); Motion.Lift(CoverHost, false); }
 
     void PlayButton_Click(object sender, RoutedEventArgs e)
     {

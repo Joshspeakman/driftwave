@@ -7,9 +7,9 @@
   "base": "light",
   "backdrop": "acrylic",
   "colors": {
-    "background": "#40F4F7FB",
-    "surface": "#59FFFFFF",
-    "card": "#99FFFFFF",
+    "background": "#12F4F7FB",
+    "surface": "#33FFFFFF",
+    "card": "#6BFFFFFF",
     "cardStroke": "#80FFFFFF",
     "control": "#99FFFFFF",
     "controlStroke": "#26000000",

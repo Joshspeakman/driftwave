@@ -36,6 +36,8 @@ public sealed partial class MainWindow : Window
         TitleIcon.Source = new BitmapImage(new Uri(iconPng));
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        // Tall caption buttons (48 px) centred on the title row, as in other Windows 11 apps with a navigation pane.
+        AppWindow.TitleBar.PreferredHeightOption = Microsoft.UI.Windowing.TitleBarHeightOption.Tall;
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Driftwave.ico"));
 
         double scale = Native.GetDpiForWindow(Hwnd) / 96.0;
@@ -121,10 +123,20 @@ public sealed partial class MainWindow : Window
         return v;
     }
 
+    Page? shownPage;
+
     void ShowPage()
     {
         var view = PageView(app.Page);
-        PageHost.Content = view;
+        if (!ReferenceEquals(PageHost.Content, view))
+        {
+            // Pages further down the list come in from the right, earlier ones from the left.
+            PageHost.ContentTransitions = Motion.Enabled && shownPage is { } before
+                ? [new Microsoft.UI.Xaml.Media.Animation.ContentThemeTransition { HorizontalOffset = app.Page > before ? 48 : -48, VerticalOffset = 0 }]
+                : null;
+            PageHost.Content = view;
+        }
+        shownPage = app.Page;
         if (view is FrameworkElement fe)
         {
             if (fe.IsLoaded) DecorateTitles(fe);
@@ -148,10 +160,19 @@ public sealed partial class MainWindow : Window
         if (args.SelectedItem is NavigationViewItem { Tag: string tag } && Enum.TryParse<Page>(tag, out var page)) app.Page = page;
     }
 
+    bool playerPaneShown;
+
     void UpdatePlayerPane()
     {
-        PlayerPane.Visibility = app.ShowPlayer ? Visibility.Visible : Visibility.Collapsed;
-        BottomBar.Visibility = !app.ShowPlayer && app.Player.Station != null ? Visibility.Visible : Visibility.Collapsed;
+        bool show = app.ShowPlayer;
+        Diagnostics.Log($"player pane {(show ? "shown" : "hidden")}");
+        if (!playerPaneShown) PlayerPane.Visibility = show ? Visibility.Visible : Visibility.Collapsed;   // first time: no slide
+        else if ((PlayerPane.Visibility == Visibility.Visible) != show || PlayerPane.Opacity < 1)
+            try { Motion.SlidePane(PlayerPane, show, 312); } catch (Exception ex) { Diagnostics.Log("slide failed: " + ex); PlayerPane.Visibility = show ? Visibility.Visible : Visibility.Collapsed; }
+        playerPaneShown = true;
+        bool bar = !show && app.Player.Station != null;
+        if (bar && BottomBar.Visibility == Visibility.Collapsed) { BottomBar.Visibility = Visibility.Visible; Motion.Entrance(BottomBar, rise: 24, fromScale: 1f); }
+        else if (!bar) BottomBar.Visibility = Visibility.Collapsed;
         PlayerToggleItem.Content = app.ShowPlayer ? "Hide Player" : "Show Player";
     }
 
@@ -163,6 +184,8 @@ public sealed partial class MainWindow : Window
         else if (args.InvokedItemContainer == MiniPlayerItem) App.Current?.ShowMiniPlayer();
     }
 
+    readonly Dictionary<(VirtualKey, VirtualKeyModifiers), long> lastShortcut = [];
+
     /// <summary>The Mac's menu shortcuts with Ctrl in place of Command. Space is deliberately not play/stop.</summary>
     void AddShortcuts()
     {
@@ -172,7 +195,14 @@ public sealed partial class MainWindow : Window
             a.Invoked += (_, e) =>
             {
                 if (dialogOpen && key is not VirtualKey.Enter) { e.Handled = false; return; }
-                action();
+                // WinUI can deliver one key press to an accelerator twice (seen with Ctrl+Alt+P), which would undo a
+                // toggle. Nobody presses the same shortcut twice within 150 ms, so a second call that soon is that.
+                long now = Environment.TickCount64;
+                var id = (key, mods);
+                bool repeat = lastShortcut.TryGetValue(id, out long last) && now - last < 150;
+                lastShortcut[id] = now;
+                Diagnostics.Log($"shortcut {mods}+{key}{(repeat ? " (repeat ignored)" : "")}");
+                if (!repeat) action();
                 e.Handled = true;
             };
             Root.KeyboardAccelerators.Add(a);
@@ -242,6 +272,30 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
+    /// The navigation pane, the player card and the bottom bar. Default: clear pane over Mica and Windows' card fill.
+    /// Themes: the pane takes the theme's background (nearly opaque, so window effects don't run under the menu)
+    /// and the cards a solid blend of the theme's card colour over its background, so effects stay behind them too.
+    /// </summary>
+    void ApplySurfaces(Theme theme)
+    {
+        var paneColor = Microsoft.UI.Colors.Transparent;
+        Microsoft.UI.Xaml.Media.Brush cardBrush = Ui.ThemeBrush("CardBackgroundFillColorDefaultBrush");
+        // Glass themes (a system backdrop behind the theme) keep their see-through panes and cards: the colour
+        // drifting behind the glass is the point. Solid themes get solid surfaces.
+        if (!theme.IsDefault && theme.Backdrop == "none" && theme.Get("background") is { } bg)
+        {
+            var solid = Theme.WithAlpha(bg, 1);
+            paneColor = Theme.WithAlpha(bg, 0.94);
+            var card = theme.Get("card") is { } c ? Theme.Mix(solid, Theme.WithAlpha(c, 1), c.A / 255.0) : solid;
+            cardBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Theme.WithAlpha(card, 0.97));
+        }
+        foreach (var key in new[] { "NavigationViewExpandedPaneBackground", "NavigationViewDefaultPaneBackground" })
+            if (Nav.Resources[key] is Microsoft.UI.Xaml.Media.SolidColorBrush b) b.Color = paneColor;
+        PlayerCard.Background = cardBrush;
+        BottomBar.Background = cardBrush;
+    }
+
+    /// <summary>
     /// Applies a theme to this window: light or dark, title bar buttons, backdrop and background, the screen
     /// border, the window effects, page title treatments and the player pane's decorations.
     /// </summary>
@@ -250,6 +304,7 @@ public sealed partial class MainWindow : Window
         bool fx = app.Settings.EffectsEnabled;
         double intensity = app.Settings.EffectIntensity;
         ThemeManager.ApplyWindow(this, theme, look, BackdropFill, "mica");
+        ApplySurfaces(theme);
         if (currentDialog != null) currentDialog.RequestedTheme = look;
         if (fx && intensity > 0 && !theme.IsDefault && theme.Has("frame"))
         {
@@ -264,7 +319,7 @@ public sealed partial class MainWindow : Window
         }
         effects.Apply(theme, fx, intensity);
         titleDecor.Apply(theme, fx, intensity, PageHost.Content is DependencyObject page ? TitleDecor.FindTitles(page) : []);
-        if (PlayerPane.Child is PlayerPanel panel) panel.SetDecor(PlayerDecor.For(theme, app.Player, fx && intensity > 0));
+        if (PlayerCard.Child is PlayerPanel panel) panel.SetDecor(PlayerDecor.For(theme, app.Player, fx && intensity > 0));
     }
 
     // ContentDialogs can't overlap, so requests queue up and show one at a time.
