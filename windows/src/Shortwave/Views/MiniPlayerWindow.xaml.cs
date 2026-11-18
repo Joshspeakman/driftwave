@@ -17,7 +17,7 @@ public sealed partial class MiniPlayerWindow : Window
         Title = "Mini Player";
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(DragArea);
-        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.ico"));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Driftwave.ico"));
         if (AppWindow.Presenter is OverlappedPresenter p)
         {
             p.IsAlwaysOnTop = true;

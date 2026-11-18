@@ -10,7 +10,7 @@ $exe = Join-Path $dest 'Driftwave.exe'
 
 # Ask a running copy of this flavor to quit (files in use can't be replaced), then make sure it is gone.
 if (Test-Path $exe) { Start-Process -FilePath $exe -ArgumentList '--quit' -Wait }
-Get-Process Driftwave -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dest, [StringComparison]::OrdinalIgnoreCase) } |
+Get-Process Driftwave -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dest.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) } |
     ForEach-Object { if (-not $_.WaitForExit(5000)) { Stop-Process -Id $_.Id -Force } }
 if (Test-Path $exe) { Start-Process -FilePath $exe -ArgumentList '--unregister' -Wait }
 

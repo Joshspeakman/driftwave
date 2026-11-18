@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Shortwave.Core</RootNamespace>
-    <AssemblyName>ShortwaveCore</AssemblyName>
+    <AssemblyName>DriftwaveCore</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ShortwaveCore.Tests" />

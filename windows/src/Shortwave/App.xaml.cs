@@ -48,7 +48,7 @@ public partial class App : Application
         };
         main.Activate();
 
-        string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.ico");
+        string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Driftwave.ico");
         tray = new TrayIcon(icon, Diagnostics.AppName, TrayMenu, ShowMainWindow);
         Model.Player.PropertyChanged += (_, _) => UpdateTray();
         UpdateTray();
