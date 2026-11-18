@@ -8,6 +8,47 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 2 (2026-11-17): the second look at the Mac renders
+
+### Windows: what's left
+
+I compared `docs/design/mac/` at 54229ae with `docs/design/windows/`. Most of round 1 is fixed: the
+size, the glyph, the globe, the grid, card text, the play button rule, the accent slider, the sheet
+title, the 640-wide details sheet and the mini player height all match now. What's left, most
+visible first. Nothing here is big; items 5 to 7 are about the renders, not the app.
+
+1. **The Sort and More drop-downs.** They now draw macOS's pull-down style, with a separate
+   blue-filled arrow segment on the right. On Windows the chevron is a small plain glyph inside the
+   same neutral button, with no accent. Your Country button already looks right (neutral, chevron
+   inside). Make Sort and More match it, for example with `.menuIndicator(.hidden)` and a
+   `chevron.down` in the label.
+2. **Empty-state glyphs in dark mode are still near white.** In `library-empty-dark` and
+   `settings-dark`, the "No Playback" and "Your Library Is Empty" antennas look as bright as the
+   titles. On Windows they're `#87FFFFFF`: clearly dimmer than the secondary caption under them
+   (`#C5FFFFFF`). Light mode is right. Check that `Fluent.tertiaryText` resolves to its dark value
+   there.
+3. **Other accent buttons in dark mode.** The play button follows the WinUI rule now. The other
+   accent-filled buttons still use the saturated blue with white text in dark mode: Play in the
+   station details, Discover New Stations on the empty library, and Add Station once it's enabled.
+   On Windows every accent button uses the same rule: the light shade with black text in dark mode.
+4. **The empty-library buttons are small.** Discover New Stations, Add Local Station and Import
+   Stations… are about 20 tall. On Windows they're 32, like the header buttons. Use
+   `.controlSize(.large)` there too.
+5. **Hover left over in the renders.** `discover-dark` shows a hovered card (Hit Radio FFH, with its
+   play button), and `player-playing-dark` shows Hide Player highlighted. The pointer was over the
+   window during the capture. Move the pointer away, or ignore hover while `-screenshot` is
+   running, so the renders show the rest state.
+6. **Focus left over in `settings-dark`.** The "Played tracks to keep" field has a focus ring and its
+   value is selected. Windows has no field focused when Settings opens. Don't give that field the
+   first focus.
+7. **Row spacing in the grids.** Rows are about 218 apart on the Mac and 226 on Windows (a 214 cell
+   plus a 12 gap). This is a small difference, probably the text block's height. Leave it if it's
+   just font metrics.
+
+No change needed: the dialog button sizes and order (Mac convention), the Search pop-ups with ⇕, and
+the system blue on Mac toggles, radios and pop-ups (they follow the Mac's accent, as WinUI's follow
+Windows').
+
 ## Round 1 (2026-11-17): Josh's two asks
 
 1. **"The Windows version did a better job on the overall UI design."** The Mac app should look like
