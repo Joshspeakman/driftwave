@@ -1,0 +1,122 @@
+{
+  "format": "shortwave-stations",
+  "stations": [
+    {
+      "bitrate": 192,
+      "codec": "MP3",
+      "country": "The United States Of America",
+      "countryCode": "US",
+      "faviconURL": "http://101smoothjazz.com/favicon.ico",
+      "homepage": "http://101smoothjazz.com/",
+      "id": "d28420a4-eccf-47a2-ace1-088c7e7cb7e0",
+      "isHLS": false,
+      "isLocal": false,
+      "isOrphaned": false,
+      "language": "English",
+      "latitude": 39.34810449643775,
+      "longitude": -103.974609375,
+      "name": "101 SMOOTH JAZZ",
+      "state": "California",
+      "streamURL": "http://jking.cdnstream1.com/b22139_128mp3",
+      "tags": [
+        "easy listening",
+        "jazz",
+        "smooth jazz"
+      ],
+      "votes": 91801
+    },
+    {
+      "bitrate": 128,
+      "codec": "MP3",
+      "country": "The United States Of America",
+      "countryCode": "US",
+      "faviconURL": "https://somafm.com/img3/secretagent-400.jpg",
+      "homepage": "https://somafm.com/secretagent/",
+      "id": "960c7c81-0601-11e8-ae97-52543be04c81",
+      "isHLS": false,
+      "isLocal": false,
+      "isOrphaned": false,
+      "language": "English",
+      "latitude": 37.809784,
+      "longitude": -121.286316,
+      "name": "SomaFM Secret Agent (128k MP3)",
+      "state": "California",
+      "streamURL": "https://ice6.somafm.com/secretagent-128-mp3",
+      "tags": [
+        "ambient",
+        "downtempo",
+        "jazz",
+        "lounge",
+        "samba",
+        "sixties"
+      ],
+      "votes": 36098
+    },
+    {
+      "bitrate": 96,
+      "codec": "AAC+",
+      "country": "Brazil",
+      "countryCode": "BR",
+      "homepage": "http://antena1.com.br/",
+      "id": "963fa65f-0601-11e8-ae97-52543be04c81",
+      "isHLS": false,
+      "isLocal": false,
+      "isOrphaned": false,
+      "language": "Portuguese",
+      "name": "Antena 1 S\u00e3o Paulo, SP (ZYD823 94,7 MHz FM) [aac]",
+      "state": "S\u00e3o Paulo",
+      "streamURL": "http://antena1.newradio.it/stream?ext=.mp3",
+      "tags": [
+        "adult contemporary",
+        "jazz",
+        "pop",
+        "smooth jazz"
+      ],
+      "votes": 33542
+    },
+    {
+      "bitrate": 128,
+      "codec": "MP3",
+      "country": "France",
+      "countryCode": "FR",
+      "homepage": "https://www.francemusique.fr/",
+      "id": "81440088-0a76-11e8-ae97-52543be04c81",
+      "isHLS": false,
+      "isLocal": false,
+      "isOrphaned": false,
+      "language": "French",
+      "name": "France Musique",
+      "state": "",
+      "streamURL": "http://direct.francemusique.fr/live/francemusique-midfi.mp3",
+      "tags": [
+        "classical",
+        "jazz",
+        "music",
+        "public radio",
+        "radio france"
+      ],
+      "votes": 22599
+    },
+    {
+      "bitrate": 128,
+      "codec": "MP3",
+      "country": "The United States Of America",
+      "countryCode": "US",
+      "homepage": "http://www.977music.com/",
+      "id": "9610c519-0601-11e8-ae97-52543be04c81",
+      "isHLS": false,
+      "isLocal": false,
+      "isOrphaned": false,
+      "language": "English",
+      "name": ".977 Smooth Jazz",
+      "state": "Florida",
+      "streamURL": "http://29319.live.streamtheworld.com/977_SMOOJAZZ_SC",
+      "tags": [
+        "jazz",
+        "smooth jazz"
+      ],
+      "votes": 21892
+    }
+  ],
+  "version": 1
+}

@@ -9,6 +9,9 @@ import Foundation
 ///   -muted                   start muted (not saved)
 ///   -importStations <file>   import a station file at launch; -exportStations <file> exports the library
 ///   -quitAfter <seconds>     quit after that long
+///   -screenshot <png>        draw the main window (and sheet) to a PNG after -screenshotDelay s, then quit
+///   -appearance light|dark   force the look
+///   -miniPlayer, -addStation open the mini player / the Add Local Station sheet
 enum Diagnostics {
     static let logging = ProcessInfo.processInfo.environment["SHORTWAVE_LOG"] == "1"
 
@@ -20,7 +23,7 @@ enum Diagnostics {
     /// Test runs use their own data folder and preferences, so they never touch the real app's data.
     static var isTestRun: Bool {
         CommandLine.arguments.contains("-muted") || playURL != nil || startPage != nil || searchText != nil || openFirstResult || openTrackDetail
-            || importStations != nil || exportStations != nil || quitAfter != nil
+            || importStations != nil || exportStations != nil || quitAfter != nil || screenshot != nil || openMiniPlayer || openAddStation
             || ProcessInfo.processInfo.environment["SHORTWAVE_TEST"] == "1"
     }
 
@@ -33,6 +36,13 @@ enum Diagnostics {
         let v = UserDefaults.standard.double(forKey: "quitAfter")
         return v > 0 ? v : nil
     }
+    static var screenshot: String? { UserDefaults.standard.string(forKey: "screenshot") }
+    static var screenshotDelay: Double? {
+        let v = UserDefaults.standard.double(forKey: "screenshotDelay")
+        return v > 0 ? v : nil
+    }
+    static var openMiniPlayer: Bool { CommandLine.arguments.contains("-miniPlayer") }
+    static var openAddStation: Bool { CommandLine.arguments.contains("-addStation") }
     static var openFirstResult: Bool { CommandLine.arguments.contains("-openFirstResult") }
     static var openTrackDetail: Bool { CommandLine.arguments.contains("-openTrackDetail") }
     /// Test runs are always muted and keep off Now Playing / media keys (pass -audible for a sound test).
