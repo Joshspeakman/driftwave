@@ -3,7 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Shortwave.Model;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage.Pickers;
+using Microsoft.Windows.Storage.Pickers;
 
 namespace Shortwave.Views;
 
@@ -54,43 +54,43 @@ public static class Ui
         Clipboard.SetContent(p);
     }
 
+    // File pickers use the Windows App SDK's own pickers (Microsoft.Windows.Storage.Pickers). The older
+    // Windows.Storage.Pickers fail with E_FAIL when the app runs elevated; these work elevated and unpackaged.
+    static Microsoft.UI.WindowId Id(nint hwnd) => Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+
     public static async Task<string?> PickImage(nint hwnd)
     {
-        var picker = new FileOpenPicker { ViewMode = PickerViewMode.Thumbnail, SuggestedStartLocation = PickerLocationId.PicturesLibrary };
+        var picker = new FileOpenPicker(Id(hwnd)) { ViewMode = PickerViewMode.Thumbnail, SuggestedStartLocation = PickerLocationId.PicturesLibrary };
         foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".ico", ".webp", ".heic" }) picker.FileTypeFilter.Add(ext);
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
         var file = await picker.PickSingleFileAsync();
         return file?.Path;
     }
 
     public static async Task<string?> PickStationFileToOpen(nint hwnd)
     {
-        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary, CommitButtonText = "Import" };
+        var picker = new FileOpenPicker(Id(hwnd)) { SuggestedStartLocation = PickerLocationId.DocumentsLibrary, CommitButtonText = "Import" };
         picker.FileTypeFilter.Add(".json");
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
         var file = await picker.PickSingleFileAsync();
         return file?.Path;
     }
 
     public static async Task<string?> PickStationFileToSave(nint hwnd, string suggestedName)
     {
-        var picker = new FileSavePicker
+        var picker = new FileSavePicker(Id(hwnd))
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
             SuggestedFileName = Path.GetFileNameWithoutExtension(suggestedName),
             CommitButtonText = "Export",
+            DefaultFileExtension = ".json",
         };
         picker.FileTypeChoices.Add("Shortwave station file", [".json"]);
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
         var file = await picker.PickSaveFileAsync();
         return file?.Path;
     }
 
     public static async Task<string?> PickFolder(nint hwnd)
     {
-        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.MusicLibrary };
-        picker.FileTypeFilter.Add("*");
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        var picker = new FolderPicker(Id(hwnd)) { SuggestedStartLocation = PickerLocationId.MusicLibrary };
         var folder = await picker.PickSingleFolderAsync();
         return folder?.Path;
     }

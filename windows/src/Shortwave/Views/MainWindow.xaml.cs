@@ -161,19 +161,44 @@ public sealed partial class MainWindow : Window
         Add(VirtualKey.E, ctrlShift, app.ChooseExportFile);
         Add(VirtualKey.Q, ctrl, () => App.Current?.Quit());
         Root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
+        // The navigation pane (where focus starts) and lists use Ctrl+Up/Down and Enter themselves, so those
+        // accelerators never fired from there. Take these three before the focused control sees them.
+        Root.PreviewKeyDown += (_, e) =>
+        {
+            if (dialogOpen || !IsDown(VirtualKey.Control) || IsDown(VirtualKey.Menu) || IsDown(VirtualKey.Shift)) return;
+            switch (e.Key)
+            {
+                case VirtualKey.Up: app.Player.IncreaseVolume(); break;
+                case VirtualKey.Down: app.Player.DecreaseVolume(); break;
+                case VirtualKey.Enter: if (app.Player.HasStation) app.Player.TogglePlayback(); break;
+                default: return;
+            }
+            e.Handled = true;
+        };
     }
+
+    static bool IsDown(VirtualKey key) =>
+        InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
 
     /// <summary>Import Stations… (Ctrl+Shift+I, the Library's More menu, the empty library).</summary>
     async Task ChooseImportFile()
     {
-        if (await Ui.PickStationFileToOpen(Hwnd) is { } path) app.ImportReporting(path);
+        Diagnostics.Log("picker import");
+        string? path;
+        try { path = await Ui.PickStationFileToOpen(Hwnd); }
+        catch (Exception e) { Diagnostics.Log("picker import failed: " + e); app.Notice("Couldn’t Import Stations", e.Message); return; }
+        if (path != null) app.ImportReporting(path);
     }
 
     /// <summary>Export Stations… (Ctrl+Shift+E, the Library's More menu).</summary>
     async Task ChooseExportFile()
     {
         if (app.Library.Count == 0) { app.Notice("Nothing to Export", "Your library is empty."); return; }
-        if (await Ui.PickStationFileToSave(Hwnd, StationExchange.DefaultFileName) is { } path) app.ExportReporting(path);
+        Diagnostics.Log("picker export");
+        string? path;
+        try { path = await Ui.PickStationFileToSave(Hwnd, StationExchange.DefaultFileName); }
+        catch (Exception e) { Diagnostics.Log("picker export failed: " + e); app.Notice("Couldn’t Export Stations", e.Message); return; }
+        if (path != null) app.ExportReporting(path);
     }
 
     /// <summary>App Theme changed (the window's root is already set): restyle an open dialog too.</summary>
@@ -199,6 +224,7 @@ public sealed partial class MainWindow : Window
             d.XamlRoot = Root.XamlRoot;
             d.RequestedTheme = Root.RequestedTheme;   // Default: follows Windows, like the window
             currentDialog = d;
+            Diagnostics.Log($"dialog {d.GetType().Name} {d.Title}");
             try { await d.ShowAsync(); }
             catch (Exception e) { Diagnostics.Log("dialog: " + e.Message); }
             dialogOpen = false;
