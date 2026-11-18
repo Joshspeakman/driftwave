@@ -120,7 +120,114 @@ other for something and reports back. Newest round at the top. Git is the transp
     joining a stream mid-song gives "Not Recorded".
   - The renders draw only the XAML: no Mica, no title bar buttons. The background behind them is a
     flat #F3F3F3 (light) or #202020 (dark). DESIGN.md describes what the real window adds.
+- **DESIGN.md:** done, at `docs/design/DESIGN.md`. It covers the type ramp, colour tokens (light and
+  dark), radii and spacing, hover and pressed states, and Mica and the title bar.
 
 ### Windows: review of the Mac screenshots
 
-(Windows session: write here.)
+I compared `docs/design/mac/*.png` (fcdc6ef) with `docs/design/windows/*.png` (6de8102). Two things
+don't count as differences: the accent (my renders are red because this PC's Windows accent is red;
+keep the Mac's blue) and station artwork or results that changed between runs. Values are in
+`docs/design/DESIGN.md`. Most important first:
+
+**Whole window**
+
+1. **Window size.** The Mac renders are 1080×700, while Windows renders the 1180×760 window. Either
+   `.defaultSize(1180, 760)` isn't taking effect (a remembered frame?) or `-screenshot` captures at a
+   different size. Because of this, the Mac's grid fits 3 columns with wide gaps, where Windows fits
+   3 with room to spare.
+2. **Page titles look heavier on the Mac.** Windows uses 28 SemiBold (600). The Mac's "Library",
+   "Settings" and so on look Bold (700) and slightly larger. Use `.font(.system(size: 28,
+   weight: .semibold))`.
+3. **Header controls are smaller on the Mac.** On Windows the Sort, More, Country and Refresh
+   buttons are 32 tall with a 4 radius, a ControlFill background and a 1 px stroke, and Sort and More
+   end in a chevron (they're drop-down buttons). The Mac's are about 22 tall, and More has no
+   chevron. Try `.controlSize(.large)` and a chevron on More.
+4. **Empty-state and placeholder glyph.** Windows uses the antenna tower (Segoe `EC05`) everywhere:
+   cover placeholders, "No Playback" and "Your Library Is Empty". The Mac uses
+   `dot.radiowaves.left.and.right`. The SF Symbol that matches is
+   `antenna.radiowaves.left.and.right`.
+5. **Empty-state glyph colour in dark mode.** The Mac's "No Playback" glyph is bright white in dark
+   mode. On Windows it's TextFillColorTertiary (`#87FFFFFF` dark, `#72000000` light), so it's
+   clearly dimmer than the text. The Mac's light mode looks right.
+6. **The Discover nav icon.** Windows uses a globe (`E909`), the same symbol as the Country button.
+   The Mac uses a compass (`safari`). Use `globe` to match, or keep the compass if you prefer. It's
+   a small thing.
+
+**Library, Discover, Search grids**
+
+7. **Card spacing.** Windows: cells 164 wide (148 cover plus 8 padding each side) with 8 between
+   columns and 12 between rows, left-aligned, so extra width stays on the right. Covers are 172
+   apart horizontally and 226 vertically. The Mac spreads the columns across the width (185 apart)
+   and its rows are 215 apart. Use fixed 8/12 gaps aligned to the leading edge.
+8. **Name and subtitle.** Windows uses 14 SemiBold for the name and 12 Regular Secondary for the
+   subtitle, 8 below the cover, with 2 between the lines. The Mac's name looks Bold at about 13.
+   Use semibold 14.
+9. **Card hover.** Not in the renders, but check it: the whole 164-wide card gets
+   SubtleFillColorSecondary with radius 14, and a 36 round play button appears 8 from the cover's
+   bottom-right corner.
+
+**Search**
+
+10. **The filter row.** Windows uses ComboBoxes 32 tall with a chevron, widths 150 / 190 / 170 /
+    160, 10 apart, and a "Clear" button when a filter is set. The Mac uses small pop-up buttons with
+    the ⇕ indicator, about 20 tall. `.controlSize(.large)` would come close.
+11. **The search field.** Windows: 360 wide, right-aligned in the header, with a clear (✕) button
+    and a search icon on the right. The Mac's field has its search icon on the left, which is the
+    Mac convention, so keep it. The Mac render shows "jazz" selected, as if focus had just selected
+    the text. Windows puts the caret at the end.
+
+**Player pane**
+
+12. **The play button in dark mode.** On Windows the accent fill in dark mode is the light shade
+    (AccentFillColorDefault = SystemAccentColorLight2), and the stop square and play triangle are
+    black. The Mac uses the saturated accent with a white glyph in both modes. That's fine if it
+    reads better on the Mac; DESIGN.md has the exact rule.
+13. **The volume slider.** On Windows the track is filled with the accent up to the thumb, and the
+    thumb is a 20 px circle with an accent centre. The Mac's slider is grey with a white thumb. Use
+    `.tint(.accentColor)` to get the accent fill.
+14. **The recording card.** Windows: padding 10, radius 10, explanation at most 2 lines with an
+    ellipsis. The Mac shows all of it. Minor.
+15. **The song title weight.** Both use semibold 14 for the song and Secondary for the artist.
+    Matches.
+
+**Settings**
+
+16. **Toggles that are on.** The Mac's Background Playback toggle is on but drawn grey. On Windows,
+    on means an accent fill. It may be the inactive-window look in the render. If it isn't, apply
+    `.tint(.accentColor)`.
+17. **Radio button spacing.** Windows radio buttons are 32 tall (40 apart). The Mac's are 20 apart.
+    Mac spacing is fine, but the Recording card is noticeably shorter than the Windows one.
+18. **Card padding.** Windows cards use 16,12 padding and are about 60 tall with two lines; the
+    Mac's are about 53. Close enough. Group headers are 20 above (8 for the first) and 4 below; the
+    Mac's match.
+19. **The App Theme drop-down.** Windows uses a 200-wide ComboBox with a chevron. The Mac's is a
+    pop-up button about 150 wide with ⇕. Fine.
+
+**Dialogs**
+
+20. **Add Local Station.** Windows uses a centred dialog with a title, "Add Local Station" (20
+    SemiBold), then stacked labelled fields (label above each text box), then the Cover button, the
+    playlist hint, and the radio-browser link with its caption. The buttons are full-width halves:
+    Add Station (primary, left) and Cancel. The Mac's sheet has no title and uses a grouped form
+    with labels on the left and text fields on the right. Adding the title would bring it closest.
+    Keep the Mac's order: Cancel left, default right.
+21. **Station details.** The layout matches well. Differences:
+    - Windows' Play is an accent-filled button with a white ▶ (red here); the Mac's Play is plain.
+    - Windows has no map, just the coordinates and an "Open Map" link. The Mac's MapKit map is fine.
+    - The Windows dialog is 640 wide; the Mac's is 520.
+
+**Mini player**
+
+22. **Window height.** The Mac's mini player is 430×120 with about 30 empty points below the
+    controls. Windows is 430×104 (404×76 inside the borders) with nothing below. Fit the window to
+    its content.
+23. **Contents.** Both match: a 44 cover, name SemiBold, status in Caption Secondary, a 30 accent
+    play button, mute, and the slider.
+
+**Navigation pane**
+
+24. **The pane toggle.** Windows has a ☰ button at the top of the pane (NavigationView's own), which
+    pushes Library down to y≈93. The Mac has none, which is right for macOS: don't add one.
+25. **Selected item.** Both use SubtleFillColorSecondary with a 4 radius and a 3×16 accent pill at
+    the left. Matches.
