@@ -129,15 +129,14 @@ public sealed class Station : IEquatable<Station>
             id, name, url,
             homepage: Str(e, "homepage"),
             faviconURL: Str(e, "faviconURL"),
-            tags: e.TryGetProperty("tags", out var t) && t.ValueKind == JsonValueKind.Array
-                ? t.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!) : null,
+            tags: TagList(e),
             country: Str(e, "country") ?? "",
             countryCode: Str(e, "countryCode") ?? "",
             state: Str(e, "state") ?? "",
             language: Str(e, "language") ?? "",
             codec: Str(e, "codec") ?? "",
-            bitrate: (int)(Num(e, "bitrate") ?? 0),
-            votes: (int)(Num(e, "votes") ?? 0),
+            bitrate: Int(e, "bitrate"),
+            votes: Int(e, "votes"),
             isHLS: Bool(e, "isHLS"),
             latitude: Num(e, "latitude"),
             longitude: Num(e, "longitude"),
@@ -146,19 +145,40 @@ public sealed class Station : IEquatable<Station>
             customCover: Str(e, "customCover"));
     }
 
+    // Like the Mac's lenient decoder, which reads tags as [String?]: nulls are dropped, and any other kind of
+    // element makes the whole list empty.
+    static List<string>? TagList(JsonElement e)
+    {
+        if (!e.TryGetProperty("tags", out var t) || t.ValueKind != JsonValueKind.Array) return null;
+        var list = new List<string>();
+        foreach (var x in t.EnumerateArray())
+        {
+            if (x.ValueKind == JsonValueKind.String) list.Add(x.GetString()!);
+            else if (x.ValueKind != JsonValueKind.Null) return null;
+        }
+        return list;
+    }
+
+    static int Int(JsonElement e, string key) =>
+        Num(e, key) is { } d && double.IsFinite(d) && Math.Abs(d) < int.MaxValue ? (int)d : 0;
+
     internal static string? Str(JsonElement e, string key) =>
         e.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
+    /// <summary>A number, or a string holding one.</summary>
     internal static double? Num(JsonElement e, string key)
     {
         if (!e.TryGetProperty(key, out var v)) return null;
         if (v.ValueKind == JsonValueKind.Number) return v.GetDouble();
-        if (v.ValueKind == JsonValueKind.String && double.TryParse(v.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return d;
+        if (v.ValueKind == JsonValueKind.String && double.TryParse(v.GetString(),
+                NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint | NumberStyles.AllowExponent,
+                CultureInfo.InvariantCulture, out var d)) return d;
         return null;
     }
 
+    /// <summary>true, or any non-zero number (also as a string).</summary>
     internal static bool Bool(JsonElement e, string key) =>
-        e.TryGetProperty(key, out var v) && (v.ValueKind == JsonValueKind.True || (v.ValueKind == JsonValueKind.Number && v.GetDouble() != 0));
+        e.TryGetProperty(key, out var v) && (v.ValueKind == JsonValueKind.True || (Num(e, key) ?? 0) != 0);
 }
 
 /// <summary>Raw station JSON as returned by radio-browser.info.</summary>

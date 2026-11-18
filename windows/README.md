@@ -17,12 +17,13 @@ Run from the repo root in PowerShell (`powershell -ExecutionPolicy Bypass -File 
 
 | Command | What it does |
 |---|---|
-| `windows\scripts\test.ps1` | Core unit tests: the 19 translated from Swift, plus Windows-only ones (31 in total) |
+| `windows\scripts\test.ps1` | Core unit tests: the 19 translated from Swift, plus Windows-only ones, and the station exchange tests that read both apps' exports (38 in total) |
 | `windows\scripts\build.ps1 [-Flavor Nightly\|Release]` | Builds `windows\out\<Flavor>\Shortwave.exe` |
 | `windows\scripts\install.ps1 [-Flavor Nightly\|Release]` | Builds and installs to `%LOCALAPPDATA%\Programs\Shortwave Nightly` (or `Shortwave`), adds a Start menu shortcut and a Settings > Apps entry. No admin needed. Nightly and Release install side by side |
 | `uninstall.ps1` in the install folder, or Settings > Apps | Removes the program. Your library, settings and tracks stay |
 | `windows\scripts\smoke-test.ps1` | Plays the five real smoke streams (MP3, AAC, HLS, Ogg, `.pls`) muted and checks playback and titles |
 | `windows\scripts\recording-test.ps1 [-StatusLine icy]` | Local ICY server plus ffmpeg: checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable. `-StatusLine icy` serves `ICY 200 OK` like an old Shoutcast server |
+| `windows\scripts\exchange-test.ps1 [-UpdateFixture]` | Imports `fixtures\exchange\seed.json` into an empty test-run library and exports it, imports that export again (nothing added), and imports the Mac's export. `-UpdateFixture` writes `fixtures\exchange\windows-export.json` |
 
 The test scripts run `windows\out\Nightly\Shortwave.exe` unless `SHORTWAVE_APP` points elsewhere. They
 write logs to `%TEMP%`, or to `SHORTWAVE_SCRATCH` if set.
@@ -47,7 +48,9 @@ run:
 | `-page library\|discover\|search\|settings`, `-searchText <text>` | Start on a page or with a search |
 | `-openFirstResult`, `-openTrackDetail` | Open the first result's details / the first recording track's details |
 | `-<settingKey> <value>` | Override a setting for this run, e.g. `-recordingMode everything`, `-recordingMinimumDuration 5`, `-trackDirectory <dir>` |
-| `-miniPlayer` | Open the mini player |
+| `-miniPlayer`, `-addStation` | Open the mini player / the Add Local Station dialog |
+| `-importStations <file>`, `-exportStations <file>` | Import a station file at launch (logs `imported added=N present=M unreadable=K covers=C`), then export the library (`exported N stations to <file>`) |
+| `-appearance light\|dark` | Use that look for this run (not saved) |
 | `-screenshot <png> [-screenshotDelay <s>]` | After the delay (default 4 s), render the main window and any open dialog to PNG, then quit |
 | `-quitAfter <s>` | Quit after that many seconds |
 | `-mediaControls` | Use the media overlay even in a test run. Only for checking the media session when nothing else is playing |
@@ -89,5 +92,5 @@ Windows flavors share the library but keep separate settings.
 
 Shortcuts: play/stop Ctrl+Enter · volume Ctrl+Up/Down · mute Ctrl+Alt+M · previous/next library
 station Ctrl+Left/Right · Library Ctrl+1 · Discover Ctrl+2 · Search Ctrl+F · show/hide player
-Ctrl+Alt+P · add local station Ctrl+N · mini player Ctrl+Shift+M · quit Ctrl+Q. Space doesn't
+Ctrl+Alt+P · add local station Ctrl+N · import stations Ctrl+Shift+I · export stations Ctrl+Shift+E · mini player Ctrl+Shift+M · quit Ctrl+Q. Space doesn't
 play or stop playback.

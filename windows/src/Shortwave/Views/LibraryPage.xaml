@@ -20,16 +20,30 @@
                         <MenuFlyout x:Name="SortMenu" Opening="SortMenu_Opening" Placement="BottomEdgeAlignedRight" />
                     </DropDownButton.Flyout>
                 </DropDownButton>
+                <DropDownButton x:Name="MoreButton" ToolTipService.ToolTip="More" AutomationProperties.Name="More">
+                    <FontIcon Glyph="&#xE712;" FontSize="14" />
+                    <DropDownButton.Flyout>
+                        <MenuFlyout x:Name="MoreMenu" Opening="MoreMenu_Opening" Placement="BottomEdgeAlignedRight">
+                            <MenuFlyoutItem Text="Import Stations…" KeyboardAcceleratorTextOverride="Ctrl+Shift+I" Click="Import_Click">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8B5;" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="ExportItem" Text="Export Stations…" KeyboardAcceleratorTextOverride="Ctrl+Shift+E" Click="Export_Click">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xEDE1;" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
             </StackPanel>
         </Grid>
-        <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" MaxWidth="420" Padding="24">
+        <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Padding="24">
             <FontIcon Glyph="&#xEC05;" FontSize="48" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
             <TextBlock Text="Your Library Is Empty" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center" />
             <TextBlock Text="Discover over 50,000 public stations and add the ones you like." Style="{StaticResource SecondaryTextStyle}"
-                       TextWrapping="Wrap" TextAlignment="Center" />
+                       TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420" />
             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,6,0,0">
                 <Button Content="Discover New Stations" Style="{StaticResource AccentButtonStyle}" Click="Discover_Click" />
                 <Button Content="Add Local Station" Click="AddLocal_Click" />
+                <Button Content="Import Stations…" Click="Import_Click" />
             </StackPanel>
         </StackPanel>
         <ScrollViewer x:Name="Scroller" Grid.Row="1" Visibility="Collapsed">
