@@ -216,3 +216,105 @@ import Testing
         #expect(LibraryFile.load(from: url) == [s])
     }
 }
+
+@Suite struct ExchangeTests {
+    static let png = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3])
+    /// Shared fixtures, written by each app's export (see docs/STATION-EXCHANGE.md).
+    static let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        .appendingPathComponent("../../fixtures/exchange").standardizedFileURL
+
+    func names() -> () -> String { var n = 0; return { n += 1; return "new\(n)" } }
+
+    @Test func roundTripWithCover() throws {
+        let local = Station.local(name: "Mine", streamURL: "http://x/live", customCover: "a.png")
+        let pub = Station(id: "uuid-1", name: "Public", streamURL: "http://p", tags: ["jazz"], bitrate: 128, latitude: 1.5)
+        let data = try StationExchange.encode([local, pub], app: "test") { $0 == "a.png" ? Self.png : nil }
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text.contains("\"format\" : \"shortwave-stations\""))
+        let c = try StationExchange.decode(data)
+        #expect(c.stations == [local, pub])
+        #expect(c.covers == ["a.png": Self.png])
+        #expect(c.unreadable == 0)
+        // An exchange file is also a library file.
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("swx-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try data.write(to: url)
+        #expect(LibraryFile.load(from: url) == [local, pub])
+    }
+
+    @Test func readsLibraryFileAndBareArray() throws {
+        let s = Station.local(name: "Mine", streamURL: "http://x")
+        let enc = JSONEncoder()
+        let lib = try enc.encode(LibraryFile(stations: [s]))
+        #expect(try StationExchange.decode(lib).stations == [s])
+        #expect(try StationExchange.decode(try enc.encode([s])).stations == [s])
+    }
+
+    @Test func lenientStations() throws {
+        let json = """
+        {"stations": [
+          {"id": "a", "name": "Only the required keys", "streamURL": "http://a"},
+          {"id": "b", "name": "Wrong types", "streamURL": "http://b", "bitrate": "96", "isHLS": 1, "tags": ["x", null], "votes": null},
+          {"name": "no id", "streamURL": "http://c"},
+          {"id": "d", "name": "empty url", "streamURL": " "},
+          "not a station"
+        ]}
+        """
+        let c = try StationExchange.decode(Data(json.utf8))
+        #expect(c.stations.map(\.id) == ["a", "b"])
+        #expect(c.stations[1].bitrate == 96 && c.stations[1].isHLS && c.stations[1].tags == ["x"])
+        #expect(c.unreadable == 3)
+    }
+
+    @Test func rejectsOtherFiles() {
+        #expect(throws: StationExchange.ReadError.notJSON) { try StationExchange.decode(Data("not json".utf8)) }
+        #expect(throws: StationExchange.ReadError.noStations) { try StationExchange.decode(Data("{\"a\": 1}".utf8)) }
+    }
+
+    @Test func mergeAddsOnlyNewStations() {
+        let have = [Station(id: "uuid-1", name: "Kept", streamURL: "http://p", customCover: "mine.png"),
+                    Station(id: "local-1", name: "Mine", streamURL: "http://X/Live ", isLocal: true)]
+        let incoming = StationExchange.Contents(stations: [
+            Station(id: "uuid-1", name: "Renamed elsewhere", streamURL: "http://p"),          // same id: keep ours
+            Station(id: "local-2", name: "Same stream", streamURL: "http://x/live", isLocal: true), // same local stream
+            Station(id: "uuid-2", name: "New", streamURL: "http://n", customCover: "c.png"),
+            Station(id: "uuid-3", name: "Cover missing", streamURL: "http://m", customCover: "gone.png"),
+            Station(id: "uuid-2", name: "Twice in the file", streamURL: "http://n"),
+        ], covers: ["c.png": Self.png], unreadable: 1)
+        let r = StationExchange.merge(incoming, into: have, newCoverName: names())
+        #expect(r.library.map(\.id) == ["uuid-1", "local-1", "uuid-2", "uuid-3"])
+        #expect(r.library[0].name == "Kept" && r.library[0].customCover == "mine.png")
+        #expect(r.added.map(\.id) == ["uuid-2", "uuid-3"])
+        #expect(r.added[0].customCover == "new1.png" && r.added[1].customCover == nil)
+        #expect(r.newCovers == ["new1.png": Self.png])
+        #expect(r.alreadyPresent == 3)
+        #expect(r.unreadable == 1)
+    }
+
+    @Test func readsMacExport() throws { try checkFixture("mac-export.json") }
+
+    /// Each app must read the other's export. The Windows file is committed by the Windows session;
+    /// until it is, this test is skipped.
+    @Test(.enabled(if: FileManager.default.fileExists(atPath: fixtures.appendingPathComponent("windows-export.json").path),
+                   "fixtures/exchange/windows-export.json isn't committed yet"))
+    func readsWindowsExport() throws { try checkFixture("windows-export.json") }
+
+    func checkFixture(_ name: String) throws {
+        let url = Self.fixtures.appendingPathComponent(name)
+        let c = try StationExchange.decode(Data(contentsOf: url))
+        // Both fixtures hold the same three stations (docs/STATION-EXCHANGE.md, "Test fixtures").
+        #expect(c.unreadable == 0)
+        #expect(c.stations.count == 3)
+        let pub = try #require(c.stations.first { $0.id == "960cfd3b-0601-11e8-ae97-52543be04c81" })
+        #expect(pub.name == "SomaFM Groove Salad" && pub.tags == ["ambient", "chillout"] && pub.bitrate == 128)
+        #expect(pub.latitude == 37.775 && pub.longitude == -122.419)
+        let local = try #require(c.stations.first { $0.isLocal })
+        #expect(local.name == "Exchange Test Local" && local.streamURL == "http://127.0.0.1:8765/mp3")
+        let cover = try #require(local.customCover)
+        #expect(c.covers[cover].map(StationExchange.isImage) == true)
+        let orphan = try #require(c.stations.first { $0.isOrphaned })
+        #expect(orphan.name == "Exchange Test Orphan" && orphan.homepage == "https://example.com/")
+        let r = StationExchange.merge(c, into: [], newCoverName: names())
+        #expect(r.added.count == 3 && r.newCovers.count == 1)
+    }
+}

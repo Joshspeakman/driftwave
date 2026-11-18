@@ -61,6 +61,10 @@ struct MainView: View {
         .sheet(item: $app.detailTrack) { TrackDetailSheet(track: $0) }
         .sheet(isPresented: $app.showingAddStation) { LocalStationSheet() }
         .sheet(item: $app.editingStation) { LocalStationSheet(editing: $0) }
+        .alert(app.notice?.title ?? "", isPresented: Binding(get: { app.notice != nil }, set: { if !$0 { app.notice = nil } }),
+               presenting: app.notice) { _ in
+            Button("OK") { app.notice = nil }
+        } message: { Text($0.message) }
         .onDisappear {
             // Closing the window stops playback unless background playback is on.
             if !app.settings.backgroundPlayback { app.player.stopPlayback(reason: "window closed") }

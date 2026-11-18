@@ -14,6 +14,7 @@ struct LibraryPage: View {
                 } actions: {
                     Button("Discover New Stations") { app.page = .discover }.buttonStyle(.borderedProminent)
                     Button("Add Local Station") { app.showingAddStation = true }
+                    Button("Import Stations…") { app.chooseImportFile() }
                 }
             } else {
                 ScrollView {
@@ -26,7 +27,24 @@ struct LibraryPage: View {
             ToolbarItem {
                 SortMenu()
             }
+            ToolbarItem {
+                LibraryMoreMenu()
+            }
         }
+    }
+}
+
+/// Import and export of saved stations (docs/STATION-EXCHANGE.md).
+struct LibraryMoreMenu: View {
+    @Environment(AppModel.self) private var app
+    var body: some View {
+        Menu {
+            Button("Import Stations…") { app.chooseImportFile() }
+            Button("Export Stations…") { app.chooseExportFile() }.disabled(app.library.isEmpty)
+        } label: {
+            Label("More", systemImage: "ellipsis.circle")
+        }
+        .help("Import or export your saved stations")
     }
 }
 

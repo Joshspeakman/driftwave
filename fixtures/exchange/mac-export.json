@@ -1,0 +1,72 @@
+{
+  "app" : "Shortwave for macOS 1.0 (nightly 09fd9a9)",
+  "covers" : {
+    "431DD15A-A3EE-4AB5-A27E-6528C6F0E117.png" : "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABGdBTUEAALGPC\/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAARGVYSWZNTQAqAAAACAABh2kABAAAAAEAAAAaAAAAAAADoAEAAwAAAAEAAQAAoAIABAAAAAEAAABAoAMABAAAAAEAAABAAAAAAEZRQrAAAAHNaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJYTVAgQ29yZSA2LjAuMCI+CiAgIDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+CiAgICAgIDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiCiAgICAgICAgICAgIHhtbG5zOmV4aWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vZXhpZi8xLjAvIj4KICAgICAgICAgPGV4aWY6Q29sb3JTcGFjZT4xPC9leGlmOkNvbG9yU3BhY2U+CiAgICAgICAgIDxleGlmOlBpeGVsWERpbWVuc2lvbj4xMDI0PC9leGlmOlBpeGVsWERpbWVuc2lvbj4KICAgICAgICAgPGV4aWY6UGl4ZWxZRGltZW5zaW9uPjEwMjQ8L2V4aWY6UGl4ZWxZRGltZW5zaW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4Kwe07qQAAEgZJREFUeAHtWmtwXGd5fs+es1frZsuyLUW2FXB8ieNLSIzDMFA6pDEJhBII\/lGGzFAgZGh\/0JShM5QZQmFoS0m5NANMaBuSUGjTxgQyTkLCDGlKEt8T23ES27IsybIsWdqVVlrt7tk9lz7Pd\/ZIR9Ke1cVuflC\/9tE53+29PN\/7vt93vrMiV+gKAlcQuILAFQT+\/yKgLdb0j2\/eHLvvw6vWNcej66JRbbmuiS628L8ivXKfb5ndOYb957yjg+2KXS67w2mz3HnfrwY6\/\/PEiRJ5LJQWDMBvP\/++Vdva6u5KGZHdkYhcG9W1pODhrSEXYgIqO46UbbeA2+t5y3nsaH\/ukT\/8wfMDC9ElwG3uYX1fvvWu5XXxr8VjkQ5xXAoX16VSHs1QT\/6vy5SqwYKojgmIaFIsOd3pnPnV9m8+\/UhFpTlv8wLghhskunfXB\/++uS7+FxxQspxpEzGnlLeoQwxAEHSA8J0P\/nrvXx0+LOW5RM8HAK33S7f\/4+rGxBcKZZsTfxmowsT3Hk6jIv++eBFwBElGdTmXLX53zbeevBecamo8p8Rjf37bp9Y3L\/nXMgLN13fB6lEFF+mNDGisbuCKiubnDvK2MVm2JQphWqHBrSeBWZhEFRbgfSo98adbH3jqoVqjawLw41t3tt+xtf3lpKG3l+2K2\/t4+iP9MqWwLliGwa5jixZLSKRpuUSaV0qksVm0VD0CNy6aznxPbABO2RQ3Py5ONi1OekCc0bS4pSJwQB8CQr4+\/5l3xWX6H+aFgmX3\/eJY37s++\/T+vumtUyVMRTi9a+3KT9Ub8faJEmZGFpDpXcwoZjVS3yTGmmtEb+tQzxKNesJosGUpcFhBgCTVKNqyVom0o6JcFmd8VOz+brF6T6tn5S30inmSCRH1sXg7bcCQr4cNCwVg57plDY3R2MfNkiuOTcjnR5zNSCIl0U3XidGxAbO9BG7tiJMbEzs9KHZmSNzxrLhmQVyAQNIMQ7R4UrT6RtGXrYCn4GpoFqOpRfSOa8XqPimlU6+JW8xPes18tKHutAG2fG9\/Z2as2phQAD69buMGQzM2mNheuMG113dFn5tfxp3GG1etlfi2nXD5ZYhpW8p958Q6e1Ksi\/0woIBO6MggnRnfrHfPqXoNABor2sS4er0YK3HfeINEVnWIeeyAWH09HgjV5sTXpaIbvcDQ9A20ZX\/nSwd9lYP3UADa6xrXx8SIlbnkBQCYIcMLeSqPp\/imd0jsuusxo1GxhofEPH5ErH4YhTwgjGUXF5\/Zn3HNJKiGQgaXF4LCfvmS2F1nxOzuFqNttcTBU4dXJG66WcwTr4j5+lGlk4b+HB7EYmY5pkdjtAXdFgZAXI+0aA52t9js1CRlvCbJ698JALbANkfMN05I8dhhuHkRBgFjJlCoqi9bBg9ZI9HWNuUhkThiH+SgnzOaEetCPzymV+yRNGphFhJZqadHygODktgKcK\/ZJPEtO5BAk1I4ckCNneVJXu3k3xjyBm2ZrJjxEOoBrq3rjqXVjn9igyt5PZTbuEWcsgXFDon55glvdgGgwINiV79dkjfuxH0dkmGD58IAjmCRtMqSxxByxsekdLZTCgcPSKm7C43gUbRkYt8+sUbGJHnDDoltuE6ckiOFo4c5Wv1XjKr8QSpGaFaWmyrtoQA4XJKR\/ByrRuaFOxsrVkp883b0syW\/74AUT76pQsA1y6I3Nkn9zX+E2duGxJgUp5CHcWel1NcnNkLEyeeV8pFkSvTlLRJbvVqM1lZJbN8h8Y3XSeHYURn\/zXNiZ0cVz\/xrbwBkV1I33YSw2CZmbx9yy6AXNlWMY5UDgGhLGIUCIE5EGe8o9w0Zjpi2snkpnukRa3BACm+cwoRFxSmWJd5xtTR97KNw91ZlaO6llyV\/8JCU4eZuCZueYOCSPTxJi8VU\/9SOGyW1baukduyUaPtaGd2zR0wAp2EZzUOGqxlIjquUbIde5s5kNqUvPYC2hFEoAMxVtvKAcOa0whkvSvY3zyv+GuLdKdqSuGa9LP2T3fCABiSyXhl98ikxz5zFTGlq9+dCIbeSF3wkNMS7htktdvdJseucTBx8VZpuv01ia1fL0k98QjI\/e0yKp8+oJXPi+JsiuLydJABQxHicTdiGqbw7u8WrCQdg0gPC0Zti6vVxyo4YzS2ydPedojc0Sv7YCUn\/xy8AUk65sIOZjySiEr9mnSTe1oG+SxULKz0iZlc3DO9BbBclgpkunO4W88ePSPPuOyS1dbPiOfjDfxH2JdAk7q6nqPpE0QOcRXmAnwMWtAnCsqRht4eklscMDT26Bx5hQkcoDK9veO97ZOntt0ji7R1Tegeeime6ZeTJZ2XshX1qjDNWlKGfPi4tn9Ql1t4K3jGEJbwIpy\/zpUXnAFt5gKbCICiOjhZe1sXsH5bz334QCc\/E8gar0TuSTEjr5+8CADuV3jY8onCyS0oDQ6ocW7VCkhuuVsC0fuFuWfKObXLhB4+CR0GcCUsGH\/ov8Igj5sexYujYQVKDoMtPLwd1dJAfaEsYhYYAz6YcG+6Day6aLh7nBekc7GZtRCKxqFz1xXuk7kbsERACw48\/I5mnX5DyENZ6bJGVHYj\/aEuzLP3Ae6Xlzg8ooCKplJz72x8hJPBeUIA75gEmN0mTRP5Bmln22lQSnBYqwTHKN6dX+CXGjUqCCwgBf6w61cM0uFga4x1tynh7oiC933xQxl5+BaDE0AVXANvSxaxc+OfHZeJEl6z58t1qTLStTfKnupE\/KobXMGRK9vQnlQQX4wFqHzDXRmhS1kwf8MuG5Dv7pffvHhJzYFgmjp7EUof9AJctCwhh+8t\/k9kcO7zRl46L9dcPSHzVcsmfwZKJ\/DHl8j7fue6+YlgBIGtR+wDH1r19QA30fDHenUoFqVKG9w7tfUkZqeEMQGVu7gKxQ4yu8FaB8kVkds4yw0aPy\/grnTLmnJJInK\/Pvpv4\/Od793RxXIZxMHSCOtYMAW8fYDu+wOkDF1QyYDgH0IVhPA852v\/sY9K8y0uK6V\/vl74fPeHtDQhCBIbDbuyML5lseoC3467KKzQJMn9jX6KuqiMXWemYlqy8\/d2ycvf7JznwebzzvAw++WJl1iebLvlBpw01uIQCwLdgnCcoANTs1WCykCYHb5epaztmDWFd6YnfSaQijH4XlDuzPItBlQqOIT\/aEkahABA1AsDrcpINFx95vUfaPjKdK+tKaOOMXU7SwO+SPOByAyBRQ3qe2idNN26Uq27Buz3o\/LMHVR3b5jp+WCg4BOCSPIB54HKSyyUQWclY4h2GkLeO5xIt5wvRZZBHFnR\/0uI9AIP9MFCcLtMfq1iSt\/0xkuC7t8jw8S7FdRWeW2\/dKV2\/fFGMBDZIl5OABlbiUArNAXyFMTH4coYAj8rjzY2y+bMfUkveoe8+rhTb9eBfqrre370m5thEZWMUqvPCGmADXlJDyd9lzOqgVoHKSuAnw0u9F7AEbrzrFqlrbZbOvfvk\/JHT6uIz69jGPvzOfamyJseT1yzrpipCAaD7q4sI8qpV9tt4D\/S1eBiBy8Wupozvik1Y6jbd+QdSGM3J\/zz8jOQbkuriM+vY1rS5Q0olW43hWPKoKTsgz9+3VOsP1apSaAjgPcabBQ6DkGlUo4w0hh84QHEceI5bJcnwsk3JlEz56j2fUzH+\/W\/\/RP791UN4v\/dSldbnyugDP5N7v3K3rP\/cbfK1z3xdlsXisgzb4mVGTOpxzK7jjAHfm9Q1TZ8auiid0U5bwigcAIzw3YiDmU2DsoJlmqEUxDY3jROdnvyY9JXygm9BUsTmP5fLy0d23yJb37NdThw7Jf\/28C8lO45YrwDA3xiwbteH36f6rHn\/dnnisWelri4lCRjegBei9nhK1iYbAEwCsvCOz89vVAwU1GVWmQCoXtX\/hAJANyIAtZZB3\/ACXrd68lk5mcvIxRI+eeHztI6PHja+KTpIfK2rWuTeL31afS\/8\/j\/8RDKZLD4TVr4TQg6BYB3bfvjwN1Tf\/S+8IunhEbHApxBzpD9flIPZIVkRS8mGuqUAo14S+MocBKKqibShaoNXGZoD\/K2w7wUz7zxomIBxR8aGZc+FM\/LcUK9csIoSxTKm4TXXxIkQIgEZXZNPfuajsgbnAk\/96nn57XMvi4FvgSTOIC8S69jGPuzLMRxLHuRFnuR9wSooWXsGzijZ1IG6zNQvWF70RshPKp6KnrJ0P3isdE6MyPGxIcmUCxCPL0OJOL50YbagLF06gm8RURx8jGdzyqCLA2n5p\/sfRjxCXWx4gqRAAF+2sc87b9qmxpg4Xq9vrMM7fQlJ1MIHZRywQE4UvEdMU17MnJc3xjOypaFFOlJN6m3aoXIBYrGWB4SGAOOG+wCeW\/jEOB9FjL86OiB9Be9jq4E6KkVXp\/EMC05bPB6TIg5ECcRXvni\/LFmSknQaHzgq3wMDbH32qq3nbL\/csesemZjIq7HkkQD\/QqGogKeMGI7ZkomEmGijPi8Mn5OuVFa2N66ShmhChYXPlAAsLgdU9gAEgEYxTrsQ48ey+ACCX3PQcFKch5WYmTLO7tiHM5BAXQllflekG49iicsjhml8NcMVI\/xhG6+hoQzGW6LDU8iDvGIElABDholP1lGAQNmqDmN6kYOGzLxsbWyVNUualBeSFyJHzMVshPC50mUccR0u4n5k5IIcyPSBGRSD8WROBcowngrS\/1inq\/jWpASXJXKso8sbUJhAkVhX7WIb+7Avx7APeSheeCBvrw78IZOyqQPrqBN1O5A5p3RV3osxKhcoGMhsNoWGQL5czjAHFHEsc3ykTwaKWSWELNQswy0ttFERzopSDG3RmAHXx94rUBeBF9AVbYQJ+9YihhL70nMcTh8JY4qY9QSSoFWoLOqo84AXzzsQDuRN9p25Iclh\/7FlaTtWCh0HymbGYzT77\/RsNNWupUujXSPlQulwpkcuwPhIZdaZ4Oh+fKkr8dwfEqkmlTbwOstEpoxgXaWeecDmtzbMiKrz26rc2Yd9OYY8\/f4Ej7wpw6+nbOpAXZROaGB\/6kqdqTttSJfGupRw\/JlJYaeFkXx5rDzqJj40bpktzPwkxRyK+bPszzxbqUQMh5gmPIL9vBEcA8Cw5tNbCB7bSFPtM8qVBgNyLP6EpiKbsmx4BBMgXZ\/dFC\/UM2wom+2UwbYI6vPIVUPF7KlzmVe\/V7AK+FgxKd4Tyn6TT9Mf3HQhnR4zR\/ZG+CUGbf4Vp5FEvVLHYcwxBk51OUucfdJkOw2AO9uYPdb5NNleqQiW2ZdjfOPZhe3kTRmU5UnxBrONOlE3nw\/v1J020BYUWTWLQgFAT3useOHnjmMNElPGfbTi4pxN0qQwPDBBMXNzbifr2QkAYKhKQ8H6Ws8MfY5RY3Hz+7KsVgcmQ\/aptOGmPIwhQh2pq9IZutMGNFNhdp9FYSGgOpbL42PxaJNtGKmb6YJ0P5XglJNN8eIGiEuWAoAzHqAIP2ehylsBprcFuk179DZSWAWg8mQirPRgWXlAxd2nBnpeRh2VB0FosTTyjWyu8xn04RvxggFQA\/Lm4OlErGVFKtWwrYyY9F3cF+wnRQol8kFiMYr3gmqGBPvNegaI3DNw9bC4jw3iVgFYVzkCEzsDcM58FG+S+WL20aHRI\/eDN2M\/dC9U0wMwkKFmTxTPH6pfsrLZtvWtKE+HEgoQda7V081nP8wWEqCNkJkJDvnUItrFlSCYCP3+Clgst\/6+wq8HbJVQy\/+0f2jffahn7PNwK5TmAoADGT9mNnduXzTakNH1+CZNM+q8+MQvvzhTdH+18QlOFUbBCi5bzNozwSHjWsT+fEHy802wL71ORyJ0EQYE1vuRFTdO9kCxPPKtgeGD30F\/fnvHz9Rqi54PANSFIJQKxcFjljPx30YkmYPQJohuwBZVZ9JSyZ\/TFrioGNdnAhCsn9ezcuUYfj\/NEJjOF77hhQiAR1hiSbLPWFbu59mJ038znjv7NHQdxUXjg4sFirNpxpTN7hCoYV\/uHJO4UojulXXJtnWpJU0d+Iy+FLmh6oqiwoNb5UVQrbFIvI6uuyP5idHuXKG\/E+98+LmY4Gdngp+jqpifl9MtBADfBB8Inl8TEHoRr8XwwrBFk++Z9E4mOWZ63udlOPopulSlOd6\/Kizf0huN9a+3VPAVYVcQuILA7wcC\/wvmRC9SVML1GwAAAABJRU5ErkJggg=="
+  },
+  "exported" : "2026-11-18T02:46:33Z",
+  "format" : "shortwave-stations",
+  "stations" : [
+    {
+      "bitrate" : 0,
+      "codec" : "",
+      "country" : "",
+      "countryCode" : "",
+      "customCover" : "431DD15A-A3EE-4AB5-A27E-6528C6F0E117.png",
+      "id" : "local-6f1c2a9e-8d4b-4c1e-9a37-2b5e0c7d1f00",
+      "isHLS" : false,
+      "isLocal" : true,
+      "isOrphaned" : false,
+      "language" : "",
+      "name" : "Exchange Test Local",
+      "state" : "",
+      "streamURL" : "http:\/\/127.0.0.1:8765\/mp3",
+      "tags" : [
+
+      ],
+      "votes" : 0
+    },
+    {
+      "bitrate" : 64,
+      "codec" : "AAC",
+      "country" : "Germany",
+      "countryCode" : "DE",
+      "homepage" : "https:\/\/example.com\/",
+      "id" : "00000000-0000-4000-8000-00000000e0e0",
+      "isHLS" : false,
+      "isLocal" : false,
+      "isOrphaned" : true,
+      "language" : "German",
+      "name" : "Exchange Test Orphan",
+      "state" : "",
+      "streamURL" : "http:\/\/example.com\/orphan.aac",
+      "tags" : [
+        "test"
+      ],
+      "votes" : 0
+    },
+    {
+      "bitrate" : 128,
+      "codec" : "MP3",
+      "country" : "The United States Of America",
+      "countryCode" : "US",
+      "faviconURL" : "https:\/\/somafm.com\/img3\/groovesalad-400.jpg",
+      "homepage" : "https:\/\/somafm.com\/groovesalad\/",
+      "id" : "960cfd3b-0601-11e8-ae97-52543be04c81",
+      "isHLS" : false,
+      "isLocal" : false,
+      "isOrphaned" : false,
+      "language" : "English",
+      "latitude" : 37.775,
+      "longitude" : -122.419,
+      "name" : "SomaFM Groove Salad",
+      "state" : "California",
+      "streamURL" : "http:\/\/ice1.somafm.com\/groovesalad-128-mp3",
+      "tags" : [
+        "ambient",
+        "chillout"
+      ],
+      "votes" : 4321
+    }
+  ],
+  "version" : 1
+}

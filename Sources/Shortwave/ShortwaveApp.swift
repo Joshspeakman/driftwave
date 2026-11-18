@@ -51,6 +51,15 @@ struct ShortwaveCommands: Commands {
                 app.showingAddStation = true
             }
             .keyboardShortcut("n")
+            Divider()
+            Button("Import Stations…") {
+                openWindow(id: "main")
+                app.chooseImportFile()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
+            Button("Export Stations…") { app.chooseExportFile() }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                .disabled(app.library.isEmpty)
         }
         CommandGroup(after: .sidebar) {
             Button("Library") { app.page = .library }.keyboardShortcut("1")
