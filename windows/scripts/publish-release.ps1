@@ -74,6 +74,7 @@ try {
     if ($prevTag) { $previous = ((gh release view $prevTag --repo $Repo --json body | ConvertFrom-Json).body | Select-String 'Commit: ([0-9a-f]+)').Matches | Select-Object -First 1 | ForEach-Object { $_.Groups[1].Value } }
 }
 catch { Write-Output "No earlier release found on $Repo (first release?)." }
+[Console]::OutputEncoding = [Text.Encoding]::UTF8   # git log writes UTF-8
 $range = if ($previous) { "$previous..$commit" } else { "-15 $commit" }
 $changes = if ($NotesFile) { @((Get-Content -Raw $NotesFile).Trim()) } else { @(git -C $RepoRoot log --no-merges --pretty='- %s' $range.Split(' ') -- windows themes docs/THEMES.md 2>$null) }
 if (-not $changes) { $changes = @('- Maintenance build') }

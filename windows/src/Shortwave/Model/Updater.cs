@@ -237,7 +237,7 @@ public sealed class Updater : Observable
     /// <summary>Runs after the app quits: back up, copy the new files in, restore on failure, start the app again.</summary>
     const string ApplyScript = """
         param([int]$WaitPid, [string]$Source, [string]$Dest, [string]$Exe, [string]$Version, [string]$RegistryKey, [string]$ArgsFile, [string]$Log)
-        function Write-Log([string]$m) { Add-Content -LiteralPath $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
+        function Write-Log([string]$m) { Add-Content -LiteralPath $Log -Value ("{0:u} {1}" -f (Get-Date).ToUniversalTime(), $m) }
         Write-Log "update to ${Version}: waiting for ${WaitPid}"
         try { Wait-Process -Id $WaitPid -Timeout 30 -ErrorAction SilentlyContinue } catch { }
         # Only ever touch an installed copy, and only with a complete new one.
