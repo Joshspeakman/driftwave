@@ -58,7 +58,7 @@ public sealed partial class StationCard : UserControl
         StopGlyph.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         ToolTipService.SetToolTip(PlayButton, active ? "Stop" : "Play");
         ActiveIcon.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
-        Card.Background = hovering ? (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"] : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        Card.Background = hovering ? Ui.ThemeBrush("SubtleFillColorSecondaryBrush") : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
     }
 
     void Card_PointerEntered(object sender, PointerRoutedEventArgs e) { hovering = true; Refresh(); }

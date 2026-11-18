@@ -34,6 +34,8 @@ public partial class App : Application
         Model.Player.OnNewTrack = (t, s) => Notifications.Show(t, s, Model.Images.Cached(s));
 
         main = new MainWindow(Model);
+        ApplyTheme();
+        Model.Settings.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Preferences.Appearance)) ApplyTheme(); };
         main.Activate();
 
         string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.ico");
@@ -73,9 +75,17 @@ public partial class App : Application
 
     public void ShowMiniPlayer()
     {
-        mini ??= new MiniPlayerWindow(Model);
+        if (mini is null) { mini = new MiniPlayerWindow(Model); Model.Settings.Appearance.Apply(mini); }
         mini.AppWindow.Show();
         mini.Activate();
+    }
+
+    /// <summary>App Theme: the main window (and its dialogs), the mini player and their title bar buttons.</summary>
+    void ApplyTheme()
+    {
+        var theme = Model.Settings.Appearance;
+        if (main != null) { theme.Apply(main); main.ThemeChanged(theme.ElementTheme()); }
+        if (mini != null) theme.Apply(mini);
     }
 
     public void ShowSettings()

@@ -14,7 +14,7 @@ namespace Shortwave.Views;
 /// <summary>Builders shared by the dialogs: grouped sections with label/value rows, like the Mac's grouped forms.</summary>
 static class Form
 {
-    public static Brush Res(string key) => (Brush)Application.Current.Resources[key];
+    public static Brush Res(string key) => Ui.ThemeBrush(key);
 
     public static Border Section(string? title, StackPanel host, params UIElement[] rows)
     {

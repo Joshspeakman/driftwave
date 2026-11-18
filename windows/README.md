@@ -24,6 +24,7 @@ Run from the repo root in PowerShell (`powershell -ExecutionPolicy Bypass -File 
 | `windows\scripts\smoke-test.ps1` | Plays the five real smoke streams (MP3, AAC, HLS, Ogg, `.pls`) muted and checks playback and titles |
 | `windows\scripts\recording-test.ps1 [-StatusLine icy]` | Local ICY server plus ffmpeg: checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable. `-StatusLine icy` serves `ICY 200 OK` like an old Shoutcast server |
 | `windows\scripts\exchange-test.ps1 [-UpdateFixture]` | Imports `fixtures\exchange\seed.json` into an empty test-run library and exports it, imports that export again (nothing added), and imports the Mac's export. `-UpdateFixture` writes `fixtures\exchange\windows-export.json` |
+| `windows\scripts\screenshots.ps1 [name ...]` | Renders the main screens in light and dark into `docs\design\windows\` (port of `scripts/screenshots.sh`). The renders leave out Mica and the title bar buttons |
 
 The test scripts run `windows\out\Nightly\Shortwave.exe` unless `SHORTWAVE_APP` points elsewhere. They
 write logs to `%TEMP%`, or to `SHORTWAVE_SCRATCH` if set.
@@ -86,6 +87,7 @@ Windows flavors share the library but keep separate settings.
 | Menu bar extra | Notification-area icon with the same menu (left click opens the window) |
 | Mini Player window | Always-on-top mini player |
 | Settings window | Settings page in the navigation pane |
+| Settings > Appearance > App Theme | Same: Use System Setting (follows Windows' light or dark mode), Light or Dark. It applies to every window, dialog and title bar |
 | MapKit map | Coordinates plus an "Open Map" link to OpenStreetMap |
 | AirPlay picker | Audio output picker next to the volume |
 | Closing the window | The app keeps running in the notification area. With Background Playback off, closing stops playback. Quit from the tray menu or with Ctrl+Q |

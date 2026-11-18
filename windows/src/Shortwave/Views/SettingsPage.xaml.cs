@@ -19,6 +19,7 @@ public sealed partial class SettingsPage : UserControl
         this.hwnd = hwnd;
         InitializeComponent();
         ModeButtons.ItemsSource = RecordingModes.All.Select(m => m.Title()).ToList();
+        ThemeBox.ItemsSource = AppThemes.All.Select(t => t.Title()).ToList();
         AboutTitle.Text = $"{Diagnostics.AppName} {Diagnostics.Version.Split('+')[0]}{(Diagnostics.Commit is { Length: > 0 } c ? $" ({c})" : "")}";
         app.Settings.PropertyChanged += (_, _) => Refresh();
         Refresh();
@@ -40,6 +41,7 @@ public sealed partial class SettingsPage : UserControl
     {
         updating = true;
         var s = app.Settings;
+        ThemeBox.SelectedIndex = Array.IndexOf(AppThemes.All, s.Appearance);
         BackgroundToggle.IsOn = s.BackgroundPlayback;
         NotificationsToggle.IsOn = s.Notifications;
         PastTracksBox.Value = s.PastTracksCount;
@@ -55,6 +57,12 @@ public sealed partial class SettingsPage : UserControl
         MaxBox.Value = s.MaximumDuration;
         MaxText.Text = Hours(s.MaximumDuration);
         updating = false;
+    }
+
+    void ThemeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (updating || ThemeBox.SelectedIndex < 0) return;
+        app.Settings.Appearance = AppThemes.All[ThemeBox.SelectedIndex];
     }
 
     void BackgroundToggle_Toggled(object sender, RoutedEventArgs e) { if (!updating) app.Settings.BackgroundPlayback = BackgroundToggle.IsOn; }

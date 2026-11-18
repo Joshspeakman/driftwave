@@ -18,6 +18,7 @@ public sealed partial class MainWindow : Window
     private readonly Dictionary<Page, UIElement> pages = [];
     private readonly Queue<Func<ContentDialog>> dialogs = new();
     private bool dialogOpen;
+    private ContentDialog? currentDialog;
     private bool syncingNav;
     public nint Hwnd { get; }
 
@@ -175,6 +176,12 @@ public sealed partial class MainWindow : Window
         if (await Ui.PickStationFileToSave(Hwnd, StationExchange.DefaultFileName) is { } path) app.ExportReporting(path);
     }
 
+    /// <summary>App Theme changed (the window's root is already set): restyle an open dialog too.</summary>
+    public void ThemeChanged(ElementTheme theme)
+    {
+        if (currentDialog != null) currentDialog.RequestedTheme = theme;
+    }
+
     // ContentDialogs can't overlap, so requests queue up and show one at a time.
     void Enqueue(Func<ContentDialog> make)
     {
@@ -190,10 +197,12 @@ public sealed partial class MainWindow : Window
             dialogOpen = true;
             var d = make();
             d.XamlRoot = Root.XamlRoot;
-            d.RequestedTheme = Root.ActualTheme;
+            d.RequestedTheme = Root.RequestedTheme;   // Default: follows Windows, like the window
+            currentDialog = d;
             try { await d.ShowAsync(); }
             catch (Exception e) { Diagnostics.Log("dialog: " + e.Message); }
             dialogOpen = false;
+            currentDialog = null;
         }
     }
 }
