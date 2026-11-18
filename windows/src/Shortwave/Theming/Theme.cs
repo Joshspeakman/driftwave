@@ -100,8 +100,8 @@ public sealed class Theme
 
     public static Theme FromJson(string json, bool builtIn = false)
     {
-        var root = JsonNode.Parse(json) as JsonObject ?? throw new FormatException("This file isn’t a Shortwave theme.");
-        if ((string?)root["format"] is { } f && f != Format) throw new FormatException("This file isn’t a Shortwave theme.");
+        var root = JsonNode.Parse(json) as JsonObject ?? throw new FormatException("This file isn’t a Driftwave theme.");
+        if ((string?)root["format"] is { } f && f != Format) throw new FormatException("This file isn’t a Driftwave theme.");
         var t = new Theme
         {
             Id = Str(root, "id") ?? throw new FormatException("The theme has no id."),

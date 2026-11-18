@@ -61,6 +61,8 @@ public partial class App : Application
             if (Diagnostics.QuitAfter is null) Quit();
         });
         if (Diagnostics.QuitAfter is { } q) After(q, () => { Quit(); return Task.CompletedTask; });
+        // A quiet update check a little after launch (at most daily; test runs only with -updateFeed).
+        After(8, () => Model.Updates.CheckAtLaunch());
     }
 
     private readonly HashSet<DispatcherQueueTimer> timers = [];   // keeps pending timers from being collected
@@ -115,10 +117,11 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Starts a new copy and quits this one (to finish applying a theme). The new copy waits for this one to exit,
-    /// and plays the same station again if one was playing.
+    /// The arguments for a new copy of this app (a restart, or the relaunch after an update): this copy's own
+    /// arguments, so a test run comes back as a test run, without one-shot test flags, plus --resume if a station is
+    /// playing (the station is saved to resume.json; the new copy plays it again).
     /// </summary>
-    public void Restart()
+    public List<string> RelaunchArguments()
     {
         var args = Environment.GetCommandLineArgs().Skip(1).ToList();
         int i = args.IndexOf("--restart-after");
@@ -130,14 +133,24 @@ public partial class App : Application
             int f = args.FindIndex(a => string.Equals(a, flag, StringComparison.OrdinalIgnoreCase));
             if (f >= 0) args.RemoveRange(f, Math.Min(2, args.Count - f));
         }
-        args.Add("--restart-after");
-        args.Add(Environment.ProcessId.ToString());
         if (Model.Player.IsPlaying && Model.Player.Station is { } playing)
         {
             // Any station (also one from Search that isn't in the library): the new copy reads it back.
             try { Core.LibraryFile.Save([playing], Path.Combine(Model.Paths.Caches, "resume.json")); args.Add("--resume"); }
             catch (Exception e) { Diagnostics.Log("resume: " + e.Message); }
         }
+        return args;
+    }
+
+    /// <summary>
+    /// Starts a new copy and quits this one (to finish applying a theme). The new copy waits for this one to exit,
+    /// and plays the same station again if one was playing.
+    /// </summary>
+    public void Restart()
+    {
+        var args = RelaunchArguments();
+        args.Add("--restart-after");
+        args.Add(Environment.ProcessId.ToString());
         var psi = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
         foreach (var a in args) psi.ArgumentList.Add(a);
         Diagnostics.Log("restart " + string.Join(" ", args));

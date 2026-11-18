@@ -21,6 +21,7 @@ public sealed partial class SettingsPage : UserControl
         ModeButtons.ItemsSource = RecordingModes.All.Select(m => m.Title()).ToList();
         ThemeBox.ItemsSource = AppThemes.All.Select(t => t.Title()).ToList();
         ThemeHost.Children.Add(new ThemeSettings(app, hwnd, () => new Border { Style = (Style)Resources["Card"] }));
+        UpdateHost.Children.Add(new UpdateSettings(app, (Style)Resources["Card"]));
         AboutTitle.Text = $"{Diagnostics.AppName} {Diagnostics.Version.Split('+')[0]}{(Diagnostics.Commit is { Length: > 0 } c ? $" ({c})" : "")}";
         app.Settings.PropertyChanged += (_, _) => Refresh();
         Refresh();

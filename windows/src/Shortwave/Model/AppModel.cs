@@ -11,7 +11,8 @@ public sealed class AppModel : Observable
 {
     public Preferences Settings { get; }
     public Theming.ThemeManager Themes { get; }
-    public AppPaths Paths { get; } = new(Diagnostics.IsTestRun ? "ShortwaveTestRun" : "Shortwave");
+    public Updater Updates { get; }
+    public AppPaths Paths { get; } = new(Diagnostics.IsTestRun ? "ShortwaveTestRun" : "Driftwave");
     public RadioBrowser Api { get; } = new();
     public ImageStore Images { get; }
     public Player Player { get; }
@@ -33,8 +34,20 @@ public sealed class AppModel : Observable
     public AppModel(DispatcherQueue ui)
     {
         this.ui = ui;
+        // Renamed from Shortwave (2026-11-18): the first real launch copies the old data folder. Test runs never do.
+        if (!Diagnostics.IsTestRun)
+        {
+            try
+            {
+                string oldSupport = new AppPaths("Shortwave").Support;
+                string oldMusic = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Shortwave");
+                if (DataMigration.CopyIfFirstRun(oldSupport, Paths.Support, oldMusic)) Diagnostics.Log($"migrated {oldSupport} -> {Paths.Support}");
+            }
+            catch (Exception e) { Diagnostics.Log("migration failed: " + e.Message); }
+        }
         Settings = new Preferences(Paths);
         Themes = new Theming.ThemeManager(Settings, Paths);
+        Updates = new Updater(Paths, Settings, ui);
         Images = new ImageStore(Paths);
         Player = new Player(Settings, Paths, Api, ui);
         library = LibraryFile.Load(Paths.Library);
@@ -218,7 +231,7 @@ public sealed class AppModel : Observable
             ExportStations(path);
             int n = library.Count;
             Notice("Stations Exported",
-                $"{n} {(n == 1 ? "station was" : "stations were")} saved to “{Path.GetFileName(path)}”. Open it with Import Stations… in Shortwave on another computer.");
+                $"{n} {(n == 1 ? "station was" : "stations were")} saved to “{Path.GetFileName(path)}”. Open it with Import Stations… in Driftwave on another computer, or in Shortwave on a Mac.");
         }
         catch (Exception e) { Notice("Couldn’t Export Stations", e.Message); }
     }

@@ -4,6 +4,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Authors>Josh Speakman</Authors>
-    <Product>Shortwave</Product>
+    <Product>Driftwave</Product>
+  </PropertyGroup>
+  <!-- Builds don't record where the source lives on this PC (release packages are public): paths in the DLLs and
+       PDBs start at /driftwave/. Not for the test project, which finds its fixtures by its own source path. -->
+  <PropertyGroup Condition="!$(MSBuildProjectName.EndsWith('Tests'))">
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=/driftwave/</PathMap>
   </PropertyGroup>
 </Project>

@@ -14,7 +14,7 @@ public static class StationExchange
     public const string Format = "shortwave-stations";
     public const int Version = 1;
     /// <summary>Suggested file name for an export.</summary>
-    public const string DefaultFileName = "Shortwave Stations.json";
+    public const string DefaultFileName = "Driftwave Stations.json";
 
     public enum ReadError { NotJSON, NoStations }
 
@@ -25,7 +25,7 @@ public static class StationExchange
 
     static string Describe(ReadError e) => e switch
     {
-        ReadError.NotJSON => "This file isn’t a Shortwave station file.",
+        ReadError.NotJSON => "This file isn’t a station file.",
         _ => "This file doesn’t contain a list of stations.",
     };
 

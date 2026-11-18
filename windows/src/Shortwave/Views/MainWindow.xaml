@@ -60,6 +60,9 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <ContentControl x:Name="PageHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" IsTabStop="False" />
+                    <!-- A new version was found by the check at launch -->
+                    <InfoBar x:Name="UpdateBar" VerticalAlignment="Bottom" Margin="16" IsOpen="False" Severity="Informational"
+                             Title="Update available" IsClosable="True" />
                     <Border x:Name="BottomBar" Grid.Row="1" Visibility="Collapsed" BorderThickness="0,1,0,0"
                             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" Background="{ThemeResource LayerFillColorAltBrush}">
                         <local:MiniPlayerView />

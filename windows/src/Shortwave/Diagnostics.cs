@@ -17,6 +17,7 @@ namespace Shortwave;
 ///   -miniPlayer, -addStation   open the mini player / the Add Local Station dialog
 ///   -screenshot &lt;png&gt;         after -screenshotDelay s (default 4), save the main window (and dialog) and quit
 ///   -quitAfter &lt;s&gt;            quit after that many seconds
+///   -updateFeed &lt;file|url&gt;     test runs only: check this releases JSON instead of GitHub (test runs never contact GitHub)
 /// Windows-only: -mediaControls (see below).
 /// A test run uses its own data folder and settings, and stays muted and off the system media controls.
 /// </summary>
@@ -83,12 +84,12 @@ public static class Diagnostics
 
 #if NIGHTLY
     public const bool IsNightly = true;
-    public const string AppName = "Shortwave Nightly";
-    public const string AppUserModelId = "Joshspeakman.Shortwave.Nightly";
+    public const string AppName = "Driftwave Nightly";
+    public const string AppUserModelId = "Joshspeakman.Driftwave.Nightly";
 #else
     public const bool IsNightly = false;
-    public const string AppName = "Shortwave";
-    public const string AppUserModelId = "Joshspeakman.Shortwave";
+    public const string AppName = "Driftwave";
+    public const string AppUserModelId = "Joshspeakman.Driftwave";
 #endif
 
     public static string Version =>
@@ -100,13 +101,13 @@ public static class Diagnostics
     static string? Metadata(string key) =>
         typeof(Diagnostics).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == key)?.Value is { Length: > 0 } v ? v : null;
 
-    /// <summary>"Shortwave for Windows 1.0.15 (nightly 09fd9a9)", written into exported station files.</summary>
+    /// <summary>"Driftwave for Windows 1.0.15 (nightly 09fd9a9)", written into exported station files.</summary>
     public static string AppDescription
     {
         get
         {
             string build = string.Join(" ", new[] { Branch, Commit }.Where(s => !string.IsNullOrEmpty(s)));
-            return $"Shortwave for Windows {Version.Split('+')[0]}" + (build.Length > 0 ? $" ({build})" : "");
+            return $"Driftwave for Windows {Version.Split('+')[0]}" + (build.Length > 0 ? $" ({build})" : "");
         }
     }
 }

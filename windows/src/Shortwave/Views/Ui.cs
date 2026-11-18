@@ -74,7 +74,7 @@ public static class Ui
         return file?.Path;
     }
 
-    public static Task<string?> PickStationFileToSave(nint hwnd, string suggestedName) => PickJsonToSave(hwnd, suggestedName, "Shortwave station file");
+    public static Task<string?> PickStationFileToSave(nint hwnd, string suggestedName) => PickJsonToSave(hwnd, suggestedName, "Station file");
 
     public static async Task<string?> PickJsonToSave(nint hwnd, string suggestedName, string typeLabel)
     {
