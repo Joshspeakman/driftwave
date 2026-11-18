@@ -55,9 +55,23 @@ public sealed partial class MainWindow : Window
         };
         // Theme animations run only while the window can be seen.
         effects = new WindowEffects(EffectsBack, EffectsFront, Root);
+        // Theme scenes place things in the pane, content and player areas: keep them told how wide the pane is.
+        void PaneChanged()
+        {
+            double width = Nav.IsPaneOpen && Nav.DisplayMode == NavigationViewDisplayMode.Expanded ? Nav.OpenPaneLength : Nav.CompactPaneLength;
+            if (Math.Abs(Theming.SceneEffect.PaneWidth - width) > 0.5) { Theming.SceneEffect.PaneWidth = width; effects.Relayout(); }
+        }
+        Nav.DisplayModeChanged += (_, _) => PaneChanged();
+        Nav.PaneOpened += (_, _) => PaneChanged();
+        Nav.PaneClosed += (_, _) => PaneChanged();
         // Any change (restoring from minimised reports only a size or position change); SetWindowVisible is cheap.
         AppWindow.Changed += (s, e) =>
-            EffectsClock.SetWindowVisible(s.IsVisible && s.Presenter is not Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized });
+        {
+            bool shown = s.IsVisible && s.Presenter is not Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized };
+            EffectsClock.SetWindowVisible(shown);
+            MemoryTrim.WindowShown(shown);
+        };
+        Activated += (_, e) => EffectsClock.SetWindowActive(e.WindowActivationState != WindowActivationState.Deactivated);
 
         app.PropertyChanged += (_, e) =>
         {
@@ -174,6 +188,7 @@ public sealed partial class MainWindow : Window
         if (bar && BottomBar.Visibility == Visibility.Collapsed) { BottomBar.Visibility = Visibility.Visible; Motion.Entrance(BottomBar, rise: 24, fromScale: 1f); }
         else if (!bar) BottomBar.Visibility = Visibility.Collapsed;
         PlayerToggleItem.Content = app.ShowPlayer ? "Hide Player" : "Show Player";
+        if (Theming.SceneEffect.PlayerShown != show) { Theming.SceneEffect.PlayerShown = show; effects.Relayout(); }
     }
 
     // Footer commands (they don't select a page). ItemInvoked also covers keyboard and UI Automation.
@@ -285,7 +300,7 @@ public sealed partial class MainWindow : Window
         if (!theme.IsDefault && theme.Backdrop == "none" && theme.Get("background") is { } bg)
         {
             var solid = Theme.WithAlpha(bg, 1);
-            paneColor = Theme.WithAlpha(bg, 0.94);
+            paneColor = Theme.WithAlpha(theme.Get("pane") ?? bg, 0.94);
             var card = theme.Get("card") is { } c ? Theme.Mix(solid, Theme.WithAlpha(c, 1), c.A / 255.0) : solid;
             cardBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Theme.WithAlpha(card, 0.97));
         }

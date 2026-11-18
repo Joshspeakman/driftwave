@@ -19,7 +19,7 @@ public static class EffectsClock
     public const double StillTime = 2.5;
 
     static readonly List<IAnimated> subscribers = [];
-    static bool windowVisible = true;
+    static bool windowVisible = true, windowActive = true;
     static bool running;
     static DateTime start = DateTime.UtcNow, last = DateTime.UtcNow;
     static readonly Windows.UI.ViewManagement.UISettings ui = new();
@@ -45,9 +45,47 @@ public static class EffectsClock
         Update();
     }
 
+    /// <summary>Effects rest while another window has the focus: Driftwave then costs next to nothing.</summary>
+    public static void SetWindowActive(bool active)
+    {
+        windowActive = active;
+        Update();
+    }
+
+    /// <summary>
+    /// A moving element driven by this clock: <paramref name="apply"/> sets its composition visual's properties
+    /// (translation, opacity, scale) for a time in seconds. Setting composition properties costs no layout, and
+    /// the window only redraws at the clock's rate (24 a second) instead of the compositor's 60 that a running
+    /// composition animation would cause. It stops with the clock (window hidden, inactive or minimised) and
+    /// removes itself when the element leaves the window.
+    /// </summary>
+    public static void AddTrack(Microsoft.UI.Xaml.UIElement element, Action<Microsoft.UI.Composition.Visual, double> apply)
+    {
+        Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.SetIsTranslationEnabled(element, true);
+        var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(element);
+        var track = new Track(visual, apply);
+        if (Frozen) { apply(visual, StillTime); return; }
+        Add(track);
+        if (element is Microsoft.UI.Xaml.FrameworkElement fe) fe.Unloaded += (_, _) => Remove(track);
+    }
+
+    sealed class Track(Microsoft.UI.Composition.Visual visual, Action<Microsoft.UI.Composition.Visual, double> apply) : IAnimated
+    {
+        public void Tick(double t, double dt) => apply(visual, t);
+    }
+
+    /// <summary>Sets one axis of a visual's Translation (the others keep their values).</summary>
+    public static void SetTranslation(Microsoft.UI.Composition.Visual v, float? x = null, float? y = null)
+    {
+        v.Properties.TryGetVector3("Translation", out var cur);
+        v.Properties.InsertVector3("Translation", new System.Numerics.Vector3(x ?? cur.X, y ?? cur.Y, cur.Z));
+    }
+
+    static bool Moving => windowVisible && windowActive && !Frozen;
+
     static void Update()
     {
-        bool want = subscribers.Count > 0 && windowVisible && !Frozen;
+        bool want = subscribers.Count > 0 && Moving;
         if (want == running) return;
         running = want;
         Diagnostics.Log(want ? "effects clock running" : "effects clock stopped");
@@ -62,8 +100,8 @@ public static class EffectsClock
     static void OnFrame(object? sender, object e)
     {
         var now = DateTime.UtcNow;
-        // 30 frames a second is plenty for these effects and halves their cost.
-        if ((now - last).TotalSeconds < 1 / 31.0) return;
+        // 24 frames a second is plenty for slow ambient effects, and the window redraws only that often.
+        if ((now - last).TotalSeconds < 1 / 25.0) return;
         double dt = Math.Min(0.1, (now - last).TotalSeconds);
         last = now;
         double t = StillTime + (now - start).TotalSeconds;

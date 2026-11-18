@@ -1,0 +1,337 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "ninety-five",
+  "name": "Ninety-Five",
+  "description": "A homage to Windows 95: a teal desktop, grey 3D windows, a navy-to-blue title bar and icons on the desktop.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#008080",
+    "surface": "#00008080",
+    "card": "#C0C0C0",
+    "cardStroke": "#000000",
+    "control": "#C0C0C0",
+    "controlStroke": "#000000",
+    "subtle": "#330000A8",
+    "divider": "#808080",
+    "text": "#000000",
+    "textSecondary": "#222222",
+    "textTertiary": "#555555",
+    "accent": "#000080",
+    "accentText": "#000080",
+    "onAccent": "#FFFFFF",
+    "dialog": "#C0C0C0",
+    "pane": "#C0C0C0"
+  },
+  "fonts": {
+    "body": "Microsoft Sans Serif",
+    "title": "Microsoft Sans Serif",
+    "titleSize": 22,
+    "titleWeight": "Bold"
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 0,
+    "card": 0,
+    "cover": 0
+  },
+  "effects": {
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "in": "titlebar",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": [
+            [
+              "#000080",
+              0
+            ],
+            [
+              "#1084D0",
+              1
+            ]
+          ],
+          "angle": "h"
+        },
+        {
+          "type": "text",
+          "text": "Driftwave - Ninety-Five",
+          "x": 130,
+          "y": 14,
+          "size": 14,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "weight": "bold",
+          "in": "titlebar"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKKKKKKK..",
+            "..KWWWWWWWWK..",
+            "..KWBBBBBBWK..",
+            "..KWBCCCCBWK..",
+            "..KWBCCCCBWK..",
+            "..KWBBBBBBWK..",
+            "..KWWWWWWWWK..",
+            "..KKKKKKKKKK..",
+            "....KGGGGK....",
+            "KKKKKKKKKKKKKK",
+            "KWWWWWWWWWWGGK",
+            "KKKKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "G": "#C0C0C0",
+            "B": "#000080",
+            "C": "#008080"
+          },
+          "x": -110,
+          "y": 300,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "My Radio",
+          "x": -116,
+          "y": 340,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "...KKKKKK...",
+            "KKKKKKKKKKKK",
+            "KWWWWWWWWWWK",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWGWGWGWGK.",
+            ".KWWWWWWWWK.",
+            "..KKKKKKKK.."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "G": "#C0C0C0"
+          },
+          "x": -112,
+          "y": 380,
+          "scale": 3,
+          "in": "content",
+          "id": "bin",
+          "clickable": true
+        },
+        {
+          "type": "text",
+          "text": "Recycled Tracks",
+          "x": -118,
+          "y": 414,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKKKKK",
+            "KBBWWWWWWBBK",
+            "KBBWWWWWWBBK",
+            "KBBWWWWWWBBK",
+            "KBBBBBBBBBBK",
+            "KBBBBBBBBBBK",
+            "KBBGGGGGGBBK",
+            "KBBGKKGGGBBK",
+            "KBBGKKGGGBBK",
+            "KKKKKKKKKKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF",
+            "G": "#C0C0C0",
+            "B": "#000080"
+          },
+          "x": -114,
+          "y": 460,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "3½ Floppy (A:)",
+          "x": -120,
+          "y": 494,
+          "size": 11,
+          "color": "#FFFFFF",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "bevel",
+          "in": "content",
+          "x": 0,
+          "y": -30,
+          "w": "100%",
+          "h": 30,
+          "fill": "#C0C0C0"
+        },
+        {
+          "type": "bevel",
+          "in": "content",
+          "x": 4,
+          "y": -26,
+          "w": 64,
+          "h": 22,
+          "fill": "#C0C0C0",
+          "id": "start",
+          "clickable": true
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "RRGG",
+            "RRGG",
+            "BBYY",
+            "BBYY"
+          ],
+          "palette": {
+            "G": "#00A000",
+            "B": "#0000FF",
+            "Y": "#FFD800",
+            "R": "#FF0000"
+          },
+          "x": 10,
+          "y": -21,
+          "scale": 3,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "Start",
+          "x": 26,
+          "y": -25,
+          "size": 13,
+          "color": "#000000",
+          "font": "Microsoft Sans Serif",
+          "weight": "bold",
+          "in": "content"
+        },
+        {
+          "type": "bevel",
+          "in": "content",
+          "x": -84,
+          "y": -26,
+          "w": 80,
+          "h": 22,
+          "fill": "#C0C0C0",
+          "style": "sunken"
+        },
+        {
+          "type": "text",
+          "text": "{time}",
+          "x": -70,
+          "y": -24,
+          "size": 12,
+          "color": "#000000",
+          "font": "Microsoft Sans Serif",
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "....KKKK",
+            "....KYYK",
+            "....K..K",
+            "....K..K",
+            "....K..K",
+            "KKKKK..K",
+            "KYYYK..K",
+            "KYYYKKKK",
+            "KKKKKYYK",
+            "....KKKK"
+          ],
+          "palette": {
+            "K": "#000000",
+            "Y": "#FFD34E"
+          },
+          "x": -100,
+          "y": -24,
+          "scale": 2,
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "It's now safe to turn off your computer.",
+          "x": "18%",
+          "y": "40%",
+          "size": 26,
+          "color": "#FF8C1A",
+          "font": "Microsoft Sans Serif",
+          "weight": "bold",
+          "id": "safe",
+          "hidden": true,
+          "in": "content"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "K......K.....",
+            "KK....KK.....",
+            "KWKKKKWK.....",
+            "KWWWWWWK...KK",
+            "KWKWWKWK..KWK",
+            "KWWWWWWKKKKWK",
+            ".KWWWWWWWWWK.",
+            ".KWWWWWWWWWK.",
+            ".KWKKWKKKWK..",
+            ".KK.KK..KK..."
+          ],
+          "palette": {
+            "K": "#000000",
+            "W": "#FFFFFF"
+          },
+          "x": -60,
+          "y": -60,
+          "scale": 3,
+          "in": "content",
+          "id": "walker",
+          "hidden": true
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "click:start",
+          "say": "Start ▸ Programs ▸ Accessories ▸ Entertainment ▸ Driftwave. You're already here.",
+          "seconds": 6
+        },
+        {
+          "trigger": "click:bin",
+          "say": "Recycled Tracks is empty. Every song deserves a second listen.",
+          "seconds": 5
+        },
+        {
+          "trigger": "type:shutdown",
+          "show": "safe",
+          "seconds": 6
+        },
+        {
+          "trigger": "konami",
+          "run": "walk:walker",
+          "seconds": 8
+        }
+      ]
+    }
+  }
+}

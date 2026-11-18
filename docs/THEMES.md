@@ -82,7 +82,7 @@ or while Windows' animation effects are off. They also freeze into one fixed fra
 | Effect | What it does | Options |
 |---|---|---|
 | `synthwave` | Striped setting sun and a perspective grid rolling towards you, behind the UI | `sunTop`, `sunBottom`, `grid`, `sky` |
-| `rain` | Rain streaks over the UI and a hazy city glow behind it | `color`, `drops`, `glowA`, `glowB` |
+| `rain` | Rain streaks and a hazy city glow, behind the UI (never across text or controls) | `color`, `drops`, `glowA`, `glowB` |
 | `aurora` | Large soft colour blobs drifting behind the panes | `colors` (array), `opacity` |
 | `wood` | Walnut veneer with grain, behind the UI (uses `background`) | |
 | `concrete` | Board-marked concrete texture behind the UI | `opacity` |
@@ -97,6 +97,69 @@ or while Windows' animation effects are off. They also freeze into one fixed fra
 | `analyzer` | Player pane: spectrum bars with falling peaks | |
 | `dial` | Player pane: a backlit FM tuning dial; each station gets its own spot, and the pointer swings there | `color` |
 | `vu` | Player pane: left and right VU meters | |
+| `scene` | The theme's own decoration and easter eggs (see "Scenes") | `layers`, `eggs` |
+
+**Cost.** Moving effects run on one clock at 24 frames a second, setting composition properties
+directly (no layout), so the window redraws only that often. They rest whenever the window isn't the
+active one, and when it's minimised or hidden.
+
+### Scenes
+
+A `scene` is a list of `layers` (drawn behind the UI unless `"front": true`) and optional `eggs`.
+
+**Placing a layer:**
+
+- `in`: the area its coordinates are relative to: `titlebar` (the 48 px strip), `pane` (the navigation
+  pane), `content` (between the pane and the player), `player`, or the whole `window` (default).
+- `x` and `y`: a number of pixels, a negative number (counted from the far edge) or a percentage
+  (`"40%"`).
+- `anchor: "bottom"` makes `y` the item's bottom edge.
+- `w` and `h`: the same kinds of values.
+- `opacity`, `rotate`.
+- `id`, `hidden: true` (shown by an egg), `clickable: true` (an egg can react to clicks on it; the UI
+  underneath still gets the click).
+
+**Kinds (`type`):**
+
+| type | What it draws | Options |
+|---|---|---|
+| `rect`, `ellipse` | A shape | `fill` (a colour, or an array of colours or `[colour, offset]` stops), `angle` (`v`, `h`, `d`), `stroke`, `strokeWidth`, `radius` |
+| `radial` | A soft radial gradient | `fill` (stops) |
+| `bevel` | A 3D edge, as on 90s desktops | `fill`, `light`, `dark`, `edge`, `style: "sunken"`, `outline` |
+| `line` | A line | `x2`, `y2` (relative to the start), `stroke`, `strokeWidth` |
+| `path` | Path geometry | `data`, `fill`, `stroke`, `scale` |
+| `text` | Text | `text` (`{time}`, `{time24}` and `{date}` are filled in), `font`, `size`, `weight`, `style`, `color`, `spacing`, `vertical: true` (stacked, for signage), `glow` and `glowRadius` (a neon halo) |
+| `pixels` | Pixel art | `rows` (strings), `palette` (one character to a colour; `.` is clear), `scale` |
+
+**Many copies:**
+
+- `repeat: {n, dx, dy}` makes copies in a row or column.
+- `scatter: {n, seed, w, h, colors, fade}` makes random copies in an area. The pattern is the same
+  every time.
+- `jitter: {w, h}` varies their sizes, and `skip` drops a share of them.
+
+**Motion (`motion: {kind, seconds, …}`)** is always slow and smooth:
+
+- `drift` (there and back, by `x` and `y`);
+- `scroll` (a loop by `x` and `y`);
+- `breathe` (opacity between `min` and `max`, never faster than 4 s a cycle);
+- `sway` (rotation by `angle`);
+- `spin`.
+
+`offset` and `randomOffset` set the phase.
+
+**Eggs (`eggs: [{trigger, …}]`):**
+
+- **Triggers:**
+  - `type:word`: the letters typed anywhere outside a text field;
+  - `konami`: up, up, down, down, left, right, left, right, B, A;
+  - `click:<id>`;
+  - `idle:<seconds>`.
+- **What happens:**
+  - `show: <id>`: fades hidden layers in, then out;
+  - `say: "text"`: a bubble near the click or `near`;
+  - `run`: `snake`, `pong`, `cascade` (bouncing cards) or `walk:<id>` (a hidden layer walks across);
+  - `seconds` sets how long it lasts.
 
 **The spectrum bars and VU meters are decorative.** They move while a station plays, but they don't
 follow the sound. The Windows app has no access to the decoded audio, because Media Foundation plays
@@ -115,6 +178,33 @@ it.
 | `frosted-glass` | Frosted Glass | Windows' acrylic | light | See-through acrylic window, translucent cards, drifting colour |
 | `stealth` | Stealth | | dark | Black on black, dim grey type, a spotlight that follows the pointer |
 | `analog-70s` | Analog 70s | 70s hi-fi receivers | dark | Walnut, cream and orange, backlit tuning dial, VU meters, Shrikhand |
+
+### Homage themes
+
+These are tributes to computers, phones and consoles people loved. `windows/tools/make-homage-themes.py`
+writes them. Each is original work in the spirit of its subject: colours, type, shapes and a detailed
+scene with easter eggs. No logos, artwork, fonts or other assets were copied, and the names describe the
+look rather than the brands.
+
+| id | Name | A homage to | Some details (and where to look for eggs) |
+|---|---|---|---|
+| `program-manager` | Program Manager | Windows 3.1 | Navy title bar, program groups, hourglass. Type *solitaire*; click Games |
+| `ninety-five` | Ninety-Five | Windows 95 | Teal desktop with icons, a taskbar with a clock. Click Start and Recycled Tracks; type *shutdown*; Konami |
+| `luna` | Luna | Windows XP | Hills and clouds, a glossy title bar, green start button. Click start; wait; type *bliss* |
+| `aurora-glass` | Aurora Glass | Windows Vista | Smoky glass, aurora, clock and now-on-air gadgets, a glass orb. Click the orb; type *wow* |
+| `superbar` | Superbar | Windows 7 | A light swoosh, the superbar with pinned favourites. Click the orb; type *shake* |
+| `fluent` | Fluent | Windows 11 | Mica, a blue bloom, a centred taskbar. Click start; Konami |
+| `platinum` | Platinum | classic Mac OS | Pinstripes, a smiling computer, folders. Konami; click the disk; type *sosumi* |
+| `aqua` | Aqua | Mac OS X | Pinstripes, gel traffic lights, a gel dock. Click red; type *lick*; Konami |
+| `big-glass` | Big Glass | today's Mac | Full frosted glass, a menu bar, a floating dock. Type *hello*; click the trash; Konami |
+| `home-screen` | Home Screen | the iPhone | Status bar with a pill, a gradient wallpaper, a dock. Click the battery and the pill; type *slide* |
+| `dos-prompt` | C:\ Prompt | DOS | Text mode, box-drawn frames, a prompt. Type *dir*, *ver*, *help*, *format*; Konami |
+| `night-market` | Night Market | a rainy Japanese street at night | Skyline, vertical neon signs, a noodle bar with lanterns and steam, wet reflections. Click the bowl; type *noodles*; wait |
+| `woodgrain` | Woodgrain | the Atari 2600 | Walnut, ribbed black panel, rainbow stripes, a joystick. Click the joystick; Konami; type *adventure* |
+| `brick-phone` | Brick Phone | Nokia phones of 1999 | Green LCD, signal and battery, a phone. Type *snake*; click the phone; Konami |
+| `super-16` | Super 16 | the Super Nintendo | Greys and purple, four coloured buttons, a pad. Konami; type *blow* |
+| `sixteen-blast` | Sixteen Blast | the Sega Genesis | Glossy black, red and gold, speed lines, PRESS START. Type *blast*; Konami |
+| `llama-whip` | Llama Whip | Winamp | Black and gold, LCD marquee, spectrum bars, a llama. Click the llama; type *llama*; Konami |
 
 The names describe the look rather than the brands. No artwork, logos or fonts from the originals
 are used.

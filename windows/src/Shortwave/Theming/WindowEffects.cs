@@ -52,6 +52,7 @@ public sealed class WindowEffects
                 "vignette" => new Vignette(o),
                 "scanlines" => new Scanlines(o),
                 "spotlight" => new Spotlight(o, pointerSource),
+                "scene" => new SceneEffect(o, theme, pointerSource),
                 _ => null,
             };
             if (e is null) continue;
@@ -75,6 +76,9 @@ public sealed class WindowEffects
         back.Children.Clear();
         front.Children.Clear();
     }
+
+    /// <summary>Lays the effects out again (the player was shown or hidden, the pane resized).</summary>
+    public void Relayout() { if (size.Width > 0) Resize(size); }
 
     void Resize(Size s)
     {
@@ -101,32 +105,30 @@ public sealed class WindowEffects
     /// </summary>
     internal static void Loop(UIElement e, string property, float from, float to, double seconds)
     {
-        if (EffectsClock.Frozen || seconds <= 0) return;
-        Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.SetIsTranslationEnabled(e, true);
-        var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(e);
-        var c = visual.Compositor;
-        var anim = c.CreateScalarKeyFrameAnimation();
-        anim.InsertKeyFrame(0f, from);
-        anim.InsertKeyFrame(1f, to, c.CreateLinearEasingFunction());
-        anim.Duration = TimeSpan.FromSeconds(seconds);
-        anim.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
-        visual.StartAnimation(property, anim);
+        if (seconds <= 0) return;
+        bool x = property.EndsWith(".X", StringComparison.Ordinal);
+        EffectsClock.AddTrack(e, (v, t) =>
+        {
+            float value = from + (to - from) * (float)(t % seconds / seconds);
+            if (x) EffectsClock.SetTranslation(v, x: value); else EffectsClock.SetTranslation(v, y: value);
+        });
     }
 
     /// <summary>A slow composition loop through <paramref name="points"/> (translations) and back to the start.</summary>
     internal static void LoopPath(UIElement e, IList<System.Numerics.Vector3> points, double seconds)
     {
-        if (EffectsClock.Frozen || points.Count == 0) return;
-        Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.SetIsTranslationEnabled(e, true);
-        var visual = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(e);
-        var c = visual.Compositor;
-        var anim = c.CreateVector3KeyFrameAnimation();
-        anim.InsertKeyFrame(0f, System.Numerics.Vector3.Zero);
-        for (int i = 0; i < points.Count; i++) anim.InsertKeyFrame((i + 1f) / (points.Count + 1), points[i]);
-        anim.InsertKeyFrame(1f, System.Numerics.Vector3.Zero);
-        anim.Duration = TimeSpan.FromSeconds(seconds);
-        anim.IterationBehavior = Microsoft.UI.Composition.AnimationIterationBehavior.Forever;
-        visual.StartAnimation("Translation", anim);
+        if (points.Count == 0 || seconds <= 0) return;
+        var path = new List<System.Numerics.Vector3> { System.Numerics.Vector3.Zero };
+        path.AddRange(points);
+        path.Add(System.Numerics.Vector3.Zero);
+        EffectsClock.AddTrack(e, (v, t) =>
+        {
+            double f = t % seconds / seconds * (path.Count - 1);
+            int i = Math.Min((int)f, path.Count - 2);
+            float s = (float)(f - i);
+            s = s * s * (3 - 2 * s);   // smooth through each point
+            v.Properties.InsertVector3("Translation", System.Numerics.Vector3.Lerp(path[i], path[i + 1], s));
+        });
     }
 
     /// <summary>A grey noise image, premultiplied BGRA; <paramref name="smooth"/> adds soft blotches (concrete).</summary>
@@ -184,8 +186,38 @@ public sealed class WindowEffects
         readonly List<Line> rows = [];
         double w, h, horizon;
         readonly Color grid = Opt(o, "grid", Color.FromArgb(255, 255, 46, 151));
-        public override bool Animated => true;
+        // The rows are clock-driven tracks (StartRows); Tick only draws the still frame.
+        public override bool Animated => false;
         public override IEnumerable<(UIElement, bool)> Elements() { yield return (canvas, false); }
+
+        /// <summary>Where row <paramref name="i"/> is at loop phase <paramref name="phase"/> (0..1): y and opacity.</summary>
+        (double Y, double Opacity) Row(int i, double phase)
+        {
+            double z = i + 1 - phase;
+            double y = horizon + (h - horizon) / (1 + 0.55 * z);
+            return (y, Math.Clamp((y - horizon) / (h - horizon) * 3, 0, 1));
+        }
+
+        /// <summary>
+        /// Each row loops from where the row behind it starts to where it ends, sampled along the perspective curve:
+        /// seamless, and no per-frame work on the UI thread.
+        /// </summary>
+        void StartRows()
+        {
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var line = rows[i];
+                int row = i;
+                line.Y1 = line.Y2 = 0;
+                line.Opacity = 1;
+                EffectsClock.AddTrack(line, (v, t) =>
+                {
+                    var (y, op) = Row(row, t * 0.45 % 1);
+                    EffectsClock.SetTranslation(v, y: (float)y);
+                    v.Opacity = (float)op;
+                });
+            }
+        }
 
         public override void Resize(double width, double height)
         {
@@ -254,6 +286,8 @@ public sealed class WindowEffects
             var glow = new Rectangle { Width = w, Height = 2, Fill = Brush(Theme.Mix(grid, Microsoft.UI.Colors.White, 0.4)) };
             Canvas.SetTop(glow, horizon - 1);
             canvas.Children.Add(glow);
+            if (EffectsClock.Frozen) Tick(EffectsClock.StillTime, 0);
+            else StartRows();
         }
 
         public override void Tick(double t, double dt)
@@ -262,11 +296,9 @@ public sealed class WindowEffects
             double phase = t * 0.45 % 1;
             for (int i = 0; i < rows.Count; i++)
             {
-                double z = i + 1 - phase;
-                double y = horizon + (h - horizon) / (1 + 0.55 * z) * 1.0;
-                var line = rows[i];
-                line.Y1 = line.Y2 = y;
-                line.Opacity = Math.Clamp((y - horizon) / (h - horizon) * 3, 0, 1);
+                var (y, op) = Row(i, phase);
+                rows[i].Y1 = rows[i].Y2 = y;
+                rows[i].Opacity = op;
             }
         }
     }

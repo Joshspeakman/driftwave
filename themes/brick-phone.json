@@ -1,0 +1,183 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "brick-phone",
+  "name": "Brick Phone",
+  "description": "A homage to the indestructible phones of 1999: a green backlit LCD, chunky pixels, signal bars and a snake.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#8FA87A",
+    "surface": "#E6C7F0A8",
+    "card": "#D8B6DE8E",
+    "cardStroke": "#43523D",
+    "control": "#C7F0A8",
+    "controlStroke": "#43523D",
+    "subtle": "#3343523D",
+    "divider": "#43523D",
+    "text": "#2B3627",
+    "textSecondary": "#43523D",
+    "textTertiary": "#5E7356",
+    "accent": "#43523D",
+    "accentText": "#2B3627",
+    "onAccent": "#C7F0A8",
+    "dialog": "#C7F0A8",
+    "pane": "#9DB689"
+  },
+  "fonts": {
+    "body": "Consolas",
+    "title": "VT323",
+    "titleSize": 36
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 2,
+    "card": 2,
+    "cover": 0
+  },
+  "effects": {
+    "scene": {
+      "layers": [
+        {
+          "type": "line",
+          "in": "content",
+          "x": 0,
+          "y": 0,
+          "x2": "100%",
+          "y2": 0,
+          "stroke": "#1443523D",
+          "repeat": {
+            "n": 300,
+            "dy": 3
+          }
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "......KK",
+            "......KK",
+            "....KKKK",
+            "....KKKK",
+            "..KKKKKK",
+            "..KKKKKK",
+            "KKKKKKKK",
+            "KKKKKKKK"
+          ],
+          "palette": {
+            "K": "#2B3627"
+          },
+          "x": 132,
+          "y": 14,
+          "scale": 2,
+          "in": "titlebar"
+        },
+        {
+          "type": "text",
+          "text": "DRIFTWAVE",
+          "x": 160,
+          "y": 10,
+          "size": 24,
+          "color": "#2B3627",
+          "font": "VT323",
+          "in": "titlebar"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "KKKKKKKKKKKK.",
+            "KGGGGGGGGGGKK",
+            "KGGGGGGGGGGKK",
+            "KGGGGGGGGGGKK",
+            "KKKKKKKKKKKK."
+          ],
+          "palette": {
+            "K": "#2B3627",
+            "G": "#43523D"
+          },
+          "x": -232,
+          "y": 18,
+          "scale": 2,
+          "in": "titlebar"
+        },
+        {
+          "type": "pixels",
+          "rows": [
+            "..KKKKKKKK..",
+            ".KGGGGGGGGK.",
+            ".KGLLLLLLGK.",
+            ".KGLDDDDLGK.",
+            ".KGLDDDDLGK.",
+            ".KGLLLLLLGK.",
+            ".KGGGGGGGGK.",
+            ".KGKKGGKKGK.",
+            ".KGGGGGGGGK.",
+            ".KGKGKGKGGK.",
+            ".KGKGKGKGGK.",
+            ".KGKGKGKGGK.",
+            ".KGGGGGGGGK.",
+            "..KKKKKKKK.."
+          ],
+          "palette": {
+            "K": "#2B3627",
+            "G": "#43523D",
+            "D": "#8FA87A",
+            "L": "#C7F0A8"
+          },
+          "x": -90,
+          "y": -110,
+          "scale": 5,
+          "in": "content",
+          "id": "phone",
+          "clickable": true
+        },
+        {
+          "type": "text",
+          "text": "Menu",
+          "x": 20,
+          "y": -34,
+          "size": 22,
+          "color": "#2B3627",
+          "font": "VT323",
+          "in": "content"
+        },
+        {
+          "type": "text",
+          "text": "Names",
+          "x": -170,
+          "y": -34,
+          "size": 22,
+          "color": "#2B3627",
+          "font": "VT323",
+          "in": "content"
+        },
+        {
+          "type": "rect",
+          "in": "content",
+          "x": 0,
+          "y": 0,
+          "w": 380,
+          "h": 230,
+          "id": "board",
+          "fill": "#00000000"
+        }
+      ],
+      "eggs": [
+        {
+          "trigger": "type:snake",
+          "run": "snake",
+          "seconds": 20
+        },
+        {
+          "trigger": "click:phone",
+          "say": "1 missed call: your favourite station.",
+          "seconds": 5
+        },
+        {
+          "trigger": "konami",
+          "run": "snake",
+          "seconds": 20
+        }
+      ]
+    }
+  }
+}

@@ -20,7 +20,7 @@ public sealed partial class StationCover : UserControl
         Loaded += (_, _) =>
         {
             images = App.Current?.Model.Images;
-            if (images != null) images.Changed += OnImageChanged;
+            if (images != null) { images.Changed -= OnImageChanged; images.Changed += OnImageChanged; }
             Apply();
         };
         Unloaded += (_, _) => { if (images != null) images.Changed -= OnImageChanged; };
