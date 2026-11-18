@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 /// The Windows app's look (WinUI 3 / Fluent), drawn with Mac controls: the shared colours, type
-/// sizes and building blocks. Values follow WinUI's default theme resources; see
-/// docs/design/ for the Windows screenshots they're matched against.
+/// sizes and building blocks. Values are WinUI's default theme resources (taken from the
+/// Windows app's XAML); docs/MAC-WINDOWS-SYNC.md tracks comparing them with the Windows renders.
 enum Fluent {
     /// A colour with separate light and dark values.
     static func dynamic(light: NSColor, dark: NSColor) -> Color {
@@ -126,9 +126,9 @@ struct NavRow: View {
             HStack(spacing: 14) {
                 Image(systemName: symbol).font(.system(size: 15)).frame(width: 20)
                 if !compact { Text(title).lineLimit(1) }
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, alignment: compact ? .center : .leading)
+            .padding(.horizontal, compact ? 0 : 10)
             .frame(height: 36)
             .contentShape(Rectangle())
             .background(RoundedRectangle(cornerRadius: 5, style: .continuous)

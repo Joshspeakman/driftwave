@@ -55,7 +55,7 @@ struct MainView: View {
                     }
                 }
             }
-            .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minWidth: 400, maxWidth: .infinity, maxHeight: .infinity)
             if app.showPlayer {
                 Rectangle().fill(Fluent.divider).frame(width: 1)
                 PlayerPanel()

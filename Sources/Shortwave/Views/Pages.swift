@@ -187,7 +187,8 @@ struct CountryMenu: View {
 
     private var filtered: [RadioBrowser.Facet] {
         let f = filter.trimmingCharacters(in: .whitespaces)
-        return f.isEmpty ? app.countries : app.countries.filter { $0.name.localizedCaseInsensitiveContains(f) }
+        let named = app.countries.filter { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty }
+        return f.isEmpty ? named : named.filter { $0.name.localizedCaseInsensitiveContains(f) }
     }
 }
 
