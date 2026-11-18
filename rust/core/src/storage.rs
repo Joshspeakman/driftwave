@@ -195,6 +195,57 @@ mod tests {
         assert_eq!(library_file::load(&p).len(), 1);
     }
 
+    /// A library.json in the Mac's format (hand-written to match Swift's JSONEncoder: escaped slashes, " : "
+    /// separators, optional values left out).
+    #[test]
+    fn loads_mac_library() {
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../windows/tests/ShortwaveCore.Tests/Fixtures/mac-library.json");
+        let list = library_file::load(&fixture);
+        assert_eq!(list.len(), 2);
+        let soma = &list[0];
+        assert_eq!(soma.id, "960cfd3b-0601-11e8-ae97-52543be04c81");
+        assert_eq!(soma.stream_url, "http://ice1.somafm.com/groovesalad-128-mp3");
+        assert_eq!(soma.homepage.as_deref(), Some("https://somafm.com/groovesalad/"));
+        assert_eq!(soma.tags, vec!["ambient", "chillout"]);
+        assert_eq!((soma.latitude, soma.longitude), (Some(37.775), Some(-122.419)));
+        assert_eq!(soma.votes, 4321);
+        assert_eq!(soma.custom_cover.as_deref(), Some("5C1A7F0E-2B7D-4F64-9E1B-1D2C3B4A5F60.png"));
+        let local = &list[1];
+        assert!(local.is_local && local.homepage.is_none() && local.latitude.is_none() && local.tags.is_empty());
+        assert_eq!(local.name, "Café Radio été");
+    }
+
+    #[test]
+    fn writes_mac_compatible_layout() {
+        let mut s = Station::new("id1", "A/B", "http://x/y");
+        s.tags = vec!["t".into()];
+        s.latitude = Some(1.5);
+        let json = String::from_utf8(library_file::encode(&[s.clone()])).unwrap();
+        assert!(!json.contains("null") && !json.contains("homepage"));
+        assert!(json.find("\"stations\"") < json.find("\"version\""));
+        let keys: Vec<&str> = json
+            .split('"')
+            .collect::<Vec<_>>()
+            .windows(2)
+            .filter(|w| w[1].starts_with(':'))
+            .map(|w| w[0])
+            .filter(|k| *k != "stations" && *k != "version")
+            .collect();
+        let mut sorted = keys.clone();
+        sorted.sort();
+        assert_eq!(keys, sorted);
+        assert_eq!(
+            keys,
+            vec!["bitrate", "codec", "country", "countryCode", "id", "isHLS", "isLocal", "isOrphaned", "language",
+                 "latitude", "name", "state", "streamURL", "tags", "votes"]
+        );
+        let dir = TempDir::new("layout");
+        let path = dir.path().join("library.json");
+        library_file::save(&[s.clone()], &path).unwrap();
+        assert_eq!(library_file::load(&path), vec![s]);
+    }
+
     #[test]
     fn paths() {
         let p = AppPaths::new("S", "C");
