@@ -99,6 +99,27 @@ other for something and reports back. Newest round at the top. Git is the transp
   - One fix beyond the Mac code: a library refresh that is still waiting on radio-browser no longer
     marks stations imported in the meantime as orphaned.
   - Not driven by the tests: the Open and Save file pickers themselves.
+- **App Theme:** done. Settings now opens with an "Appearance" group whose "App Theme" card has the
+  caption "Follow Windows' light or dark setting, or always use one." and a drop-down: Use System
+  Setting (default) / Light / Dark.
+  - The setting is stored under `appearance` as `system|light|dark`. `-appearance light|dark`
+    overrides it for a run without saving it, and doesn't by itself make a test run (as on the Mac).
+  - It sets `RequestedTheme` on the main window's and the mini player's root elements and on any
+    open dialog, and `AppWindow.TitleBar.PreferredTheme` for the title bar buttons.
+  - Colours set from code (dialog cards, secondary text, card hover) now come from the chosen theme's
+    dictionary, not Windows' theme.
+  - Checked: UI Automation picks each choice and `settings.json` follows. Switching to Light while
+    the app runs in dark Windows restyles the window. Forced Light and Dark renders are correct on
+    this PC, which uses dark mode.
+  - Not checked: the title bar buttons on the real screen, since the renders leave them out.
+- **Screenshots:** done, in `docs/design/windows/`, from `windows/scripts/screenshots.ps1`, a port
+  of `scripts/screenshots.sh` with the same set and delays.
+  - The main window renders at 1164×739, the client area of the default 1180×760 window at 100%
+    scale. The mini player is 404×76.
+  - `track-details` is left out: `-openTrackDetail` needs a track recorded from its start, and
+    joining a stream mid-song gives "Not Recorded".
+  - The renders draw only the XAML: no Mica, no title bar buttons. The background behind them is a
+    flat #F3F3F3 (light) or #202020 (dark). DESIGN.md describes what the real window adds.
 
 ### Windows: review of the Mac screenshots
 

@@ -39,6 +39,7 @@ public sealed class Preferences : Observable
         volume = Math.Clamp(GetDouble("volume") ?? 1.0, 0, 1);
         lastStationID = Get("lastStation");
         discoverCountry = Get("discoverCountry") ?? DefaultCountry();
+        appearance = AppThemes.FromRawValue(Get("appearance")) ?? AppTheme.System;   // -appearance light|dark overrides it
         loading = false;
     }
 
@@ -138,5 +139,48 @@ public sealed class Preferences : Observable
     private string discoverCountry;
     public string DiscoverCountry { get => discoverCountry; set { if (Set(ref discoverCountry, value)) Store("discoverCountry", value); } }
 
+    private AppTheme appearance;
+    /// <summary>App Theme: follow Windows' light or dark setting, or always use one. Key <c>appearance</c>, like the Mac.</summary>
+    public AppTheme Appearance
+    {
+        get => appearance;
+        set { if (Set(ref appearance, value)) { Store("appearance", value.RawValue()); Diagnostics.Log("theme " + value.RawValue()); } }
+    }
+
     public RecorderConfig RecorderConfig => new(RecordingMode, MinimumDuration, MaximumDuration);
+}
+
+/// <summary>The app's light or dark look: Windows' own setting (the default), or always light or dark.</summary>
+public enum AppTheme { System, Light, Dark }
+
+public static class AppThemes
+{
+    public static readonly AppTheme[] All = [AppTheme.System, AppTheme.Light, AppTheme.Dark];
+    public static string RawValue(this AppTheme t) => t.ToString().ToLowerInvariant();
+    public static AppTheme? FromRawValue(string? raw) => All.Cast<AppTheme?>().FirstOrDefault(t => t!.Value.RawValue() == raw);
+    public static string Title(this AppTheme t) => t switch
+    {
+        AppTheme.Light => "Light",
+        AppTheme.Dark => "Dark",
+        _ => "Use System Setting",
+    };
+    public static Microsoft.UI.Xaml.ElementTheme ElementTheme(this AppTheme t) => t switch
+    {
+        AppTheme.Light => Microsoft.UI.Xaml.ElementTheme.Light,
+        AppTheme.Dark => Microsoft.UI.Xaml.ElementTheme.Dark,
+        _ => Microsoft.UI.Xaml.ElementTheme.Default,
+    };
+    public static Microsoft.UI.Windowing.TitleBarTheme TitleBarTheme(this AppTheme t) => t switch
+    {
+        AppTheme.Light => Microsoft.UI.Windowing.TitleBarTheme.Light,
+        AppTheme.Dark => Microsoft.UI.Windowing.TitleBarTheme.Dark,
+        _ => Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode,
+    };
+
+    /// <summary>Applies the theme to a window: its root element and its title bar buttons.</summary>
+    public static void Apply(this AppTheme t, Microsoft.UI.Xaml.Window window)
+    {
+        if (window.Content is Microsoft.UI.Xaml.FrameworkElement root) root.RequestedTheme = t.ElementTheme();
+        try { window.AppWindow.TitleBar.PreferredTheme = t.TitleBarTheme(); } catch (Exception e) { Diagnostics.Log("title bar theme: " + e.Message); }
+    }
 }

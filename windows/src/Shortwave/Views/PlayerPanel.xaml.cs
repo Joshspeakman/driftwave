@@ -80,8 +80,8 @@ public sealed partial class PlayerPanel : UserControl
             bool recording = track.State == RecordingState.Recording;
             RecordingGlyph.Glyph = recording ? "\uE7C8" : track.State.IsRecorded() ? "\uE930" : "\uEA3A";
             RecordingGlyph.Foreground = recording
-                ? (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"]
-                : (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+                ? Ui.ThemeBrush("SystemFillColorCriticalBrush")
+                : Ui.ThemeBrush("TextFillColorSecondaryBrush");
             RecordingTitle.Text = track.StateTitle;
             RecordingText.Text = track.SaveWhenRecorded && recording ? "Will be saved when complete" : track.StateExplanation;
         }
