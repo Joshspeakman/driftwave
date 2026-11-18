@@ -19,7 +19,14 @@ final class Player: NSObject {
     private(set) var playingTrack: Track?
     private(set) var pastTracks: [Track] = []
     var volume: Double = 1 { didSet { avPlayer.volume = Float(volume); settings.volume = volume } }
-    var isMuted = false { didSet { avPlayer.isMuted = isMuted } }
+    /// What the controls show. A test run (without -audible) stays silent whatever happens to this:
+    /// ⌘↑ and the mute toggle once unmuted a test copy and it played aloud.
+    var isMuted = false {
+        didSet {
+            avPlayer.isMuted = isMuted || Diagnostics.startMuted
+            Diagnostics.log("muted shown=\(isMuted) output=\(avPlayer.isMuted)")
+        }
+    }
 
     @ObservationIgnored let avPlayer = AVPlayer()
     @ObservationIgnored private let settings: Preferences
@@ -53,6 +60,7 @@ final class Player: NSObject {
         super.init()
         volume = settings.volume
         avPlayer.volume = Float(volume)
+        avPlayer.isMuted = Diagnostics.startMuted
         avPlayer.automaticallyWaitsToMinimizeStalling = true
         statusObservation = avPlayer.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.syncStateFromPlayer() } }
