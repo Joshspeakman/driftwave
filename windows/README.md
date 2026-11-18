@@ -52,7 +52,7 @@ run:
 |---|---|
 | `SHORTWAVE_LOG=1` (environment) | Log player events to stderr (`state playing`, `icy connected titles=true format=mp3`, `now playing "..."`, `track started ... idleIncomplete`, `saved ...`) |
 | `SHORTWAVE_TEST=1` (environment) | Test run with no other effect |
-| `-playURL <url>` | Play this stream at launch as a temporary local station |
+| `-playURL <url>` | Play this stream at launch: the library station with that address if there is one, otherwise a temporary local station ("Test Stream") |
 | `-muted` / `-audible` | Muted (default in test runs) / allow sound in a test run |
 | `-page library\|discover\|search\|settings`, `-searchText <text>` | Start on a page or with a search |
 | `-openFirstResult`, `-openTrackDetail` | Open the first result's details / the first recording track's details |
@@ -64,6 +64,7 @@ run:
 | `-screenshot <png> [-screenshotDelay <s>]` | After the delay (default 4 s), render the main window and any open dialog to PNG, then quit |
 | `-quitAfter <s>` | Quit after that many seconds |
 | `-updateFeed <file\|url>` | Check this releases JSON (GitHub's format) instead of GitHub. Test runs never contact GitHub without it |
+| `-scrollTo updates` | Settings opens scrolled to the Updates section (screenshots) |
 | `-mediaControls` | Use the media overlay even in a test run. Only for checking the media session when nothing else is playing |
 
 `Driftwave.exe --quit` asks the running copy of that flavor to quit. The install script uses it.

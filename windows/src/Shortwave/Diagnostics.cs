@@ -55,6 +55,8 @@ public static class Diagnostics
     public static string? PlayURL => Value("playURL");
     public static string? StartPage => Value("page");
     public static string? SearchText => Value("searchText");
+    /// <summary>-scrollTo updates: Settings opens scrolled to that section (screenshots).</summary>
+    public static string? ScrollTo => Value("scrollTo");
     public static bool OpenFirstResult => Has("-openFirstResult");
     public static bool OpenTrackDetail => Has("-openTrackDetail");
     public static bool OpenMiniPlayer => Has("-miniPlayer");
@@ -70,7 +72,7 @@ public static class Diagnostics
     /// <summary>Test runs use their own data folder and settings, so they never touch the real app's data.</summary>
     public static readonly bool IsTestRun =
         Has("-muted") || PlayURL != null || StartPage != null || SearchText != null || OpenFirstResult || OpenTrackDetail
-        || OpenMiniPlayer || OpenAddStation || Screenshot != null || QuitAfter != null || ImportStations != null || ExportStations != null
+        || OpenMiniPlayer || OpenAddStation || ScrollTo != null || Screenshot != null || QuitAfter != null || ImportStations != null || ExportStations != null
         || Environment.GetEnvironmentVariable("SHORTWAVE_TEST") == "1";
 
     /// <summary>

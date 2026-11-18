@@ -94,7 +94,8 @@ public sealed class AppModel : Observable
             catch (Exception e) { Diagnostics.Log("export failed: " + e.Message); }
         }
         if (Diagnostics.Resume) ResumeAfterRestart();
-        if (Diagnostics.PlayURL is { } url) Player.Select(Station.Local("Test Stream", url));
+        // A library station with that address plays as itself (name and cover); any other address as "Test Stream".
+        if (Diagnostics.PlayURL is { } url) Player.Select(Library.FirstOrDefault(s => s.StreamURL == url) ?? Station.Local("Test Stream", url));
     }
 
     /// <summary>Plays the station that was playing when App.Restart started this copy.</summary>
