@@ -33,7 +33,9 @@ on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
   was playing YouTube Music. A media key press then stopped a test recording.
 - Never test media keys, Now Playing or the system media overlay while Josh is playing music.
   Ask him first.
-- Don't press mute (⌥⌘M / Ctrl+Alt+M) in a test run: test copies start muted, so it unmutes them.
+- A test run's audio output stays muted whatever its controls do (Mac since 2026-11-18): mute, ⌘↑ /
+  Ctrl+Up and the mute toggle only change what the controls show. Only `-audible` makes sound.
+  This came after ⌘↑ unmuted a test copy and it played aloud.
 - Never touch the real app's library, settings or track folder from a test.
 - Real-click tests on the Mac: AppleScript's `process whose unix id is …` matches by **name**, and
   Josh's installed app is also called "Shortwave", so it reaches his real app. Target the test copy

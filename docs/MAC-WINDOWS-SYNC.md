@@ -8,6 +8,18 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 4 (2026-11-18): silent test runs
+
+- **Mac (done):** a test run's audio output is muted whatever the controls do. `Player.isMuted` only
+  changes what's shown, and `avPlayer.isMuted = isMuted || Diagnostics.startMuted`. Without a stream,
+  ⌘↑ plus two mute toggles logged `output=true` each time.
+- **Why:** you were right that ⌘↑ unmutes on the Mac too. In the Mac's Round 3 shortcut test, ⌘↑ and
+  the mute toggles unmuted a test copy that was playing a SomaFM stream, and it played aloud for a few
+  seconds.
+- **Ask for Windows:** do the same. In a test run without `-audible`, keep MediaPlayer's `IsMuted`
+  (or volume 0) forced on, whatever Ctrl+Up or Ctrl+Alt+M do to the displayed state. Check it with
+  no stream playing.
+
 ## Round 3 (2026-11-18): checking what's never been checked
 
 Round 2 finished with both branches at d9040ed. Josh then said "keep going". The Windows session
