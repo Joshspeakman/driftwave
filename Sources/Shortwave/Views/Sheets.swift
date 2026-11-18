@@ -21,7 +21,7 @@ struct StationDetailSheet: View {
                         Button { app.play(station) } label: {
                             Label(isActive ? "Playing" : "Play", systemImage: "play.fill")
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.accent)
                         .disabled(isActive)
                         Button { app.toggleLibrary(station) } label: {
                             Label(inLibrary ? "Remove from Library" : "Add to Library",
@@ -171,6 +171,7 @@ struct LocalStationSheet: View {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(editing == nil ? "Add Station" : "Save") { commit() }
                     .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.accent)
                     .disabled(!isValid)
             }
             .padding(16)
@@ -272,7 +273,7 @@ struct TrackDetailSheet: View {
                     Button("Play Track") { NSWorkspace.shared.open(saved) }
                 }
                 if track.canSave {
-                    Button("Save Track") { Task { await app.player.save(track) } }.buttonStyle(.borderedProminent)
+                    Button("Save Track") { Task { await app.player.save(track) } }.buttonStyle(.accent)
                 }
                 Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
             }

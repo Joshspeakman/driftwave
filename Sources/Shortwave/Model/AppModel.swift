@@ -120,12 +120,7 @@ final class AppModel {
             Screenshot.scheduleIfAsked { [weak self] in self?.openWindowByID?("main") }
             // SwiftUI doesn't always present the main window at launch (seen with copies started
             // from a script); make sure it's there.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-                if !NSApp.windows.contains(where: { $0.isVisible && $0.identifier?.rawValue.contains("main") == true }) {
-                    Diagnostics.log("opening the main window")
-                    self?.openWindowByID?("main")
-                }
-            }
+            self.ensureMainWindow(attempt: 0)
             if Diagnostics.openMiniPlayer {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.openWindowByID?("mini") }
             }
@@ -136,6 +131,25 @@ final class AppModel {
         }
         if let url = Diagnostics.playURL {
             player.select(Station.local(name: "Test Stream", streamURL: url))
+        }
+    }
+
+    /// Opens the main window if SwiftUI didn't. The open action exists only once the menu commands
+    /// have been built, so this checks every half second for up to 10 seconds.
+    private func ensureMainWindow(attempt: Int) {
+        guard attempt < 20 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self else { return }
+            if NSApp.windows.contains(where: { $0.isVisible && $0.identifier?.rawValue.contains("main") == true }) { return }
+            if let open = self.openWindowByID {
+                Diagnostics.log("opening the main window")
+                open("main")
+            } else if attempt == 0 {
+                // The menu commands (and with them the open action) are built when the app becomes
+                // active, which a copy started from a script isn't.
+                NSApp.activate()
+            }
+            self.ensureMainWindow(attempt: attempt + 1)
         }
     }
 

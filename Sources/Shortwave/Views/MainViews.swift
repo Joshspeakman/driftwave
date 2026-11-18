@@ -226,6 +226,8 @@ struct SettingsPage: View {
             }
         }
         .onChange(of: settings.recorderConfig) { app.player.settingsChanged() }
+        // Don't open with the first number field focused (and its text selected).
+        .onAppear { DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) } }
     }
 }
 

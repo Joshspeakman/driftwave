@@ -13,7 +13,7 @@ struct LibraryPage: View {
             if app.library.isEmpty {
                 EmptyState(symbol: "antenna.radiowaves.left.and.right", title: "Your Library Is Empty",
                            text: "Discover over 50,000 public stations and add the ones you like.", iconSize: 48) {
-                    Button("Discover New Stations") { app.page = .discover }.buttonStyle(.borderedProminent)
+                    Button("Discover New Stations") { app.page = .discover }.buttonStyle(.accent)
                     Button("Add Local Station") { app.showingAddStation = true }
                     Button("Import Stations…") { app.chooseImportFile() }
                 }
@@ -31,13 +31,10 @@ struct LibraryPage: View {
 struct LibraryMoreMenu: View {
     @Environment(AppModel.self) private var app
     var body: some View {
-        Menu {
+        DropDownMenu(symbol: "ellipsis") {
             Button("Import Stations…") { app.chooseImportFile() }
             Button("Export Stations…") { app.chooseExportFile() }.disabled(app.library.isEmpty)
-        } label: {
-            Image(systemName: "ellipsis")
         }
-        .fixedSize()
         .help("Import or export your saved stations")
         .accessibilityLabel("More")
     }
@@ -47,7 +44,7 @@ struct SortMenu: View {
     @Environment(AppModel.self) private var app
     var body: some View {
         @Bindable var settings = app.settings
-        Menu {
+        DropDownMenu(symbol: "arrow.up.arrow.down", title: settings.librarySorting.title) {
             Picker("Sort By", selection: $settings.librarySorting) {
                 ForEach(StationSorting.allCases) { Text($0.title).tag($0) }
             }
@@ -57,11 +54,7 @@ struct SortMenu: View {
                 Text("Descending").tag(false)
             }
             .pickerStyle(.inline)
-        } label: {
-            Label(settings.librarySorting.title, systemImage: "arrow.up.arrow.down")
-                .labelStyle(.titleAndIcon)
         }
-        .fixedSize()
         .help("Sort the library")
         .accessibilityLabel("Sort")
     }
