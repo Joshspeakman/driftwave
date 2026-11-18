@@ -8,6 +8,68 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 3 (2026-11-18): checking what's never been checked
+
+Round 2 finished with both branches at d9040ed. Josh then said "keep going". The Windows session
+had ended by then, so these asks wait for the next one. Merge `origin/nightly` first.
+
+### Asks for the Windows session
+
+1. **Look at the real screen first, while Josh is at the PC and the display is awake.**
+   - Start the installed Shortwave Nightly and capture the real window, not a `-screenshot` render,
+     in light and in dark (App Theme).
+   - Check that Mica, the title bar and the content layer look the way DESIGN.md describes. Fix
+     anything that doesn't.
+   - Commit the captures as `docs/design/windows/screen-<light|dark>.png`.
+2. **Port `scripts/behaviour-test.sh`** (PowerShell, using the same `scripts/icy-test-server.py`).
+   The server now has:
+   - `--drop-icy-after N`: it closes the app's title connection (ICY metadata plus a User-Agent
+     starting "Shortwave") every N seconds. The player's own audio connection is left alone, because
+     media engines ask for ICY metadata too. Media Foundation may differ; check.
+   - `/playlist`: a `.pls` served as `audio/x-scpls` from a URL with no extension.
+
+   The checks: the title connection comes back (at least 2 `icy connected titles=true`); playback
+   never stops, fails or goes back to loading; titles keep coming (Song 3); no song is shown twice;
+   and the extensionless playlist plays as a local station.
+3. **Keyboard shortcuts, with real key presses on a muted test copy.** Leave the media keys alone, and
+   don't press mute: a test copy starts muted, so mute would unmute it. Check:
+   - Ctrl+1/2 and Ctrl+F switch pages
+   - Ctrl+Up/Down change the volume by 0.05
+   - Ctrl+Enter stops and starts
+   - Ctrl+Right moves to the next library station
+   - Ctrl+Alt+P hides the player; Ctrl+Shift+M opens the mini player
+   - Ctrl+N opens Add Local Station
+   - Ctrl+Shift+I/E open the import and export pickers
+4. **Change Station Cover… and Use Default Cover**, through UI Automation on a test copy.
+5. Record the results under "Windows: Round 3 results" below, push `windows`, and merge it into
+   `nightly` if Josh's standing rule still allows it (only `main` is his call).
+
+### Mac: Round 3 results (2026-11-18)
+
+- **Reconnect and playlist probe:** `scripts/behaviour-test.sh` passes on the Mac.
+  - The title connection was closed every 20 s and came back 3 times.
+  - Audio never stopped or rebuffered, titles reached Song 3, and no song was listed twice.
+  - The extensionless `.pls` played.
+  - Finding: AVPlayer sends `Icy-MetaData: 1` on its own audio connection, so the server's drop
+    picks out the app's connection by User-Agent.
+- **Shortcuts, sent as real key presses to a muted test copy that wasn't in front:**
+  - ⌘1, ⌘2, ⌘F and ⌘, switch pages.
+  - ⌘↓ and ⌘↑ change the volume (0.80, then 0.75, then 0.80).
+  - ⌘↩ stops, and pressing it again plays.
+  - ⌘→ moves to the next library station.
+  - ⌥⌘P hides the player, and ⇧⌘M opens the mini player.
+  - ⌘N opens Add Local Station, and Esc closes it.
+  - ⇧⌘I opens the import panel, and ⇧⌘E opens the save panel with "Shortwave Stations" filled in.
+  - ⌥⌘M toggles mute too, but pressing it unmuted the test copy for about half a second. Don't
+    press it in test runs.
+- **Change Station Cover… on the Mac:** not driven, because the open panel is modal and doesn't take
+  key presses sent to the app. Covers that arrive through import are written and shown
+  (`exchange-test.sh` and the renders). Picking one by hand is left for Josh.
+
+### Windows: Round 3 results
+
+(Windows session: write here.)
+
 ## Round 2 (2026-11-17): the second look at the Mac renders
 
 ### Windows: what's left

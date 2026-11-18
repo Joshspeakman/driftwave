@@ -68,6 +68,7 @@ You only need the Xcode Command Line Tools (Swift 6), not Xcode.
 | `scripts/smoke-test.sh` | Plays real MP3, AAC, HLS, Ogg and `.pls` streams muted and checks that playback and titles work |
 | `scripts/exchange-test.sh` | Imports `fixtures/exchange/seed.json` into an empty test-run library, exports it, checks a re-import adds nothing, and imports the Windows app's export |
 | `scripts/screenshots.sh [name …]` | Draws each screen, light and dark, into `docs/design/mac/` (muted test runs; `-screenshot`, `-appearance` and the other flags are listed in `Diagnostics.swift`) |
+| `scripts/behaviour-test.sh` | Local test server drops the title connection every 20 s (the app must reconnect without repeating songs) and serves a `.pls` with no extension (a local station must follow it) |
 | `scripts/recording-test.sh` | Runs a local Icecast-style server (`scripts/icy-test-server.py`, needs ffmpeg) and checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable |
 
 Build output goes to `~/ProjectBuilds/shortwave-macos`, and `.build` is a symlink to it.

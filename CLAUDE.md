@@ -33,6 +33,7 @@ on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
   was playing YouTube Music. A media key press then stopped a test recording.
 - Never test media keys, Now Playing or the system media overlay while Josh is playing music.
   Ask him first.
+- Don't press mute (⌥⌘M / Ctrl+Alt+M) in a test run: test copies start muted, so it unmutes them.
 - Never touch the real app's library, settings or track folder from a test.
 - Real-click tests on the Mac: AppleScript's `process whose unix id is …` matches by **name**, and
   Josh's installed app is also called "Shortwave", so it reaches his real app. Target the test copy
@@ -51,6 +52,7 @@ Only the Command Line Tools are needed, not Xcode.
 | `scripts/recording-test.sh` | Local ICY server plus ffmpeg: checks that tracks are cut and saved |
 | `scripts/exchange-test.sh` | Station import/export in the real app (test runs); `--update-fixture` rewrites `fixtures/exchange/mac-export.json` |
 | `scripts/screenshots.sh` | Every screen, light and dark, into `docs/design/mac/` |
+| `scripts/behaviour-test.sh` | Local server: the title connection drops and must reconnect without repeats; an extensionless `.pls` must play |
 
 ## Windows build
 
