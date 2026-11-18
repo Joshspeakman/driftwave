@@ -2,7 +2,9 @@
 //! translation of the Mac app's `Sources/ShortwaveCore`. Behaviour, file formats and tests carry over.
 
 pub mod exchange;
+pub mod icy;
 pub mod migration;
+pub mod playlist;
 pub mod station;
 pub mod storage;
 

@@ -15,3 +15,5 @@ serde_json.workspace = true
 uuid.workspace = true
 ureq.workspace = true
 base64.workspace = true
+url.workspace = true
+unicode-segmentation.workspace = true
