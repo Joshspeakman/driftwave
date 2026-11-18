@@ -238,7 +238,7 @@ public sealed class Updater : Observable
     const string ApplyScript = """
         param([int]$WaitPid, [string]$Source, [string]$Dest, [string]$Exe, [string]$Version, [string]$RegistryKey, [string]$ArgsFile, [string]$Log)
         function Write-Log([string]$m) { Add-Content -LiteralPath $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
-        Write-Log "update to $Version: waiting for $WaitPid"
+        Write-Log "update to ${Version}: waiting for ${WaitPid}"
         try { Wait-Process -Id $WaitPid -Timeout 30 -ErrorAction SilentlyContinue } catch { }
         # Only ever touch an installed copy.
         if (-not (Test-Path -LiteralPath (Join-Path $Dest 'uninstall.ps1')) -or -not (Test-Path -LiteralPath (Join-Path $Dest $Exe))) { Write-Log "not an install folder: $Dest"; exit 1 }
