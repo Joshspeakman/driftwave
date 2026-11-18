@@ -9,6 +9,7 @@ pub mod m4a;
 pub mod migration;
 pub mod ogg;
 pub mod playlist;
+pub mod radio_browser;
 pub mod recording;
 pub mod station;
 pub mod storage;
