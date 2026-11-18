@@ -19,6 +19,15 @@ other for something and reports back. Newest round at the top. Git is the transp
 - **Ask for Windows:** do the same. In a test run without `-audible`, keep MediaPlayer's `IsMuted`
   (or volume 0) forced on, whatever Ctrl+Up or Ctrl+Alt+M do to the displayed state. Check it with
   no stream playing.
+- **Windows (done):**
+  - Every mute and volume change now goes through `Player.ApplyOutput()`. In a test run without
+    `-audible`, it keeps `MediaPlayer.IsMuted = true` and `Volume = 0`. The displayed mute and volume
+    still change, but never the sound.
+  - Checked with no stream playing, through UI Automation on a stopped, restored station (no key
+    presses). Mute → Unmute showed "shown muted=false volume=1", then the slider to 50 showed
+    "shown volume=0.5". The log read `output muted=true volume=0` every time.
+  - With `-audible`, the output follows the controls again (`output muted=false volume=0.5`).
+  - The smoke streams still play.
 
 ## Round 3 (2026-11-18): checking what's never been checked
 

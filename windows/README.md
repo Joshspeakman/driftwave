@@ -39,7 +39,8 @@ The rules in the root `CLAUDE.md` apply. Any test flag or `SHORTWAVE_TEST=1` mak
 run:
 
 - uses `%APPDATA%\ShortwaveTestRun` and `%LOCALAPPDATA%\ShortwaveTestRun`, with their own settings;
-- stays muted unless you pass `-audible`;
+- stays silent unless you pass `-audible`. The output stays muted even when Ctrl+Up, Ctrl+Alt+M or the
+  volume controls change what's shown (they would otherwise unmute);
 - stays off the media overlay and media keys;
 - skips the single-instance check, so test runs can run side by side.
 - saves tracks to `%APPDATA%\ShortwaveTestRun\Tracks` unless `-trackDirectory` says otherwise.

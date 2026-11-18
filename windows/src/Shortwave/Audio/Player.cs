@@ -53,7 +53,7 @@ public sealed class Player : Observable
         mp.AudioCategory = MediaPlayerAudioCategory.Media;
         mp.RealTimePlayback = false;
         volume = settings.Volume;
-        mp.Volume = volume;
+        ApplyOutput();
         mp.MediaFailed += (s, e) =>
         {
             var src = s.Source;
@@ -128,12 +128,27 @@ public sealed class Player : Observable
         set
         {
             value = Math.Clamp(value, 0, 1);
-            if (Set(ref volume, value)) { mp.Volume = value; settings.Volume = value; }
+            if (Set(ref volume, value)) { settings.Volume = value; ApplyOutput(); }
         }
     }
 
     private bool isMuted;
-    public bool IsMuted { get => isMuted; set { if (Set(ref isMuted, value)) mp.IsMuted = value; } }
+    public bool IsMuted { get => isMuted; set { if (Set(ref isMuted, value)) ApplyOutput(); } }
+
+    /// <summary>
+    /// What the player actually outputs. A test run without -audible stays silent whatever the controls show:
+    /// Ctrl+Up and Ctrl+Alt+M change the displayed mute and volume, never the sound (the Mac does the same).
+    /// </summary>
+    private void ApplyOutput()
+    {
+        bool silent = Diagnostics.StartMuted;
+        mp.IsMuted = isMuted || silent;
+        mp.Volume = silent ? 0 : volume;
+        Diagnostics.Log($"{OutputDescription} (shown muted={(isMuted ? "true" : "false")} volume={volume.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
+    }
+
+    /// <summary>For the test log: the player's real output state.</summary>
+    public string OutputDescription => $"output muted={(mp.IsMuted ? "true" : "false")} volume={mp.Volume.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
 
     public MediaPlayer MediaPlayer => mp;
 
@@ -264,7 +279,7 @@ public sealed class Player : Observable
         currentItem = item;
         currentItemGen = gen;
         playerRequestedAt = DateTime.UtcNow;
-        mp.IsMuted = isMuted;
+        ApplyOutput();
         mp.Source = item;
         mp.Play();
 
