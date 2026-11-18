@@ -11,7 +11,7 @@ struct LibraryPage: View {
                 LibraryMoreMenu()
             }
             if app.library.isEmpty {
-                EmptyState(symbol: "dot.radiowaves.left.and.right", title: "Your Library Is Empty",
+                EmptyState(symbol: "antenna.radiowaves.left.and.right", title: "Your Library Is Empty",
                            text: "Discover over 50,000 public stations and add the ones you like.", iconSize: 48) {
                     Button("Discover New Stations") { app.page = .discover }.buttonStyle(.borderedProminent)
                     Button("Add Local Station") { app.showingAddStation = true }
@@ -37,7 +37,6 @@ struct LibraryMoreMenu: View {
         } label: {
             Image(systemName: "ellipsis")
         }
-        .menuIndicator(.hidden)
         .fixedSize()
         .help("Import or export your saved stations")
         .accessibilityLabel("More")
@@ -292,6 +291,7 @@ struct SearchPage: View {
             }
           }
           .labelsHidden()
+          .controlSize(.large)
           .padding(EdgeInsets(top: 0, leading: 24, bottom: 8, trailing: 16))
         }
     }

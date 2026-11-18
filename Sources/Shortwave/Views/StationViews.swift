@@ -33,7 +33,7 @@ struct StationCover: View {
         return LinearGradient(colors: [Color(hue: stable, saturation: 0.45, brightness: 0.85),
                                        Color(hue: stable, saturation: 0.65, brightness: 0.55)],
                               startPoint: .topLeading, endPoint: .bottomTrailing)
-            .overlay(Image(systemName: "dot.radiowaves.left.and.right")
+            .overlay(Image(systemName: "antenna.radiowaves.left.and.right")
                 .font(.system(size: size * 0.36, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9)))
     }
@@ -73,14 +73,14 @@ struct StationCard: View {
                         Image(systemName: "speaker.wave.2.fill").font(.caption).foregroundStyle(.tint)
                             .symbolEffect(.variableColor.iterative, isActive: app.player.state == .playing)
                     }
-                    Text(station.name).font(.headline).lineLimit(1)
+                    Text(station.name).font(.system(size: 14, weight: .semibold)).lineLimit(1)
                 }
-                Text(cardSubtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(cardSubtitle).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(width: 148, alignment: .leading)
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(hovering ? Color.primary.opacity(0.06) : .clear))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(hovering ? Fluent.subtle : .clear))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2) { app.play(station) }
@@ -124,7 +124,7 @@ struct StationMenu: View {
 struct StationGrid: View {
     let stations: [Station]
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 164, maximum: 200), spacing: 8, alignment: .top)], alignment: .leading, spacing: 12) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 164, maximum: 164), spacing: 8, alignment: .top)], alignment: .leading, spacing: 12) {
             ForEach(stations) { StationCard(station: $0) }
         }
     }

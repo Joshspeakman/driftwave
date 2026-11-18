@@ -17,14 +17,29 @@ enum Screenshot {
                 openMain()
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + max(delay, 2)) {
+        // Render at the Windows app's size (1180×760) with the window active, so accent-coloured
+        // controls draw as they do in use. Test copies share the installed app's saved window
+        // frame, so the old frame is put back before quitting.
+        var savedFrame: NSRect?
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            NSApp.activate()
+            guard let w = mainWindow() else { return }
+            w.makeKeyAndOrderFront(nil)
+            if !Diagnostics.openMiniPlayer {
+                savedFrame = w.frame
+                w.setFrame(NSRect(x: w.frame.minX, y: w.frame.maxY - 760, width: 1180, height: 760), display: true)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(delay, 2.5)) {
             if capture(to: URL(fileURLWithPath: path)) {
                 Diagnostics.log("screenshot \(path)")
             } else {
                 Diagnostics.log("screenshot failed: windows \(NSApp.windows.map { "\(type(of: $0)) \($0.frame)" })")
             }
-            // exit, not terminate: an open sheet can hold up a normal quit.
-            exit(0)
+            if let f = savedFrame { mainWindow()?.setFrame(f, display: false) }
+            // Let the window save its restored frame, then exit (not terminate: an open sheet can
+            // hold up a normal quit).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { exit(0) }
         }
     }
 

@@ -97,7 +97,7 @@ struct StationDetailSheet: View {
             }
             .formStyle(.grouped)
         }
-        .frame(width: 520, height: 600)
+        .frame(width: 640, height: 620)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
         }
@@ -133,7 +133,9 @@ struct LocalStationSheet: View {
     @ViewState private var loaded = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(editing == nil ? "Add Local Station" : "Edit Station").font(Fluent.subtitleFont)
+                .padding(EdgeInsets(top: 20, leading: 20, bottom: 0, trailing: 20))
             Form {
                 Section {
                     TextField("Name", text: $name)
