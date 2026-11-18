@@ -3,6 +3,8 @@ import AppKit
 /// `-screenshot <png>` (test runs): after `-screenshotDelay` seconds (default 4), draws the main
 /// window, with any open sheet laid over it, into a PNG and quits. It draws the app's own views,
 /// so it works with the display asleep, like the Windows app's flag of the same name.
+/// Known limit: SF Symbols draw untinted (white in dark mode) in these renders; on screen they
+/// take their colour. Check symbol colours with a real screen capture.
 /// `-appearance light|dark` picks the look for the run (it overrides the App Theme setting).
 @MainActor
 enum Screenshot {

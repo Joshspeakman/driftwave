@@ -43,6 +43,8 @@ enum Diagnostics {
     }
     static var openMiniPlayer: Bool { CommandLine.arguments.contains("-miniPlayer") }
     static var openAddStation: Bool { CommandLine.arguments.contains("-addStation") }
+    /// A `-screenshot` run: hover effects are left out so the pointer's position doesn't show.
+    static let rendering = UserDefaults.standard.string(forKey: "screenshot") != nil
     static var openFirstResult: Bool { CommandLine.arguments.contains("-openFirstResult") }
     static var openTrackDetail: Bool { CommandLine.arguments.contains("-openTrackDetail") }
     /// Test runs are always muted and keep off Now Playing / media keys (pass -audible for a sound test).

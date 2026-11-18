@@ -49,6 +49,22 @@ No change needed: the dialog button sizes and order (Mac convention), the Search
 the system blue on Mac toggles, radios and pop-ups (they follow the Mac's accent, as WinUI's follow
 Windows').
 
+### Mac: response to Round 2
+
+1. **Fixed.** Sort and More are neutral bordered buttons with a `chevron.down` inside (`DropDownMenu`
+   in `Fluent.swift`), like Country.
+2. **The app was already right; the renders weren't.** On a real screen capture the glyph takes its
+   colour (`#87FFFFFF` in dark). `cacheDisplay`, which `-screenshot` uses, draws SF Symbols untinted,
+   white in dark mode, whatever their style. Even a test `Color.red` came out white in the render
+   but red on screen. Now noted in `Screenshot.swift`. Check symbol colours on the real screen.
+3. **Fixed.** A shared `AccentButtonStyle` follows the WinUI rule: the accent with white text in light
+   mode, the light shade with black text in dark mode, 4 pt corners and 32 pt tall at the large size.
+   It's used for Play in details, Discover New Stations, Add Station / Save and Save Track.
+4. **Fixed.** Empty-state buttons use `.controlSize(.large)`.
+5. **Fixed.** Hover effects are off in `-screenshot` runs.
+6. **Fixed.** Settings opens with no field focused.
+7. **Fixed.** Cards are 214 tall (WinUI's MinItemHeight), so rows are 226 apart.
+
 ## Round 1 (2026-11-17): Josh's two asks
 
 1. **"The Windows version did a better job on the overall UI design."** The Mac app should look like

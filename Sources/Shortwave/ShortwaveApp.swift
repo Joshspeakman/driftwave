@@ -34,7 +34,7 @@ struct ShortwaveApp: App {
         MenuBarExtra {
             MenuBarContent().environment(app)
         } label: {
-            Image(systemName: app.player.isPlaying ? "dot.radiowaves.left.and.right" : "radio")
+            MenuBarLabel(app: app)
         }
     }
 }
@@ -112,5 +112,20 @@ struct ShortwaveCommands: Commands {
                 .keyboardShortcut("m", modifiers: [.command, .shift])
             Divider()
         }
+    }
+}
+
+/// The menu bar icon. It's drawn at launch even when the app isn't active (unlike the menu
+/// commands), so it also hands the model SwiftUI's openWindow action.
+struct MenuBarLabel: View {
+    let app: AppModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Image(systemName: app.player.isPlaying ? "dot.radiowaves.left.and.right" : "radio")
+            .task {
+                let open = openWindow
+                app.openWindowByID = { open(id: $0) }
+            }
     }
 }

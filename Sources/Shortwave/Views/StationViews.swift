@@ -52,7 +52,7 @@ struct StationCard: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .bottomTrailing) {
                 StationCover(station: station, size: 148)
-                if hovering || isActive {
+                if (hovering && !Diagnostics.rendering) || isActive {
                     Button {
                         if isActive { app.player.stopPlayback() } else { app.play(station) }
                     } label: {
@@ -80,7 +80,8 @@ struct StationCard: View {
             .frame(width: 148, alignment: .leading)
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(hovering ? Fluent.subtle : .clear))
+        .frame(height: 214, alignment: .top)   // WinUI's MinItemHeight: rows 226 apart
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(hovering && !Diagnostics.rendering ? Fluent.subtle : .clear))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .onTapGesture(count: 2) { app.play(station) }

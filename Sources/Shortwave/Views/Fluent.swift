@@ -92,6 +92,7 @@ struct GroupTitle: View {
 
 /// A big icon, a title, a line of text and optional buttons, centred in a page.
 struct EmptyState<Actions: View>: View {
+    @Environment(\.colorScheme) private var scheme
     let symbol: String
     let title: String
     var text: String = ""
@@ -100,13 +101,13 @@ struct EmptyState<Actions: View>: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: symbol).font(.system(size: iconSize, weight: .light)).foregroundStyle(Fluent.tertiaryText)
+            Image(systemName: symbol).font(.system(size: iconSize, weight: .light)).foregroundStyle(scheme == .dark ? Color.white.opacity(0.53) : Color.black.opacity(0.447))
                 .padding(.bottom, 2)
             Text(title).font(Fluent.subtitleFont).multilineTextAlignment(.center)
             if !text.isEmpty {
                 Text(text).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
-            HStack(spacing: 8) { actions }.padding(.top, 6)
+            HStack(spacing: 8) { actions }.controlSize(.large).padding(.top, 6)
         }
         .frame(maxWidth: 420)
         .padding(24)
@@ -142,7 +143,7 @@ struct NavRow: View {
             .frame(height: 36)
             .contentShape(Rectangle())
             .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(selected ? Fluent.subtle : hovering ? Fluent.subtleHover : .clear))
+                .fill(selected ? Fluent.subtle : hovering && !Diagnostics.rendering ? Fluent.subtleHover : .clear))
             .overlay(alignment: .leading) {
                 if selected {
                     Capsule().fill(.tint).frame(width: 3, height: 16)
@@ -154,5 +155,49 @@ struct NavRow: View {
         .help(help ?? title)
         .accessibilityLabel(title)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// WinUI's accent button: the accent fill (its lighter shade in dark mode) with white text in light
+/// mode and black text in dark mode, 4 pt corners, 32 pt tall at the large size.
+struct AccentButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.controlSize) private var size
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .lineLimit(1)
+            .fixedSize()
+            .fontWeight(.medium)
+            .foregroundStyle(enabled ? AnyShapeStyle(Fluent.onAccent) : AnyShapeStyle(.tertiary))
+            .padding(.horizontal, 12)
+            .frame(minHeight: size == .large ? 32 : 24)
+            .background(RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(enabled ? AnyShapeStyle(Fluent.accentFill) : AnyShapeStyle(.quaternary)))
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .contentShape(Rectangle())
+    }
+}
+
+extension ButtonStyle where Self == AccentButtonStyle {
+    static var accent: AccentButtonStyle { AccentButtonStyle() }
+}
+
+/// A neutral drop-down button (WinUI DropDownButton): an icon, an optional title and a chevron, no
+/// coloured arrow. macOS menus keep only one image from a label, so it's all one Text.
+struct DropDownMenu<Content: View>: View {
+    let symbol: String
+    var title: String = ""
+    @ViewBuilder var content: Content
+    var body: some View {
+        Menu {
+            content
+        } label: {
+            Text("\(Image(systemName: symbol))\(title.isEmpty ? "" : "  " + title)  \(Image(systemName: "chevron.down"))")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .menuIndicator(.hidden)
+        .fixedSize()
     }
 }
