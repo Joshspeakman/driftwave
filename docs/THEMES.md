@@ -116,9 +116,15 @@ are used.
 - **Renders:** every theme across Library, Settings, a dialog, the playing player, Discover and the
   mini player (`windows/scripts/screenshots.ps1 -Theme <id>`). The committed ones are in
   `docs/design/windows/themes/`.
-  - The render hook can't draw text-masked glows (Retrowave, Neon Noir), so those titles show a small
-    blob there.
-  - Nor can it draw acrylic, so open menus look see-through in renders, Default included.
+  - The render hook can't draw acrylic, so open menus look see-through in renders, Default included.
+- **On the real screen** (Josh's go-ahead, 2026-11-18): Retrowave, Neon Noir and Frosted Glass were
+  captured. The rain falls, the synthwave scene draws, and Frosted Glass is see-through acrylic
+  (`docs/design/windows/screen-frosted-glass.png`).
+  - The captures caught a bug: the title glows (then a composition shadow masked by the text) showed
+    as a blob under the title.
+  - The glows are now plain XAML: a halo and copies of the text. So the renders show them exactly as
+    the screen does. The same fix corrected the hard shadows and the Retro 64 cursor, which were
+    24 px right and 12 px down.
 - **Live runs:** each theme ran 20 s with a stream playing, with no effect errors. CPU while visible,
   in percent of one core:
 
@@ -142,8 +148,9 @@ are used.
   playing) were all checked through UI Automation. So were making a copy, renaming it (saved to the
   same file), deleting it, and a theme file with a hostile id (`..\library`), which loads under a
   safe id and can only touch its own file.
-- **Not checked yet, on the real screen:** the glows, the acrylic window and menus, and the effects
-  actually moving. The restart's wait-for-the-old-copy step, in a normal (non-test) run.
+- **Not checked yet:**
+  - the acrylic menus on the real screen;
+  - the restart's wait for the old copy to exit, in a normal (non-test) run.
 
 ## Applying a theme (Windows)
 

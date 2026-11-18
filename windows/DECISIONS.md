@@ -141,8 +141,8 @@ Josh asked for a customisable look and nine built-in themes. The format and the 
   taller, because the new background layer fills the window and the render hook used to crop the
   empty top of the title bar; the content is identical once shifted.
 - **Effects are drawn with XAML shapes, not Win2D,** so `-screenshot` renders show them and there is no
-  native dependency. Glows use a composition drop shadow masked by the text. The render hook can't
-  draw that, so check glows on the real screen. Hard shadows are offset copies of the text.
+  native dependency. The title glows and hard shadows are also XAML (a halo and copies of the text).
+  A composition drop shadow masked by the text showed as a blob under the title on the real screen.
 - **Names describe the look.** "Neon Noir" stands for Blade Runner, "Retro 64" for the Commodore 64
   and "Classic Skin" for Winamp, and each description says what it's after. No artwork or fonts come
   from the originals. The fonts are OFL (Orbitron, Press Start 2P, VT323, Share Tech Mono, Space Mono,
