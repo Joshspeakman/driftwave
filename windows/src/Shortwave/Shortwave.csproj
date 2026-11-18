@@ -13,7 +13,7 @@
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\Shortwave.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\Driftwave.ico</ApplicationIcon>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <!-- Release or Nightly; set by scripts\build.ps1 -->
     <Flavor Condition="'$(Flavor)' == ''">Nightly</Flavor>
@@ -31,8 +31,8 @@
     <ProjectReference Include="..\ShortwaveCore\ShortwaveCore.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Assets\Shortwave.ico" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="Assets\Shortwave.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Driftwave.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Driftwave.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- Theme fonts (SIL Open Font License; the licence files ship next to them) -->
     <Content Include="Assets\Fonts\**" CopyToOutputDirectory="PreserveNewest" />
     <!-- Built-in themes, shared with the Mac app's format (docs/THEMES.md) -->

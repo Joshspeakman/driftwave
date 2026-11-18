@@ -17,7 +17,7 @@ public static class Notifications
         if (failed) return false;
         try
         {
-            string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.png");
+            string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Driftwave.png");
             AppNotificationManager.Default.NotificationInvoked += (_, _) => App.Current?.ShowMainWindow();
             AppNotificationManager.Default.Register(Diagnostics.AppName, new Uri(icon));
             registered = true;

@@ -240,27 +240,34 @@ public sealed class Updater : Observable
         function Write-Log([string]$m) { Add-Content -LiteralPath $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
         Write-Log "update to ${Version}: waiting for ${WaitPid}"
         try { Wait-Process -Id $WaitPid -Timeout 30 -ErrorAction SilentlyContinue } catch { }
-        # Only ever touch an installed copy.
+        # Only ever touch an installed copy, and only with a complete new one.
         if (-not (Test-Path -LiteralPath (Join-Path $Dest 'uninstall.ps1')) -or -not (Test-Path -LiteralPath (Join-Path $Dest $Exe))) { Write-Log "not an install folder: $Dest"; exit 1 }
-        Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($Dest, [StringComparison]::OrdinalIgnoreCase) } | Stop-Process -Force -ErrorAction SilentlyContinue
+        if (-not (Test-Path -LiteralPath (Join-Path $Source 'uninstall.ps1')) -or -not (Test-Path -LiteralPath (Join-Path $Source $Exe))) { Write-Log "incomplete download: $Source"; exit 1 }
+        $inside = $Dest.TrimEnd('\') + '\'
+        Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($inside, [StringComparison]::OrdinalIgnoreCase) } | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 500
         $backup = "$Dest.backup"
-        if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
         $ok = $false
-        try {
-            Copy-Item -LiteralPath $Dest -Destination $backup -Recurse -Force
-            robocopy $Source $Dest /E /IS /IT /R:3 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-            if ($LASTEXITCODE -ge 8) { throw "copy failed (robocopy $LASTEXITCODE)" }
-            if (-not (Test-Path -LiteralPath (Join-Path $Dest $Exe))) { throw "$Exe missing after the copy" }
-            if ($RegistryKey -and (Test-Path $RegistryKey)) { Set-ItemProperty -Path $RegistryKey -Name DisplayVersion -Value $Version }
-            $ok = $true
-            Write-Log "updated to $Version"
+        if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
+        robocopy $Dest $backup /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+        if ($LASTEXITCODE -ge 8) { Write-Log "couldn't back up the current version (robocopy $LASTEXITCODE); leaving it as it is" }
+        else {
+            try {
+                # Mirror: files the new version no longer has are removed (the release zip has everything, uninstall.ps1 too).
+                robocopy $Source $Dest /MIR /XF Install.ps1 flavor.txt README.txt /R:3 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+                if ($LASTEXITCODE -ge 8) { throw "copy failed (robocopy $LASTEXITCODE)" }
+                if (-not (Test-Path -LiteralPath (Join-Path $Dest $Exe))) { throw "$Exe missing after the copy" }
+                if ($RegistryKey -and (Test-Path $RegistryKey)) { Set-ItemProperty -Path $RegistryKey -Name DisplayVersion -Value $Version }
+                $ok = $true
+                Write-Log "updated to $Version"
+            }
+            catch {
+                Write-Log "update failed: $_ (restoring the previous version)"
+                robocopy $backup $Dest /MIR /R:3 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+                Write-Log "restore: robocopy $LASTEXITCODE"
+            }
+            if ($ok) { Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue }
         }
-        catch {
-            Write-Log "update failed: $_ (restoring the previous version)"
-            if (Test-Path -LiteralPath $backup) { robocopy $backup $Dest /MIR /R:3 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null }
-        }
-        if ($ok -and (Test-Path -LiteralPath $backup)) { Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue }
         $arguments = @(Get-Content -Raw -LiteralPath $ArgsFile | ConvertFrom-Json)
         $quoted = $arguments | ForEach-Object { if ($_ -match '[\s"]') { '"' + ($_ -replace '"', '\"') + '"' } else { $_ } }
         if ($quoted) { Start-Process -FilePath (Join-Path $Dest $Exe) -ArgumentList $quoted } else { Start-Process -FilePath (Join-Path $Dest $Exe) }

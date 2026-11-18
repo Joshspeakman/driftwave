@@ -32,11 +32,11 @@ public sealed partial class MainWindow : Window
         Hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         Title = Diagnostics.AppName;
         TitleText.Text = Diagnostics.AppName;
-        string iconPng = Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.png");
+        string iconPng = Path.Combine(AppContext.BaseDirectory, "Assets", "Driftwave.png");
         TitleIcon.Source = new BitmapImage(new Uri(iconPng));
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
-        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.ico"));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "Driftwave.ico"));
 
         double scale = Native.GetDpiForWindow(Hwnd) / 96.0;
         AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(1180 * scale), (int)(760 * scale)));

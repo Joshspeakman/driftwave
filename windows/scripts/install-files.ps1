@@ -22,7 +22,7 @@ function Stop-Installed([string]$folder, [string]$exeName) {
     $exe = Join-Path $folder $exeName
     if (Test-Path $exe) { Start-Process -FilePath $exe -ArgumentList '--quit' -Wait }
     Get-Process ([IO.Path]::GetFileNameWithoutExtension($exeName)) -ErrorAction SilentlyContinue |
-        Where-Object { $_.Path -and $_.Path.StartsWith($folder, [StringComparison]::OrdinalIgnoreCase) } |
+        Where-Object { $_.Path -and $_.Path.StartsWith($folder.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) } |
         ForEach-Object { if (-not $_.WaitForExit(5000)) { Stop-Process -Id $_.Id -Force } }
 }
 
