@@ -121,7 +121,7 @@ impl Default for Theme {
 }
 
 /// The colour tokens a theme can set, with the label the editor shows.
-pub const TOKENS: [(&str, &str); 15] = [
+pub const TOKENS: [(&str, &str); 16] = [
     ("background", "Window background"),
     ("surface", "Content area"),
     ("card", "Cards"),
@@ -137,10 +137,11 @@ pub const TOKENS: [(&str, &str); 15] = [
     ("accentText", "Accent text and links"),
     ("onAccent", "Text on accent"),
     ("dialog", "Dialogs and menus"),
+    ("pane", "Navigation pane"),
 ];
 
 /// The decorative effects, with the label the editor shows. None of them may flash (docs/THEMES.md).
-pub const EFFECT_KINDS: [(&str, &str); 16] = [
+pub const EFFECT_KINDS: [(&str, &str); 17] = [
     ("synthwave", "Synthwave sun and grid"),
     ("rain", "Neon rain"),
     ("aurora", "Drifting colour behind glass"),
@@ -157,6 +158,7 @@ pub const EFFECT_KINDS: [(&str, &str); 16] = [
     ("analyzer", "Spectrum bars"),
     ("dial", "Tuning dial"),
     ("vu", "VU meter"),
+    ("scene", "Theme scene and easter eggs"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
