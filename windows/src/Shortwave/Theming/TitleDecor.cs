@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
@@ -11,8 +10,10 @@ using Windows.UI;
 namespace Shortwave.Theming;
 
 /// <summary>
-/// Page title treatments: upper case, a glow or hard shadow (a composition drop shadow masked by the text), and
-/// a blinking block cursor. Applied to every TextBlock that uses PageTitleStyle.
+/// Page title treatments: upper case, a neon glow or a hard shadow, and a blinking block cursor. Applied to every
+/// TextBlock that uses PageTitleStyle. Glow and shadow are plain XAML (copies of the text in the glow colour and a
+/// soft halo), so they look the same on screen and in -screenshot renders. A composition drop shadow masked by the
+/// text (GetAlphaMask) came out as a small blob under the title, on screen too.
 /// </summary>
 public sealed class TitleDecor
 {
@@ -20,8 +21,10 @@ public sealed class TitleDecor
     {
         public required TextBlock Title;
         public required Canvas Host;
-        public SpriteVisual? Glow;
-        public DropShadow? Shadow;
+        /// <summary>Neon glow: a halo and a ring of faint copies of the text.</summary>
+        public Canvas? Glow;
+        public Ellipse? Halo;
+        public readonly List<(TextBlock Text, double Dx, double Dy)> Ring = [];
         public Rectangle? Cursor;
         /// <summary>A hard shadow (blur 0): an offset copy of the title, drawn with plain XAML.</summary>
         public TextBlock? Copy;
@@ -32,12 +35,12 @@ public sealed class TitleDecor
 
         public void Tick(double t, double dt)
         {
-            if (Shadow != null && FlickerOn)
+            if (Glow != null && FlickerOn)
             {
                 // A tired neon tube: steady, with rare stutters.
                 double v = BaseOpacity;
                 if (dt > 0 && (t % 9.3 < 0.25 || t % 13.7 < 0.12)) v *= Random.Shared.NextDouble() < 0.5 ? 0.25 : 0.9;
-                Shadow.Opacity = (float)v;
+                Glow.Opacity = v;
             }
         }
     }
@@ -64,7 +67,6 @@ public sealed class TitleDecor
         foreach (var a in attached)
         {
             EffectsClock.Remove(a);
-            ElementCompositionPreview.SetElementChildVisual(a.Host, null);
             (a.Host.Parent as Panel)?.Children.Remove(a.Host);
         }
         attached.Clear();
@@ -95,7 +97,9 @@ public sealed class TitleDecor
         bool glow = theme.Has("titleShadow"), cursor = theme.Has("cursor");
         if (!glow && !cursor) return;
 
-        var host = new Canvas { IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        // The host covers the title's cell. Positions are measured again once it has been laid out: measured before,
+        // they put every glow, shadow and cursor 24 px right and 12 px down.
+        var host = new Canvas { IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch };
         Grid.SetRow(host, Grid.GetRow(title));
         Grid.SetColumn(host, Grid.GetColumn(title));
         panel.Children.Insert(0, host);   // behind the text
@@ -118,17 +122,41 @@ public sealed class TitleDecor
         if (glow)
         {
             var o = shadowOptions;
-            var compositor = ElementCompositionPreview.GetElementVisual(title).Compositor;
-            a.Shadow = compositor.CreateDropShadow();
-            a.Shadow.Color = WindowEffects.Opt(o, "color", Microsoft.UI.Colors.White);
-            a.Shadow.BlurRadius = (float)WindowEffects.Opt(o, "blur", 12);
-            a.Shadow.Offset = new Vector3((float)WindowEffects.Opt(o, "offsetX", 0), (float)WindowEffects.Opt(o, "offsetY", 0), 0);
+            var color = WindowEffects.Opt(o, "color", Microsoft.UI.Colors.White);
+            double blur = WindowEffects.Opt(o, "blur", 12);
+            a.Ox = WindowEffects.Opt(o, "offsetX", 0);
+            a.Oy = WindowEffects.Opt(o, "offsetY", 0);
             a.BaseOpacity = Math.Clamp(WindowEffects.Opt(o, "opacity", 1) * (0.4 + 0.6 * intensity), 0, 1);
-            a.Shadow.Opacity = (float)a.BaseOpacity;
             a.FlickerOn = o["flicker"] is System.Text.Json.Nodes.JsonValue f && f.TryGetValue(out bool fl) && fl;
-            a.Glow = compositor.CreateSpriteVisual();
-            a.Glow.Shadow = a.Shadow;
-            ElementCompositionPreview.SetElementChildVisual(host, a.Glow);
+            a.Glow = new Canvas { Opacity = a.BaseOpacity };
+            // A soft halo behind the word...
+            a.Halo = new Ellipse
+            {
+                Fill = new RadialGradientBrush
+                {
+                    GradientStops =
+                    {
+                        new GradientStop { Color = WindowEffects.A(color, 0.42), Offset = 0 },
+                        new GradientStop { Color = WindowEffects.A(color, 0.16), Offset = 0.55 },
+                        new GradientStop { Color = WindowEffects.A(color, 0), Offset = 1 },
+                    },
+                },
+            };
+            a.Glow.Children.Add(a.Halo);
+            // ...and the letters themselves bleeding light: faint copies in two rings around them.
+            foreach (var (radius, alpha) in new[] { (blur * 0.32, 0.30), (blur * 0.16, 0.45) })
+                for (int k = 0; k < 12; k++)
+                {
+                    double angle = k * Math.PI / 6;
+                    var copy = new TextBlock
+                    {
+                        Style = title.Style, Tag = ShadowTag, Text = title.Text, TextWrapping = TextWrapping.NoWrap,
+                        Foreground = new SolidColorBrush(color), Opacity = alpha,
+                    };
+                    a.Glow.Children.Add(copy);
+                    a.Ring.Add((copy, radius * Math.Cos(angle), radius * Math.Sin(angle)));
+                }
+            host.Children.Add(a.Glow);
         }
         if (cursor)
         {
@@ -151,6 +179,7 @@ public sealed class TitleDecor
             }
         }
         title.SizeChanged += (_, _) => Layout(a);
+        host.SizeChanged += (_, _) => Layout(a);   // the first measurement comes before the host is laid out
         title.Loaded += (_, _) => Layout(a);
         Layout(a);
         attached.Add(a);
@@ -162,11 +191,21 @@ public sealed class TitleDecor
         if (a.Title.ActualWidth < 1 || a.Host.XamlRoot is null) return;
         Windows.Foundation.Point at;
         try { at = a.Title.TransformToVisual(a.Host).TransformPoint(new Windows.Foundation.Point(0, 0)); } catch { return; }
-        if (a.Glow != null && a.Shadow != null)
+        if (a.Glow != null)
         {
-            a.Glow.Size = new Vector2((float)a.Title.ActualWidth, (float)a.Title.ActualHeight);
-            a.Glow.Offset = new Vector3((float)at.X, (float)at.Y, 0);
-            a.Shadow.Mask = a.Title.GetAlphaMask();
+            double w = a.Title.ActualWidth, h = a.Title.ActualHeight;
+            if (a.Halo != null)
+            {
+                a.Halo.Width = w * 1.25; a.Halo.Height = h * 2.4;
+                Canvas.SetLeft(a.Halo, at.X + a.Ox + (w - a.Halo.Width) / 2);
+                Canvas.SetTop(a.Halo, at.Y + a.Oy + (h - a.Halo.Height) / 2);
+            }
+            foreach (var (text, dx, dy) in a.Ring)
+            {
+                text.Text = a.Title.Text;
+                Canvas.SetLeft(text, at.X + a.Ox + dx);
+                Canvas.SetTop(text, at.Y + a.Oy + dy);
+            }
         }
         if (a.Copy != null)
         {
