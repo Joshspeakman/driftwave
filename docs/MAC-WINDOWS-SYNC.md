@@ -66,9 +66,62 @@ had ended by then, so these asks wait for the next one. Merge `origin/nightly` f
   key presses sent to the app. Covers that arrive through import are written and shown
   (`exchange-test.sh` and the renders). Picking one by hand is left for Josh.
 
-### Windows: Round 3 results
+### Windows: Round 3 results (2026-11-18)
 
-(Windows session: write here.)
+All four asks are done. Josh was at the PC and agreed to the screen takeover for 1 and 3. Each check is
+now a script in `windows/scripts/`, so it can be run again. Two real bugs turned up and are fixed.
+
+1. **Real screen** (`screen-capture.ps1`): the window draws correctly. The "black window" worry from
+   the first night was the sleeping display. The captures are `docs/design/windows/screen-light.png`
+   and `screen-dark.png`, taken from a test copy of this build (Josh's installed Nightly was left
+   alone). Both match DESIGN.md:
+   - Mica behind the pane and the 40 px title bar;
+   - the content layer with its 8 px top-left corner and stroke;
+   - the title bar buttons drawn for the chosen theme (dark glyphs in Light, light glyphs in Dark).
+
+   Nothing needed fixing. DESIGN.md's Mica section now says it was checked.
+2. **Reconnect and playlist probe** (`behaviour-test.ps1`, using `scripts/icy-test-server.py`):
+   passes.
+   - The title connection was dropped every 20 s and came back 3 times.
+   - Titles reached Song 3 with no repeats, playback never stopped or failed, and the extensionless
+     `.pls` played.
+   - Media Foundation's audio connection doesn't send a "Shortwave" User-Agent, so the server never
+     drops it. The test confirms this by watching the app's TCP connections: one audio connection
+     stays open for the whole run, and every later connection is a title reconnect.
+   - One Windows difference: against this server (a 2 s head start, then real time), Media
+     Foundation drains its buffer and reports Buffering a few times, with or without drops. A
+     60-second SomaFM run never did. So the Windows test checks that the audio connection is never
+     reopened, instead of counting "state loading".
+3. **Shortcuts with real key presses** (`shortcut-test.ps1`): all 14 checks pass. Before each press
+   the script checks that a test window has focus, and stops if not. Mute and media keys were never
+   pressed. Checked:
+   - Ctrl+1/2/F switch pages.
+   - Ctrl+Down/Up change the volume by 0.05 (0.95, then 1).
+   - Ctrl+Alt+P hides and shows the player; Ctrl+Shift+M opens the mini player.
+   - Ctrl+N opens Add Local Station.
+   - Ctrl+Shift+I and Ctrl+Shift+E open the Open and Save As pickers.
+   - Ctrl+Enter stops and plays again.
+   - Ctrl+Right moves to a library station.
+
+   **Bug fixed:** at launch focus sits in the navigation pane, which used Ctrl+Up/Down and Enter
+   itself, so those three shortcuts did nothing until you clicked somewhere else. The window now
+   takes them before the focused control does.
+
+   **Bug fixed:** Import, Export, Change Station Cover and Choose (track folder) failed silently
+   with E_FAIL when the app ran elevated. They now use the Windows App SDK's own pickers
+   (`Microsoft.Windows.Storage.Pickers`). Picker errors are shown and logged too.
+
+   **Note:** Ctrl+Up also unmutes (`IncreaseVolume` sets `IsMuted = false`), so the script presses
+   the volume keys only in a copy that plays nothing. If the Mac's ⌘↑ unmutes too, the CLAUDE.md
+   mute rule applies to it as well.
+4. **Change Station Cover… / Use Default Cover** (`cover-test.ps1`): passes.
+   - Through UI Automation: the card, its details, More, then Change Station Cover…
+   - The picker's controls appear in UI Automation without patterns, so the script types the image
+     path into the picker, after checking the picker has focus.
+   - The station got a new `<UUID>.png` in `Covers`. Use Default Cover cleared `customCover` and
+     deleted the file.
+
+Also re-run on this build: the exchange test passes, and the folder picker opens.
 
 ## Round 2 (2026-11-17): the second look at the Mac renders
 

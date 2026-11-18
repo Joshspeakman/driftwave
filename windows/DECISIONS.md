@@ -100,27 +100,18 @@ was never created.
 | Start menu shortcut | Carries AppUserModelID `Joshspeakman.Shortwave.Nightly` |
 | Notification on a new track | Fired without error. Not seen on screen |
 | UI pages and dialogs | Rendered with `-screenshot`: Library, Discover, Search, Settings, station details, track details, mini player |
+| The real window on screen (2026-11-18, `screen-capture.ps1`) | Draws correctly in light and dark: Mica, the title bar buttons and the content layer, as `docs/design/DESIGN.md` describes. The black captures on the first night came from the sleeping display |
+| Keyboard shortcuts with real key presses (`shortcut-test.ps1`) | All 14 checks pass. This found two bugs, both fixed: Ctrl+Up/Down/Enter didn't work while focus was in the navigation pane, and the file pickers failed when the app ran elevated |
+| ICY reconnect and the extensionless playlist (`behaviour-test.ps1`) | Pass: the title connection reconnects without repeats, the audio connection is never reopened, and a `.pls` with no extension plays |
+| Change Station Cover… / Use Default Cover (`cover-test.ps1`) | Pass: the cover is copied in as PNG, then cleared and deleted |
 
 ### Not verified (needs Josh)
 
-- **Whether the window draws on screen. Check this first.** While this session ran, the displays had
-  been asleep for over 80 minutes. In that state, newly started GPU-drawn windows came out black in every
-  screen capture: Shortwave, a plain WinUI 3 window, and a plain WPF window. The same WPF window in
-  software rendering drew fine, as did Notepad, and Chrome and Windows Terminal (started earlier) kept
-  updating. So the likely cause is the GPU/display power state, not Shortwave. Still, nobody has seen
-  the real window. Open *Shortwave Nightly* from Start: you should see the Library page with a dark
-  Mica background. The UI was checked by rendering its XAML (`-screenshot`), which leaves out the
-  backdrop and window chrome.
 - **Sound.** Every test was muted. Play a station with sound.
 - **Keyboard media keys and the overlay's buttons.** Implemented with System Media Transport
   Controls, but never pressed, per `CLAUDE.md`. Try play/pause/next/previous yourself.
-- **Keyboard shortcuts** (Ctrl+Enter and the rest), and the **notification-area icon and menu** (whether
-  the icon shows, and the menu). Built, but not driven by the tests.
-- **ICY reconnect**: the title connection dropping while audio plays, reconnecting, and not adding the
-  same song twice. Ported from the Mac code but not exercised.
-- **Local station content-type probe**: a local station whose link is a playlist without a `.pls` or `.m3u`
-  extension.
-- **Changing a station cover** (Change Station Cover… / Use Default Cover).
+- **The notification-area icon and its menu** (whether the icon shows, and the menu). Built, but not
+  driven by the tests.
 - **A real `library.json` from Josh's Mac.** The Mac app's export (`fixtures/exchange/mac-export.json`) reads and imports, but Josh's own library hasn't been tried.
 - **Title timing by ear.** The delay is computed from stream position (SomaFM: about 16 s burst), but
   nobody has listened to check that a title changes when the song does.

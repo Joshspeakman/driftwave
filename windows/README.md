@@ -25,6 +25,10 @@ Run from the repo root in PowerShell (`powershell -ExecutionPolicy Bypass -File 
 | `windows\scripts\recording-test.ps1 [-StatusLine icy]` | Local ICY server plus ffmpeg: checks that MP3 and AAC tracks are cut at each title change, saved, tagged and playable. `-StatusLine icy` serves `ICY 200 OK` like an old Shoutcast server |
 | `windows\scripts\exchange-test.ps1 [-UpdateFixture]` | Imports `fixtures\exchange\seed.json` into an empty test-run library and exports it, imports that export again (nothing added), and imports the Mac's export. `-UpdateFixture` writes `fixtures\exchange\windows-export.json` |
 | `windows\scripts\screenshots.ps1 [name ...]` | Renders the main screens in light and dark into `docs\design\windows\` (port of `scripts/screenshots.sh`). The renders leave out Mica and the title bar buttons |
+| `windows\scripts\behaviour-test.ps1` | Local server (`scripts\icy-test-server.py`): the title connection is dropped every 20 s and must reconnect without repeats while the audio connection stays open; a `.pls` link with no extension must play |
+| `windows\scripts\screen-capture.ps1` | **Uses the screen.** Captures the real window (Mica, title bar) in light and dark into `docs\design\windows\screen-*.png` |
+| `windows\scripts\shortcut-test.ps1` | **Uses the screen and keyboard for about a minute.** Real key presses on muted test copies. Before each press it checks that a test window has focus. It never presses mute or media keys, and presses Ctrl+Up only in a copy that plays nothing, because Ctrl+Up unmutes |
+| `windows\scripts\cover-test.ps1` | **Uses the screen.** Change Station Cover… (types the image path into the file picker once it has focus) and Use Default Cover |
 
 The test scripts run `windows\out\Nightly\Shortwave.exe` unless `SHORTWAVE_APP` points elsewhere. They
 write logs to `%TEMP%`, or to `SHORTWAVE_SCRATCH` if set.

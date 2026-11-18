@@ -142,5 +142,5 @@ screen:
 - **The mini player** has the same Mica and title bar buttons. Its own title row is the text
   "Mini Player" in Caption.
 
-I haven't yet seen the Windows window on a real screen (the displays were asleep when it was built).
-This section follows WinUI's documented behaviour and the XAML.
+Checked on the real screen on 2026-11-18. `docs/design/windows/screen-light.png` and
+`screen-dark.png` are captures of the actual window, made with `windows/scripts/screen-capture.ps1`.
