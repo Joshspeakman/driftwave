@@ -10,7 +10,7 @@
     </Window.SystemBackdrop>
     <Grid x:Name="Root">
         <Grid.RowDefinitions>
-            <RowDefinition Height="28" />
+            <RowDefinition Height="32" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <!-- The theme's background when it has no system backdrop -->

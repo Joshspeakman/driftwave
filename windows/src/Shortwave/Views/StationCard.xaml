@@ -10,7 +10,7 @@
             <MenuFlyout x:Name="Menu" Opening="Menu_Opening" />
         </local:CardPanel.ContextFlyout>
         <StackPanel Spacing="8">
-            <Grid Width="148" Height="148">
+            <Grid x:Name="CoverHost" Width="148" Height="148">
                 <local:StationCover x:Name="Cover" Size="148" />
                 <Button x:Name="PlayButton" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"
                         Width="36" Height="36" CornerRadius="18" Padding="0" Visibility="Collapsed" Click="PlayButton_Click"

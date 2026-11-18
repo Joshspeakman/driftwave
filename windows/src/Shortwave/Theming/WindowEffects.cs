@@ -278,7 +278,7 @@ public sealed class WindowEffects
     sealed class Rain(JsonObject o) : Effect
     {
         readonly Canvas glow = new(), drops = new();
-        public override IEnumerable<(UIElement, bool)> Elements() { yield return (glow, false); yield return (drops, true); }
+        public override IEnumerable<(UIElement, bool)> Elements() { yield return (glow, false); yield return (drops, false); }   // behind the UI: rain never crosses text or controls
 
         public override void Resize(double w, double h)
         {

@@ -175,16 +175,59 @@ public sealed class ThemeManager
             };
         }
         catch (Exception e) { Diagnostics.Log("title bar theme: " + e.Message); }
+        try { ApplyCaptionButtons(w.AppWindow.TitleBar, t, look); }
+        catch (Exception e) { Diagnostics.Log("caption buttons: " + e.Message); }
         string backdrop = t.IsDefault ? defaultBackdrop : t.Backdrop;
         switch (backdrop)
         {
             case "mica" when w.SystemBackdrop is not Microsoft.UI.Xaml.Media.MicaBackdrop: w.SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop(); break;
-            case "acrylic" when w.SystemBackdrop is not Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop: w.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop(); break;
+            case "acrylic" when t.IsDefault:
+                if (w.SystemBackdrop is not Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop) w.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+                break;
+            case "acrylic":
+            {
+                // Glass themes: thin, lightly tinted acrylic so the desktop shows through (GlassBackdrop).
+                var tint = Theme.WithAlpha(t.Get("background") ?? (t.IsDark ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White), 1);
+                float tintOpacity = t.IsDark ? 0.30f : 0.18f, luminosity = t.IsDark ? 0.55f : 0.42f;
+                if (w.SystemBackdrop is not GlassBackdrop g || !g.Matches(tint, tintOpacity, luminosity))
+                    w.SystemBackdrop = new GlassBackdrop(tint, tintOpacity, luminosity);
+                break;
+            }
             case "none": w.SystemBackdrop = null; break;
         }
         // Without a backdrop the window needs an opaque background; over one, the colour may tint it.
         fill.Background = t.IsDefault || t.Get("background") is not { } bg ? null
             : new SolidColorBrush(backdrop == "none" ? Theme.WithAlpha(bg, 1) : bg);
+    }
+
+    /// <summary>
+    /// Minimise, maximise and close in the theme's colours: clear backgrounds over the theme, its text colour for the
+    /// glyphs, and soft tints of that colour for hover and press. Default leaves them to Windows.
+    /// </summary>
+    static void ApplyCaptionButtons(Microsoft.UI.Windowing.AppWindowTitleBar bar, Theme t, Microsoft.UI.Xaml.ElementTheme look)
+    {
+        var clear = Microsoft.UI.Colors.Transparent;
+        bar.ButtonBackgroundColor = clear;
+        bar.ButtonInactiveBackgroundColor = clear;
+        if (t.IsDefault)
+        {
+            bar.ButtonForegroundColor = null;
+            bar.ButtonInactiveForegroundColor = null;
+            bar.ButtonHoverBackgroundColor = null;
+            bar.ButtonHoverForegroundColor = null;
+            bar.ButtonPressedBackgroundColor = null;
+            bar.ButtonPressedForegroundColor = null;
+            return;
+        }
+        bool dark = look == Microsoft.UI.Xaml.ElementTheme.Dark || (look == Microsoft.UI.Xaml.ElementTheme.Default && t.IsDark);
+        var text = t.Get("text") ?? (dark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black);
+        var faint = t.Get("textTertiary") ?? Theme.WithAlpha(text, 0.45);
+        bar.ButtonForegroundColor = Theme.WithAlpha(text, 1);
+        bar.ButtonInactiveForegroundColor = Theme.WithAlpha(faint, 1);
+        bar.ButtonHoverForegroundColor = Theme.WithAlpha(text, 1);
+        bar.ButtonHoverBackgroundColor = Theme.WithAlpha(t.Get("subtle") is { } su && su.A > 0 ? su : text, 0.12);
+        bar.ButtonPressedForegroundColor = Theme.WithAlpha(t.Get("textSecondary") ?? text, 1);
+        bar.ButtonPressedBackgroundColor = Theme.WithAlpha(text, 0.07);
     }
 
     void ApplyColors(Theme t)

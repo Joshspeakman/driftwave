@@ -43,6 +43,16 @@ public sealed partial class PlayerPanel : UserControl
             player.PropertyChanged += OnChanged;
             player.PastTracks.CollectionChanged += OnPastChanged;
             PastList.ItemsSource = player.PastTracks;
+            PastList.ElementPrepared += (_, e) =>
+            {
+                if (enteringTrack != null && e.Index >= 0 && e.Index < player.PastTracks.Count && ReferenceEquals(player.PastTracks[e.Index], enteringTrack))
+                {
+                    enteringTrack = null;
+                    Motion.Entrance(e.Element, rise: -10);
+                }
+                else Motion.Reset(e.Element);
+            };
+            PastList.ElementClearing += (_, e) => Motion.Glide(e.Element, false);
             Refresh();
         };
         Unloaded += (_, _) =>
@@ -55,7 +65,20 @@ public sealed partial class PlayerPanel : UserControl
     }
 
     void OnChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
-    void OnPastChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => Refresh();
+    void OnPastChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        // Runs before the list updates (it subscribed first): the rows already there glide down to make room.
+        if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add && e.NewItems?[0] is Track t)
+        {
+            Motion.GlideDuring(PastList);
+            enteringTrack = t;
+        }
+        Refresh();
+    }
+
+    Track? enteringTrack;
+    string? shownStationId;
+    string? shownSong;
 
     void BindTrack(Track? t)
     {
@@ -76,6 +99,12 @@ public sealed partial class PlayerPanel : UserControl
 
         Cover.Station = station;
         StationName.Text = station.Name;
+        if (station.Id != shownStationId)
+        {
+            bool first = shownStationId is null;
+            shownStationId = station.Id;
+            if (!first) { Motion.FadeIn(CoverButton); Motion.FadeIn(TitleBlock, 1f); }
+        }
         string song = "", artist = "";
         bool failed = player.State == PlayerState.Failed;
         switch (player.State)
@@ -87,6 +116,8 @@ public sealed partial class PlayerPanel : UserControl
                 else artist = "Playing";
                 break;
         }
+        if (song.Length > 0 && song != shownSong && shownSong != null) Motion.FadeIn(SongText, 1f);
+        shownSong = song;
         SongText.Text = song;
         SongText.Visibility = song.Length > 0 && !hideTrackText ? Visibility.Visible : Visibility.Collapsed;
         ArtistText.Text = artist;
