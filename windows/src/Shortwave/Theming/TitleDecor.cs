@@ -10,7 +10,7 @@ using Windows.UI;
 namespace Shortwave.Theming;
 
 /// <summary>
-/// Page title treatments: upper case, a neon glow or a hard shadow, and a blinking block cursor. Applied to every
+/// Page title treatments: upper case, a neon glow or a hard shadow, and a block cursor. Applied to every
 /// TextBlock that uses PageTitleStyle. Glow and shadow are plain XAML (copies of the text in the glow colour and a
 /// soft halo), so they look the same on screen and in -screenshot renders. A composition drop shadow masked by the
 /// text (GetAlphaMask) came out as a small blob under the title, on screen too.
@@ -30,18 +30,11 @@ public sealed class TitleDecor
         public TextBlock? Copy;
         public double Ox, Oy;
         public double BaseOpacity = 1;
-        public bool FlickerOn;
-        public bool Animated => FlickerOn;   // the cursor blinks by a composition animation
+        /// <summary>Nothing here animates: no flicker and no blinking (no theme may flash or strobe).</summary>
+        public bool Animated => false;
 
         public void Tick(double t, double dt)
         {
-            if (Glow != null && FlickerOn)
-            {
-                // A tired neon tube: steady, with rare stutters.
-                double v = BaseOpacity;
-                if (dt > 0 && (t % 9.3 < 0.25 || t % 13.7 < 0.12)) v *= Random.Shared.NextDouble() < 0.5 ? 0.25 : 0.9;
-                Glow.Opacity = v;
-            }
         }
     }
 
@@ -127,7 +120,6 @@ public sealed class TitleDecor
             a.Ox = WindowEffects.Opt(o, "offsetX", 0);
             a.Oy = WindowEffects.Opt(o, "offsetY", 0);
             a.BaseOpacity = Math.Clamp(WindowEffects.Opt(o, "opacity", 1) * (0.4 + 0.6 * intensity), 0, 1);
-            a.FlickerOn = o["flicker"] is System.Text.Json.Nodes.JsonValue f && f.TryGetValue(out bool fl) && fl;
             a.Glow = new Canvas { Opacity = a.BaseOpacity };
             // A soft halo behind the word...
             a.Halo = new Ellipse
@@ -163,20 +155,6 @@ public sealed class TitleDecor
             var c = WindowEffects.Opt(theme.Options("cursor"), "color", theme.Get("text", Microsoft.UI.Colors.White));
             a.Cursor = new Rectangle { Fill = new SolidColorBrush(c) };
             host.Children.Add(a.Cursor);
-            if (!EffectsClock.Frozen)
-            {
-                // Blink on the compositor: on 0.6 s, off 0.46 s, no work for the app.
-                var visual = ElementCompositionPreview.GetElementVisual(a.Cursor);
-                var comp = visual.Compositor;
-                var blink = comp.CreateScalarKeyFrameAnimation();
-                var step = comp.CreateStepEasingFunction();
-                blink.InsertKeyFrame(0f, 1f, step);
-                blink.InsertKeyFrame(0.566f, 0f, step);
-                blink.InsertKeyFrame(1f, 1f, step);
-                blink.Duration = TimeSpan.FromSeconds(1.06);
-                blink.IterationBehavior = AnimationIterationBehavior.Forever;
-                visual.StartAnimation("Opacity", blink);
-            }
         }
         title.SizeChanged += (_, _) => Layout(a);
         host.SizeChanged += (_, _) => Layout(a);   // the first measurement comes before the host is laid out

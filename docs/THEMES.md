@@ -66,6 +66,15 @@ Every other theme brings its own light or dark base.
 
 ### Effects
 
+**No flashing, ever.** Nothing in a theme may flash, flicker, strobe or blink: no sudden or repeated
+changes in brightness. Josh's rule (2026-11-18) protects people with photosensitive conditions.
+Effects may only move steadily or change slowly: rain, the rolling grid, drifting colour, the slow
+scanline band, the dial pointer, and the meters and bars.
+- A `flicker` effect, a flickering neon title and a blinking cursor were removed.
+- Grain is a still texture.
+- Old theme files that still name `flicker` load fine; it is ignored.
+
+
 Each effect is a key under `effects`, with an options object (`{}` for defaults). Effects follow the
 `effects` switch and the `effectIntensity` setting. They pause while the window is hidden or minimised,
 or while Windows' animation effects are off. They also freeze into one fixed frame in `-screenshot` runs.
@@ -79,11 +88,10 @@ or while Windows' animation effects are off. They also freeze into one fixed fra
 | `concrete` | Board-marked concrete texture behind the UI | `opacity` |
 | `grain` | Film grain over everything | `opacity` |
 | `vignette` | Darkened edges | `opacity`, `color` |
-| `flicker` | Faint fluorescent hum with occasional stutters | `opacity` |
 | `scanlines` | CRT scanlines with a slow rolling band | `opacity` |
 | `frame` | A thick screen border around the window | `color`, `thickness` |
-| `titleShadow` | Glow (`blur` > 0) or hard shadow (`blur` 0, with offsets) behind page titles | `color`, `blur`, `offsetX`, `offsetY`, `opacity`, `flicker` |
-| `cursor` | A blinking block cursor after page titles | `color` |
+| `titleShadow` | Glow (`blur` > 0) or hard shadow (`blur` 0, with offsets) behind page titles | `color`, `blur`, `offsetX`, `offsetY`, `opacity` |
+| `cursor` | A solid block cursor after page titles | `color` |
 | `spotlight` | Darkness except a soft light that follows the pointer | `radius`, `opacity` |
 | `lcd` | Player pane: the track as a scrolling LCD marquee, with bitrate and state | `color`, `background` |
 | `analyzer` | Player pane: spectrum bars with falling peaks | |
@@ -99,10 +107,10 @@ it.
 | id | Name | After | Base | Highlights |
 |---|---|---|---|---|
 | `retrowave` | Retrowave | 80s synthwave | dark | Synthwave sun and grid, neon title glow, scanlines, Orbitron |
-| `neon-noir` | Neon Noir | Blade Runner | dark | Rain, amber and cyan city glow, flickering neon title, grain, vignette, Share Tech Mono |
-| `liminal` | Liminal Space | the Backrooms | light | Yellowed walls, grain, vignette, fluorescent flicker, light titles |
+| `neon-noir` | Neon Noir | Blade Runner | dark | Rain, amber and cyan city glow, cyan neon title, grain, vignette, Share Tech Mono |
+| `liminal` | Liminal Space | the Backrooms | light | Yellowed walls, grain, vignette, light titles |
 | `brutalist` | Brutalist | brutalist web design | light | Concrete, black outlines, square corners, Space Mono, orange hard shadow |
-| `retro-64` | Retro 64 | the Commodore 64 | dark | Blue screen, light blue border, blinking cursor, scanlines, Press Start 2P |
+| `retro-64` | Retro 64 | the Commodore 64 | dark | Blue screen, light blue border, block cursor, scanlines, Press Start 2P |
 | `classic-skin` | Classic Skin | 90s Winamp skins | dark | Gunmetal, green LCD marquee, spectrum bars, VT323 |
 | `frosted-glass` | Frosted Glass | Windows' acrylic | light | See-through acrylic window, translucent cards, drifting colour |
 | `stealth` | Stealth | | dark | Black on black, dim grey type, a spotlight that follows the pointer |
@@ -142,7 +150,7 @@ are used.
   | Neon Noir | 19% |
 
   - Minimised, it's about 5%, and the effects clock stops and restarts as it should.
-  - Rain, aurora, the scanline band and the cursor blink run as composition animations, and the rest
+  - Rain, aurora and the scanline band run as composition animations, and the rest
     is capped at 30 fps.
 - **The UI:** picking a theme, the restart banner and Restart Now (resuming a station that was
   playing) were all checked through UI Automation. So were making a copy, renaming it (saved to the
