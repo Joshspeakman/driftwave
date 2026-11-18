@@ -7,8 +7,13 @@ on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
 ## Branches
 
 - `nightly` is the default and working branch for the Mac app.
-- `windows` is the working branch for the Windows port. Its code goes under `windows/`, and it
-  merges `nightly` when the Mac side changes.
+- `windows` is the working branch for the Windows port. Its code goes under `windows/`.
+- The Mac and Windows sessions can't message each other. They coordinate through
+  `docs/MAC-WINDOWS-SYNC.md`: read it first, and take the newest round's asks for your side. Each
+  side pushes only its own branch and merges the other's before starting (`git merge
+  origin/nightly` on the PC, `git merge origin/windows` on the Mac).
+- Shared specs: `docs/STATION-EXCHANGE.md` (moving stations between the apps). Shared test files:
+  `fixtures/`.
 - `main` changes only when Josh says so.
 - The GitHub repo is private. Push with the `Joshspeakman` GitHub account. On the Mac the active
   `gh` account has no access, so use `GH_TOKEN=$(gh auth token --user Joshspeakman)` per command.
@@ -29,6 +34,9 @@ on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
 - Never test media keys, Now Playing or the system media overlay while Josh is playing music.
   Ask him first.
 - Never touch the real app's library, settings or track folder from a test.
+- Real-click tests on the Mac: AppleScript's `process whose unix id is …` matches by **name**, and
+  Josh's installed app is also called "Shortwave", so it reaches his real app. Target the test copy
+  by PID instead (Accessibility API plus CGEvent). Check first that he isn't using the machine.
 
 ## Mac build
 
@@ -36,11 +44,13 @@ Only the Command Line Tools are needed, not Xcode.
 
 | Command | What it does |
 |---|---|
-| `scripts/test.sh` | Core unit tests (19). Use it instead of a bare `swift test`, which can't find the test macros with only the Swift 6.4 Command Line Tools |
+| `scripts/test.sh` | Core unit tests (26). Use it instead of a bare `swift test`, which can't find the test macros with only the Swift 6.4 Command Line Tools |
 | `scripts/build-app.sh --nightly` | Builds `~/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app` |
 | `scripts/install.sh --nightly` | Builds and installs `/Applications/Shortwave Nightly.app` |
 | `scripts/smoke-test.sh` | Real streams, muted |
 | `scripts/recording-test.sh` | Local ICY server plus ffmpeg: checks that tracks are cut and saved |
+| `scripts/exchange-test.sh` | Station import/export in the real app (test runs); `--update-fixture` rewrites `fixtures/exchange/mac-export.json` |
+| `scripts/screenshots.sh` | Every screen, light and dark, into `docs/design/mac/` |
 
 ## Windows build
 
