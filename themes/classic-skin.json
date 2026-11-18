@@ -1,0 +1,48 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "classic-skin",
+  "name": "Classic Skin",
+  "description": "Gunmetal panels, a green LCD and dancing spectrum bars. After 90s Winamp skins.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#1B1B21",
+    "surface": "#26262E",
+    "card": "#2E2E37",
+    "cardStroke": "#4A4A55",
+    "control": "#3A3A44",
+    "controlStroke": "#5A5A66",
+    "subtle": "#2600E000",
+    "divider": "#3C3C46",
+    "text": "#DADAE0",
+    "textSecondary": "#9A9AA6",
+    "textTertiary": "#6A6A76",
+    "accent": "#00C800",
+    "accentText": "#2CE02C",
+    "onAccent": "#0A0A0A",
+    "dialog": "#26262E"
+  },
+  "fonts": {
+    "body": "Tahoma",
+    "title": "Tahoma",
+    "titleSize": 22,
+    "titleWeight": "Bold",
+    "titleUppercase": true,
+    "titleSpacing": 60,
+    "lcd": "VT323"
+  },
+  "corners": {
+    "control": 2,
+    "overlay": 2,
+    "card": 2,
+    "cover": 0
+  },
+  "effects": {
+    "lcd": {
+      "color": "#00E000",
+      "background": "#050805"
+    },
+    "analyzer": {}
+  }
+}

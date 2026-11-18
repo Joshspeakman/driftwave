@@ -58,6 +58,8 @@ public static class Diagnostics
     public static bool OpenTrackDetail => Has("-openTrackDetail");
     public static bool OpenMiniPlayer => Has("-miniPlayer");
     public static bool OpenAddStation => Has("-addStation");
+    /// <summary>--resume (added by App.Restart): play the last station again after a restart.</summary>
+    public static bool Resume => Has("--resume");
     public static string? ImportStations => Value("importStations");
     public static string? ExportStations => Value("exportStations");
     public static string? Screenshot => Value("screenshot");

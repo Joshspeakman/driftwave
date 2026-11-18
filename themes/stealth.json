@@ -1,0 +1,40 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "stealth",
+  "name": "Stealth",
+  "description": "Black on black. Everything is there if you look for it.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#000000",
+    "surface": "#030303",
+    "card": "#080808",
+    "cardStroke": "#161616",
+    "control": "#0C0C0C",
+    "controlStroke": "#1C1C1C",
+    "subtle": "#121212",
+    "divider": "#131313",
+    "text": "#707070",
+    "textSecondary": "#4E4E4E",
+    "textTertiary": "#383838",
+    "accent": "#2C2C2C",
+    "accentText": "#8C8C8C",
+    "onAccent": "#A0A0A0",
+    "dialog": "#050505"
+  },
+  "fonts": {
+    "title": "Segoe UI Variable Display",
+    "titleSize": 26,
+    "titleWeight": "Light",
+    "titleUppercase": true,
+    "titleSpacing": 300
+  },
+  "corners": {},
+  "effects": {
+    "spotlight": {
+      "radius": 560,
+      "opacity": 0.42
+    }
+  }
+}

@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Shortwave.Views"
     Title="Mini Player">
+    <!-- The Default theme's backdrop; a theme can swap it (ThemeManager.ApplyWindow) -->
     <Window.SystemBackdrop>
         <DesktopAcrylicBackdrop />
     </Window.SystemBackdrop>
@@ -12,6 +13,8 @@
             <RowDefinition Height="28" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+        <!-- The theme's background when it has no system backdrop -->
+        <Border x:Name="BackdropFill" Grid.RowSpan="2" />
         <Grid x:Name="DragArea">
             <TextBlock Text="Mini Player" Style="{StaticResource CaptionSecondaryStyle}" VerticalAlignment="Center" Margin="12,0,0,0" />
         </Grid>

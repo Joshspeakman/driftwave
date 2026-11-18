@@ -1,0 +1,47 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "frosted-glass",
+  "name": "Frosted Glass",
+  "description": "Translucent panes over your desktop and slow drifting colour.",
+  "base": "light",
+  "backdrop": "acrylic",
+  "colors": {
+    "background": "#40F4F7FB",
+    "surface": "#59FFFFFF",
+    "card": "#99FFFFFF",
+    "cardStroke": "#80FFFFFF",
+    "control": "#99FFFFFF",
+    "controlStroke": "#26000000",
+    "subtle": "#14000000",
+    "divider": "#40FFFFFF",
+    "text": "#1B2330",
+    "textSecondary": "#4A5568",
+    "textTertiary": "#7A8496",
+    "accent": "#4F8EF7",
+    "accentText": "#2F6FD8",
+    "onAccent": "#FFFFFF",
+    "dialog": "#EEF4F7FB"
+  },
+  "fonts": {
+    "title": "Segoe UI Variable Display",
+    "titleSize": 32,
+    "titleWeight": "SemiLight"
+  },
+  "corners": {
+    "control": 8,
+    "overlay": 14,
+    "card": 14,
+    "cover": 0.22
+  },
+  "effects": {
+    "aurora": {
+      "colors": [
+        "#7DD3FC",
+        "#C4B5FD",
+        "#F9A8D4"
+      ],
+      "opacity": 0.55
+    }
+  }
+}

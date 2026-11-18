@@ -24,6 +24,14 @@ public static class Program
             return 0;
         }
 
+        // A restart (App.Restart, e.g. to finish applying a theme): wait for the old copy to go away first,
+        // or the single-instance check below would hand this launch back to it.
+        int restart = Array.IndexOf(args, "--restart-after");
+        if (restart >= 0 && restart + 1 < args.Length && int.TryParse(args[restart + 1], out int oldPid))
+        {
+            try { System.Diagnostics.Process.GetProcessById(oldPid).WaitForExit(15000); } catch { }
+        }
+
         bool quit = args.Contains("--quit");
         if (!Diagnostics.IsTestRun || quit)
         {

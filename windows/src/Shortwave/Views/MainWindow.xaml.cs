@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Shortwave.Core;
 using Shortwave.Integration;
 using Shortwave.Model;
+using Shortwave.Theming;
 using Windows.System;
 
 using Page = Shortwave.Model.Page;
@@ -20,6 +21,8 @@ public sealed partial class MainWindow : Window
     private bool dialogOpen;
     private ContentDialog? currentDialog;
     private bool syncingNav;
+    private readonly WindowEffects effects;
+    private readonly TitleDecor titleDecor = new();
     public nint Hwnd { get; }
 
     public MainWindow(AppModel app)
@@ -47,6 +50,13 @@ public sealed partial class MainWindow : Window
             if (App.Current?.MainWindowClosing() == true) return;
             e.Cancel = true;
             s.Hide();
+        };
+        // Theme animations run only while the window can be seen.
+        effects = new WindowEffects(EffectsBack, EffectsFront, Root);
+        AppWindow.Changed += (s, e) =>
+        {
+            if (e.DidVisibilityChange || e.DidPresenterChange)
+                EffectsClock.SetWindowVisible(s.IsVisible && s.Presenter is not Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized });
         };
 
         app.PropertyChanged += (_, e) =>
@@ -98,7 +108,17 @@ public sealed partial class MainWindow : Window
 
     void ShowPage()
     {
-        PageHost.Content = PageView(app.Page);
+        var view = PageView(app.Page);
+        PageHost.Content = view;
+        if (view is FrameworkElement fe)
+        {
+            if (fe.IsLoaded) DecorateTitles(fe);
+            else
+            {
+                void Once(object s, RoutedEventArgs e) { fe.Loaded -= Once; DecorateTitles(fe); }
+                fe.Loaded += Once;
+            }
+        }
         syncingNav = true;
         if (app.Page == Page.Settings) Nav.SelectedItem = Nav.SettingsItem;
         else Nav.SelectedItem = Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == app.Page.ToString());
@@ -201,10 +221,35 @@ public sealed partial class MainWindow : Window
         if (path != null) app.ExportReporting(path);
     }
 
-    /// <summary>App Theme changed (the window's root is already set): restyle an open dialog too.</summary>
-    public void ThemeChanged(ElementTheme theme)
+    void DecorateTitles(FrameworkElement page)
     {
-        if (currentDialog != null) currentDialog.RequestedTheme = theme;
+        foreach (var title in TitleDecor.FindTitles(page).ToList()) titleDecor.Attach(title);
+    }
+
+    /// <summary>
+    /// Applies a theme to this window: light or dark, title bar buttons, backdrop and background, the screen
+    /// border, the window effects, page title treatments and the player pane's decorations.
+    /// </summary>
+    public void ApplyLook(Theme theme, ElementTheme look)
+    {
+        bool fx = app.Settings.EffectsEnabled;
+        double intensity = app.Settings.EffectIntensity;
+        ThemeManager.ApplyWindow(this, theme, look, BackdropFill, "mica");
+        if (currentDialog != null) currentDialog.RequestedTheme = look;
+        if (fx && intensity > 0 && !theme.IsDefault && theme.Has("frame"))
+        {
+            var o = theme.Options("frame");
+            Root.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(WindowEffects.Opt(o, "color", Microsoft.UI.Colors.Gray));
+            Root.Padding = new Thickness(WindowEffects.Opt(o, "thickness", 12));
+        }
+        else
+        {
+            Root.Background = null;
+            Root.Padding = new Thickness(0);
+        }
+        effects.Apply(theme, fx, intensity);
+        titleDecor.Apply(theme, fx, intensity, PageHost.Content is DependencyObject page ? TitleDecor.FindTitles(page) : []);
+        if (PlayerPane.Child is PlayerPanel panel) panel.SetDecor(PlayerDecor.For(theme, app.Player, fx && intensity > 0));
     }
 
     // ContentDialogs can't overlap, so requests queue up and show one at a time.

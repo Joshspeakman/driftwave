@@ -1,0 +1,51 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "brutalist",
+  "name": "Brutalist",
+  "description": "Raw concrete, hard edges, heavy type and one loud colour.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#D6D3CE",
+    "surface": "#EDEBE7",
+    "card": "#FFFFFF",
+    "cardStroke": "#111111",
+    "control": "#FFFFFF",
+    "controlStroke": "#111111",
+    "subtle": "#26111111",
+    "divider": "#111111",
+    "text": "#0D0D0D",
+    "textSecondary": "#3B3B3B",
+    "textTertiary": "#6B6B6B",
+    "accent": "#FF3B00",
+    "accentText": "#C42D00",
+    "onAccent": "#0D0D0D",
+    "dialog": "#EDEBE7"
+  },
+  "fonts": {
+    "body": "Space Mono",
+    "title": "Space Mono",
+    "titleSize": 38,
+    "titleWeight": "Bold",
+    "titleUppercase": true,
+    "titleSpacing": -20
+  },
+  "corners": {
+    "control": 0,
+    "overlay": 0,
+    "card": 0,
+    "cover": 0
+  },
+  "effects": {
+    "concrete": {
+      "opacity": 0.5
+    },
+    "titleShadow": {
+      "color": "#FF3B00",
+      "blur": 0,
+      "offsetX": 4,
+      "offsetY": 4
+    }
+  }
+}

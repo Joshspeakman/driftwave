@@ -39,6 +39,9 @@ public sealed partial class MiniPlayerWindow : Window
         };
     }
 
+    public void ApplyLook(Theming.Theme theme, ElementTheme look) =>
+        Theming.ThemeManager.ApplyWindow(this, theme, look, BackdropFill, "acrylic");
+
     private bool closingForReal;
     public new void Close() { closingForReal = true; base.Close(); }
 }

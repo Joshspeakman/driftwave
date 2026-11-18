@@ -33,9 +33,19 @@ public partial class App : Application
         Model = new AppModel(DispatcherQueue);
         Model.Player.OnNewTrack = (t, s) => Notifications.Show(t, s, Model.Images.Cached(s));
 
+        // Fonts, corner radii and the text colour must be in place before any window exists.
+        Model.Themes.ApplyAtLaunch();
         main = new MainWindow(Model);
         ApplyTheme();
-        Model.Settings.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Preferences.Appearance)) ApplyTheme(); };
+        Model.Themes.Changed += ApplyTheme;
+        Model.Settings.PropertyChanged += (_, e) =>
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(Preferences.ThemeId): Model.Themes.ApplyChosen(); break;
+                case nameof(Preferences.Appearance) or nameof(Preferences.EffectsEnabled) or nameof(Preferences.EffectIntensity): ApplyTheme(); break;
+            }
+        };
         main.Activate();
 
         string icon = Path.Combine(AppContext.BaseDirectory, "Assets", "Shortwave.ico");
@@ -75,17 +85,18 @@ public partial class App : Application
 
     public void ShowMiniPlayer()
     {
-        if (mini is null) { mini = new MiniPlayerWindow(Model); Model.Settings.Appearance.Apply(mini); }
+        if (mini is null) { mini = new MiniPlayerWindow(Model); mini.ApplyLook(Model.Themes.Current, Model.Themes.ElementTheme(Model.Themes.Current)); }
         mini.AppWindow.Show();
         mini.Activate();
     }
 
-    /// <summary>App Theme: the main window (and its dialogs), the mini player and their title bar buttons.</summary>
+    /// <summary>The theme (and App Theme for Default): every window, its dialogs, title bar buttons and effects.</summary>
     void ApplyTheme()
     {
-        var theme = Model.Settings.Appearance;
-        if (main != null) { theme.Apply(main); main.ThemeChanged(theme.ElementTheme()); }
-        if (mini != null) theme.Apply(mini);
+        var themes = Model.Themes;
+        var look = themes.ElementTheme(themes.Current);
+        main?.ApplyLook(themes.Current, look);
+        mini?.ApplyLook(themes.Current, look);
     }
 
     public void ShowSettings()
@@ -101,6 +112,33 @@ public partial class App : Application
         // Closing the window stops playback unless background playback is on. The app keeps running in the notification area.
         if (!Model.Settings.BackgroundPlayback) Model.Player.StopPlayback("window closed");
         return false;
+    }
+
+    /// <summary>
+    /// Starts a new copy and quits this one (to finish applying a theme). The new copy waits for this one to exit,
+    /// and plays the same station again if one was playing.
+    /// </summary>
+    public void Restart()
+    {
+        var args = Environment.GetCommandLineArgs().Skip(1).ToList();
+        int i = args.IndexOf("--restart-after");
+        if (i >= 0) args.RemoveRange(i, Math.Min(2, args.Count - i));
+        args.Remove("--resume");
+        // One-shot test flags shouldn't run twice.
+        foreach (var flag in new[] { "-screenshot", "-screenshotDelay", "-quitAfter", "-importStations", "-exportStations" })
+        {
+            int f = args.FindIndex(a => string.Equals(a, flag, StringComparison.OrdinalIgnoreCase));
+            if (f >= 0) args.RemoveRange(f, Math.Min(2, args.Count - f));
+        }
+        args.Add("--restart-after");
+        args.Add(Environment.ProcessId.ToString());
+        if (Model.Player.IsPlaying) args.Add("--resume");
+        var psi = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
+        foreach (var a in args) psi.ArgumentList.Add(a);
+        Diagnostics.Log("restart " + string.Join(" ", args));
+        try { System.Diagnostics.Process.Start(psi); }
+        catch (Exception e) { Diagnostics.Log("restart failed: " + e.Message); return; }
+        Quit();
     }
 
     public void Quit()

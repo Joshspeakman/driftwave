@@ -10,6 +10,7 @@ public enum Page { Library, Discover, Search, Settings }
 public sealed class AppModel : Observable
 {
     public Preferences Settings { get; }
+    public Theming.ThemeManager Themes { get; }
     public AppPaths Paths { get; } = new(Diagnostics.IsTestRun ? "ShortwaveTestRun" : "Shortwave");
     public RadioBrowser Api { get; } = new();
     public ImageStore Images { get; }
@@ -33,6 +34,7 @@ public sealed class AppModel : Observable
     {
         this.ui = ui;
         Settings = new Preferences(Paths);
+        Themes = new Theming.ThemeManager(Settings, Paths);
         Images = new ImageStore(Paths);
         Player = new Player(Settings, Paths, Api, ui);
         library = LibraryFile.Load(Paths.Library);
@@ -48,6 +50,7 @@ public sealed class AppModel : Observable
         {
             Player.Restore(last);
             _ = LoadArtworkThenUpdate(last);
+            if (Diagnostics.Resume) Play(last);
         }
         _ = RefreshLibrary();
         if (Diagnostics.StartMuted) Player.IsMuted = true;

@@ -46,7 +46,7 @@ public sealed partial class StationCover : UserControl
     void Layout()
     {
         Width = Height = Size;
-        var r = new CornerRadius(Size * 0.18);
+        var r = new CornerRadius(Size * (App.Current?.Model?.Themes.CoverRadius ?? 0.18));
         Frame.CornerRadius = r;
         Glyph.FontSize = Size * 0.36;
     }

@@ -16,10 +16,10 @@ public static class Ui
     /// </summary>
     public static Brush ThemeBrush(string key)
     {
-        var theme = App.Current?.Model?.Settings.Appearance ?? AppTheme.System;
-        if (theme != AppTheme.System)
+        var look = App.Current?.Model?.Themes is { } tm ? tm.ElementTheme(tm.Current) : ElementTheme.Default;
+        if (look != ElementTheme.Default)
         {
-            string[] names = theme == AppTheme.Dark ? ["Dark", "Default"] : ["Light"];
+            string[] names = look == ElementTheme.Dark ? ["Dark", "Default"] : ["Light"];
             if (Find(Application.Current.Resources, names, key) is Brush b) return b;
         }
         return (Brush)Application.Current.Resources[key];
@@ -74,7 +74,9 @@ public static class Ui
         return file?.Path;
     }
 
-    public static async Task<string?> PickStationFileToSave(nint hwnd, string suggestedName)
+    public static Task<string?> PickStationFileToSave(nint hwnd, string suggestedName) => PickJsonToSave(hwnd, suggestedName, "Shortwave station file");
+
+    public static async Task<string?> PickJsonToSave(nint hwnd, string suggestedName, string typeLabel)
     {
         var picker = new FileSavePicker(Id(hwnd))
         {
@@ -83,7 +85,7 @@ public static class Ui
             CommitButtonText = "Export",
             DefaultFileExtension = ".json",
         };
-        picker.FileTypeChoices.Add("Shortwave station file", [".json"]);
+        picker.FileTypeChoices.Add(typeLabel, [".json"]);
         var file = await picker.PickSaveFileAsync();
         return file?.Path;
     }

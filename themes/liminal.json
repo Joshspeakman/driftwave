@@ -1,0 +1,45 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "liminal",
+  "name": "Liminal Space",
+  "description": "Yellowed walls, buzzing fluorescent light and the feeling you've been here before.",
+  "base": "light",
+  "backdrop": "none",
+  "colors": {
+    "background": "#E6DCB4",
+    "surface": "#CCF2EBCB",
+    "card": "#E6F7F1D8",
+    "cardStroke": "#1F6B5A2A",
+    "control": "#E6F4ECCF",
+    "controlStroke": "#26574A20",
+    "subtle": "#146B5A2A",
+    "divider": "#1F6B5A2A",
+    "text": "#3A352A",
+    "textSecondary": "#6E6650",
+    "textTertiary": "#9C9478",
+    "accent": "#7C8C64",
+    "accentText": "#5E6B47",
+    "onAccent": "#F7F1D8",
+    "dialog": "#F2EBCB"
+  },
+  "fonts": {
+    "title": "Segoe UI Variable Display",
+    "titleSize": 32,
+    "titleWeight": "Light",
+    "titleSpacing": 20
+  },
+  "corners": {},
+  "effects": {
+    "grain": {
+      "opacity": 0.07
+    },
+    "vignette": {
+      "opacity": 0.35,
+      "color": "#3A3018"
+    },
+    "flicker": {
+      "opacity": 0.05
+    }
+  }
+}

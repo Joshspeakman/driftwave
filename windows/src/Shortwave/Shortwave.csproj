@@ -33,6 +33,10 @@
   <ItemGroup>
     <Content Include="Assets\Shortwave.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Shortwave.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Theme fonts (SIL Open Font License; the licence files ship next to them) -->
+    <Content Include="Assets\Fonts\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Built-in themes, shared with the Mac app's format (docs/THEMES.md) -->
+    <Content Include="..\..\..\themes\*.json" Link="Themes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <AssemblyMetadata Include="ShortwaveCommit" Value="$(ShortwaveCommit)" />

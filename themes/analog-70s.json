@@ -1,0 +1,53 @@
+{
+  "format": "shortwave-theme",
+  "version": 1,
+  "id": "analog-70s",
+  "name": "Analog 70s",
+  "description": "Walnut veneer, cream lettering, a backlit tuning dial and a VU meter.",
+  "base": "dark",
+  "backdrop": "none",
+  "colors": {
+    "background": "#3B2416",
+    "surface": "#E61E140D",
+    "card": "#CC2C1E13",
+    "cardStroke": "#33E8B57A",
+    "control": "#CC3A2817",
+    "controlStroke": "#40E8B57A",
+    "subtle": "#26F2A65A",
+    "divider": "#33E8B57A",
+    "text": "#F3E3C3",
+    "textSecondary": "#C9B08A",
+    "textTertiary": "#8E7656",
+    "accent": "#E07A2E",
+    "accentText": "#F2A65A",
+    "onAccent": "#1E140D",
+    "dialog": "#24180F"
+  },
+  "fonts": {
+    "title": "Shrikhand",
+    "titleSize": 32
+  },
+  "corners": {
+    "control": 6,
+    "overlay": 10,
+    "card": 10,
+    "cover": 0.12
+  },
+  "effects": {
+    "wood": {},
+    "dial": {
+      "color": "#F2A65A"
+    },
+    "vu": {},
+    "grain": {
+      "opacity": 0.04
+    },
+    "titleShadow": {
+      "color": "#000000",
+      "blur": 0,
+      "offsetX": 2,
+      "offsetY": 2,
+      "opacity": 0.6
+    }
+  }
+}
