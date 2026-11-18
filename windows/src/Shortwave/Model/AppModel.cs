@@ -50,7 +50,6 @@ public sealed class AppModel : Observable
         {
             Player.Restore(last);
             _ = LoadArtworkThenUpdate(last);
-            if (Diagnostics.Resume) Play(last);
         }
         _ = RefreshLibrary();
         if (Diagnostics.StartMuted) Player.IsMuted = true;
@@ -81,7 +80,23 @@ public sealed class AppModel : Observable
             }
             catch (Exception e) { Diagnostics.Log("export failed: " + e.Message); }
         }
+        if (Diagnostics.Resume) ResumeAfterRestart();
         if (Diagnostics.PlayURL is { } url) Player.Select(Station.Local("Test Stream", url));
+    }
+
+    /// <summary>Plays the station that was playing when App.Restart started this copy.</summary>
+    void ResumeAfterRestart()
+    {
+        string file = Path.Combine(Paths.Caches, "resume.json");
+        try
+        {
+            var station = LibraryFile.Load(file).FirstOrDefault();
+            File.Delete(file);
+            if (station is null) return;
+            Diagnostics.Log("resume " + station.Name);
+            Play(station);
+        }
+        catch (Exception e) { Diagnostics.Log("resume: " + e.Message); }
     }
 
     private Page page;

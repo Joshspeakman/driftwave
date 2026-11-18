@@ -132,7 +132,12 @@ public partial class App : Application
         }
         args.Add("--restart-after");
         args.Add(Environment.ProcessId.ToString());
-        if (Model.Player.IsPlaying) args.Add("--resume");
+        if (Model.Player.IsPlaying && Model.Player.Station is { } playing)
+        {
+            // Any station (also one from Search that isn't in the library): the new copy reads it back.
+            try { Core.LibraryFile.Save([playing], Path.Combine(Model.Paths.Caches, "resume.json")); args.Add("--resume"); }
+            catch (Exception e) { Diagnostics.Log("resume: " + e.Message); }
+        }
         var psi = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
         foreach (var a in args) psi.ArgumentList.Add(a);
         Diagnostics.Log("restart " + string.Join(" ", args));

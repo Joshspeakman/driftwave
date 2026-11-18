@@ -28,11 +28,10 @@ public sealed class TitleDecor
         public double Ox, Oy;
         public double BaseOpacity = 1;
         public bool FlickerOn;
-        public bool Animated => Cursor != null || FlickerOn;
+        public bool Animated => FlickerOn;   // the cursor blinks by a composition animation
 
         public void Tick(double t, double dt)
         {
-            if (Cursor != null) Cursor.Opacity = dt == 0 || t % 1.06 < 0.6 ? 1 : 0;
             if (Shadow != null && FlickerOn)
             {
                 // A tired neon tube: steady, with rare stutters.
@@ -136,6 +135,20 @@ public sealed class TitleDecor
             var c = WindowEffects.Opt(theme.Options("cursor"), "color", theme.Get("text", Microsoft.UI.Colors.White));
             a.Cursor = new Rectangle { Fill = new SolidColorBrush(c) };
             host.Children.Add(a.Cursor);
+            if (!EffectsClock.Frozen)
+            {
+                // Blink on the compositor: on 0.6 s, off 0.46 s, no work for the app.
+                var visual = ElementCompositionPreview.GetElementVisual(a.Cursor);
+                var comp = visual.Compositor;
+                var blink = comp.CreateScalarKeyFrameAnimation();
+                var step = comp.CreateStepEasingFunction();
+                blink.InsertKeyFrame(0f, 1f, step);
+                blink.InsertKeyFrame(0.566f, 0f, step);
+                blink.InsertKeyFrame(1f, 1f, step);
+                blink.Duration = TimeSpan.FromSeconds(1.06);
+                blink.IterationBehavior = AnimationIterationBehavior.Forever;
+                visual.StartAnimation("Opacity", blink);
+            }
         }
         title.SizeChanged += (_, _) => Layout(a);
         title.Loaded += (_, _) => Layout(a);

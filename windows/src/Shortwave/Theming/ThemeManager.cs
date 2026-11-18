@@ -58,6 +58,12 @@ public sealed class ThemeManager
                 try
                 {
                     var t = Theme.FromJson(File.ReadAllText(file), builtIn);
+                    if (!builtIn)
+                    {
+                        t.SourcePath = file;
+                        // A hand-made file may carry any id; it only matters for the "theme" setting.
+                        if (!Theme.IsValidId(t.Id) || All.Any(x => x.Id == t.Id)) t.Id = "custom-" + StableHash(Path.GetFileNameWithoutExtension(file).ToLowerInvariant()).ToString("x8");
+                    }
                     if (All.Any(x => x.Id == t.Id)) { Diagnostics.Log($"theme {t.Id} in {file} is a duplicate; skipped"); continue; }
                     All.Add(t);
                 }
@@ -383,7 +389,10 @@ public sealed class ThemeManager
     {
         if (t.BuiltIn) return;
         Directory.CreateDirectory(userFolder);
-        string path = Path.Combine(userFolder, t.Id + ".json");
+        if (!Theme.IsValidId(t.Id)) t.Id = Theme.NewCustomId();
+        string path = t.SourcePath ?? Path.Combine(userFolder, t.Id + ".json");
+        if (!InUserFolder(path)) throw new IOException("Themes are only saved in the Themes folder.");
+        t.SourcePath = path;
         string tmp = path + ".tmp";
         File.WriteAllText(tmp, t.ToJson());
         File.Move(tmp, path, overwrite: true);
@@ -393,7 +402,8 @@ public sealed class ThemeManager
     public Theme Duplicate(Theme source)
     {
         var t = source.IsDefault ? DefaultAsEditable() : source.Clone();
-        t.Id = "custom-" + Guid.NewGuid().ToString("N")[..8];
+        t.Id = Theme.NewCustomId();
+        t.SourcePath = null;
         string baseName = source.IsDefault ? "My Theme" : source.Name;
         string name = baseName + (source.IsDefault ? "" : " (custom)");
         for (int i = 2; All.Any(x => x.Name == name); i++) name = $"{baseName} ({(source.IsDefault ? "" : "custom ")}{i})".Replace("( ", "(");
@@ -436,8 +446,8 @@ public sealed class ThemeManager
 
     public void Delete(Theme t)
     {
-        if (t.BuiltIn) return;
-        try { File.Delete(Path.Combine(userFolder, t.Id + ".json")); } catch (Exception e) { Diagnostics.Log("theme delete: " + e.Message); }
+        if (t.BuiltIn || t.SourcePath is not { } path || !InUserFolder(path)) return;
+        try { File.Delete(path); } catch (Exception e) { Diagnostics.Log("theme delete: " + e.Message); }
         Reload();
     }
 
@@ -445,12 +455,24 @@ public sealed class ThemeManager
     public Theme Import(string path)
     {
         var t = Theme.FromJson(File.ReadAllText(path));
-        if (All.Any(x => x.Id == t.Id)) t.Id = "custom-" + Guid.NewGuid().ToString("N")[..8];
+        // The id becomes a file name: anything unusual (or taken) gets a fresh one.
+        if (!Theme.IsValidId(t.Id) || All.Any(x => x.Id == t.Id)) t.Id = Theme.NewCustomId();
+        t.SourcePath = null;
         if (All.Any(x => x.Name == t.Name)) t.Name += " (imported)";
         t.BuiltIn = false;
         Save(t);
         Reload();
         return Find(t.Id);
+    }
+
+    /// <summary>FNV-1a: the same file name gives the same id on every run (string.GetHashCode doesn't).</summary>
+    static uint StableHash(string s) { uint h = 2166136261; foreach (char c in s) h = (h ^ c) * 16777619; return h; }
+
+    bool InUserFolder(string path)
+    {
+        string folder = Path.GetFullPath(userFolder).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string full = Path.GetFullPath(path);
+        return full.StartsWith(folder, StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(full)!.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar == folder;
     }
 
     public static void Export(Theme t, string path)

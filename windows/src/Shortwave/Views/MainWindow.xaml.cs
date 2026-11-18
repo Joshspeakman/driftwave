@@ -53,11 +53,9 @@ public sealed partial class MainWindow : Window
         };
         // Theme animations run only while the window can be seen.
         effects = new WindowEffects(EffectsBack, EffectsFront, Root);
+        // Any change (restoring from minimised reports only a size or position change); SetWindowVisible is cheap.
         AppWindow.Changed += (s, e) =>
-        {
-            if (e.DidVisibilityChange || e.DidPresenterChange)
-                EffectsClock.SetWindowVisible(s.IsVisible && s.Presenter is not Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized });
-        };
+            EffectsClock.SetWindowVisible(s.IsVisible && s.Presenter is not Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized });
 
         app.PropertyChanged += (_, e) =>
         {
