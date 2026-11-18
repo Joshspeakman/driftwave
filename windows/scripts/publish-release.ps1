@@ -89,7 +89,7 @@ The ``.sha256`` file lets the app check the download arrived intact.
 Commit: $commit
 "@
 $notesOut = Join-Path $stage 'notes.md'
-Set-Content -Path $notesOut -Value $notes -Encoding utf8
+[IO.File]::WriteAllText($notesOut, $notes)   # no BOM (GitHub shows it)
 
 Write-Output "Package: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
 Write-Output "SHA-256: $sha"
