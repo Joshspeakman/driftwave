@@ -13,6 +13,7 @@ pub mod radio_browser;
 pub mod recording;
 pub mod station;
 pub mod storage;
+pub mod theme;
 
 pub use station::{Station, StationSorting};
 pub use storage::AppPaths;
