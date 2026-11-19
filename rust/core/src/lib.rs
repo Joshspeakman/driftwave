@@ -1,4 +1,4 @@
-//! Driftwave's platform-independent core, ported 1:1 from `windows/src/ShortwaveCore` (C#), which was itself a
+//! Driftwave's platform-independent core, ported 1:1 from the retired C# app's core (ShortwaveCore), which was itself a
 //! translation of the Mac app's `Sources/ShortwaveCore`. Behaviour, file formats and tests carry over.
 
 pub mod audio_frames;
