@@ -143,11 +143,31 @@ Little would be lost beyond phases 1 and 2.
 | Two old apps to keep working meanwhile | Double maintenance for about 3 months | Freeze their features; fixes only |
 | Mac work happens on the Mac | This PC can't build or test the Mac target | The Mac session runs the phase 2 and 4 checks |
 
-## Decisions for Josh
+## Decisions (Josh, 2026-11-18)
 
-1. **HE-AAC:** FDK-AAC (simplest, one codebase; no patent licence) or the OS decoders (about 200
-   lines per platform).
-2. **Slint licence:** royalty-free with a "Made with Slint" attribution in About? Or GPLv3?
-3. **Linux:** a third target costs little once the app is in Rust and Slint (cpal, souvlaki and
-   tray-icon all support it). Worth including?
-4. **The old apps:** retire the Swift and C# apps after phase 5, or keep one as a fallback?
+Josh said "go ahead and rebuild it in rust" and chose:
+
+1. **HE-AAC: the OS decoders.** Media Foundation on Windows, AudioToolbox on the Mac. Driftwave is
+   public now, so this avoids shipping FDK-AAC without a patent licence.
+   - **Linux** has no system AAC decoder. The app loads one the user already has at run time (FFmpeg's
+     `libavcodec`, through `dlopen`) and bundles nothing. Without it, AAC-LC still plays through
+     symphonia, and HE-AAC plays as its base layer, with a note in the station's details.
+2. **Slint: the royalty-free licence.** About shows "Made with Slint". The source can stay private.
+3. **Linux: ship it too.** It's a third release target, tested in WSL or on a Linux machine.
+   - Its packaging is a tarball with a `.desktop` file to start with (an AppImage later).
+   - Its system integration uses MPRIS through souvlaki and a StatusNotifier tray icon.
+4. **The old apps: retire them.** The Rust build replaces Driftwave through the normal updater: same
+   exe name, zip and tags, `uninstall.ps1` marker, AUMIDs, data folders and file formats. The last C#
+   release stays on GitHub as a fallback; the C# and Swift code is frozen.
+
+**Progress:**
+- **Phase 1 done (2026-11-18).** `driftwave-core` has 13 modules: station, storage, migration, exchange, icy,
+  playlist, radio_browser, id3, audio_frames, m4a, ogg, recording and theme. 62 tests pass, plus one live
+  radio-browser test (`--ignored`), which also passes. They cover:
+  - every C# core test;
+  - both shared exchange fixtures and the Mac `library.json` fixture;
+  - the ffmpeg round trip of real AAC through the M4A muxer;
+  - all nine built-in themes, including a check that none of them flashes.
+
+**Where the code lives:** branch `rust`, folder `rust/` (a Cargo workspace; `rust/core` is
+`driftwave-core`). Run cargo through `rust\cargo.ps1`, which sets the toolchain for that process only.
