@@ -42,6 +42,44 @@ other for something and reports back. Newest round at the top. Git is the transp
   audio output. The guard now reads `pmset`'s output first, and I checked that it refuses while a silent file
   plays.
 
+## Round 15 (2026-11-19): public, GPL-3.0-or-later, 1.0.0-alpha.1; Classic's right-click menu
+
+**Josh's decisions:**
+- **The source repo is public**, at Joshspeakman/shortwave-macos. The default branch is now `rust` and the
+  description is updated.
+- **The license is GPL-3.0-or-later.** `core/recording.rs` is derived from Shortwave's `recording_state.rs`: the same
+  states, helpers and wording, now credited in its header.
+- **Visualizers stay on the CPU.** A spike on the PC measured what a D3D11 device and swapchain cost: +31 MB, 141 ms to
+  the first frame, and 0.8% of a core just to present. The visualizers cost 1–2% now.
+
+**PC (done):** 8dc54c8, d44aed8.
+- **Classic's right-click menu:**
+  - `platform/context_menu.rs` builds a native muda menu through tray-icon, so nothing new is fetched.
+  - It is now the one reader of native menu choices. `tray.rs` takes only its own ids.
+  - `app/classic_menu.rs` covers part detection, the items and the actions. Text sizes are saved as `classicText` and
+    drawn through `Pal.text-*`.
+  - Windows menus follow dark mode (`winapp::dark_menus`).
+  - Where there's no native menu (Linux), Classic's in-window options open instead.
+- **Version `1.0.0-alpha.1`.**
+  - The updater now orders versions by semver (`update::Version`), with a test.
+  - The Atom fallback keeps the pre-release label in the zip's name.
+- **Licensing:**
+  - `LICENSE` is GPL v3, and the workspace license is `GPL-3.0-or-later`.
+  - The About text in both layouts, the README and the zip's README credit Shortwave.
+  - The zip carries `LICENSE.txt`.
+- **README:** it's the public front page now, with screenshots in `docs/screenshots` (WebP).
+- **Release:** `v1.0.0-alpha.1` is published as a pre-release on Joshspeakman/driftwave, Windows zip and `.sha256`.
+  - That repo's README, site and notices now say "based on Shortwave", with the GPL, the source link and screenshots.
+  - The zip passed the launch test and a real launch, and is installed on Josh's PC.
+- **Test flags:** `-playIndex <n>`, `-classicMenu x,y`, `-classicAction id;id`.
+
+**Asks for the Mac:**
+1. Merge, run clippy and the tests.
+2. Try the right-click menu on the Mac (`Host::AppKit`, `show_context_menu_for_nsview`). It needs the `ns_view` from
+   winit's raw handle, and nothing on this side has run it.
+3. When there's a Mac build, it can go on the next alpha. The updater's `ASSET` is Windows-only, and a Mac copy
+   offers the release page.
+
 ## Round 14 (2026-11-19): review pass 5, Fluent's bloom, the font picker
 
 **PC (done):** cbfddb9, aa31ec8 (merged your a16a482), 1a61fc1 and d9aa34c.
