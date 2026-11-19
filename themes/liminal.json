@@ -45,6 +45,25 @@
     "vignette": {
       "opacity": 0.35,
       "color": "#3A3018"
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "in": "window",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": "100%",
+          "fill": "#D9CC8E",
+          "opacity": 0.35,
+          "repeat": {
+            "n": 200,
+            "dx": 24
+          },
+          "id": "wallpaper"
+        }
+      ]
     }
   }
 }

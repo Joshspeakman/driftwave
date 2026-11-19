@@ -62,6 +62,8 @@ export global Th {
     in-out property <color> bevel-dark: #000000;
     in-out property <color> selection: transparent;
     in-out property <color> selection-text: #FFFFFF;
+    // A hard offset shadow under cards (Brutalist), clear for none.
+    in-out property <color> hard-shadow: transparent;
 
     // A hard shadow behind page titles (titleShadow with no blur), and a block cursor after them.
     in-out property <bool> title-hard: false;
@@ -288,12 +290,13 @@ component SpectrumBars inherits Rectangle {
     for v[i] in Decor.bars: Rectangle {
         x: 6px + i * (root.bw + 3px); y: 6px; width: root.bw; height: 54px;
         Rectangle { background: @linear-gradient(0deg, #00C800 0%, #78E600 45%, #F0DC00 70%, #FF3C14 100%); }
-        Rectangle { y: 0; height: parent.height * (1 - v); background: Decor.lcd-back; }
-        if Decor.peaks[i] > 0: Rectangle {
-            y: clamp(parent.height * (1 - Decor.peaks[i]) - 2px, 0px, parent.height - 2px); height: 2px; background: #C8FFC8;
-        }
+        Rectangle { y: 0; height: (18 - Math.round(v * 18)) * 3px; background: Decor.lcd-back; }
     }
     for k in 18: Rectangle { x: 6px; y: 6px + k * 3px; width: root.width - 12px; height: 1px; background: Decor.lcd-back; }
+    for p[i] in Decor.peaks: Rectangle {
+        visible: p > 0;
+        x: 6px + i * (root.bw + 3px); y: 6px + (18 - max(1, Math.round(p * 18))) * 3px + 1px; width: root.bw; height: 2px; background: #C8FFC8;
+    }
 }
 
 // A backlit FM dial, 88 to 108 MHz; the pointer swings to each station's own spot.
@@ -315,17 +318,17 @@ component TuningDial inherits Rectangle {
         background: #F3E3C3.transparentize(self.major ? 0.1 : 0.45);
     }
     for m in 6: Text {
-        x: root.left + m * 4 / 20 * (root.right - root.left) - self.width / 2; y: root.height - 17px;
+        x: root.left + m * 4 / 20 * (root.right - root.left) - self.width / 2; y: root.height - 16px;
         text: 88 + m * 4; color: #F3E3C3; font-size: 11px; font-family: "Bahnschrift";
     }
     Text { x: 6px; y: 4px; text: "FM"; color: Decor.dial-ink; font-size: 10px; font-weight: 700; font-family: "Bahnschrift"; }
     Text { x: root.width - 28px; y: 4px; text: "MHz"; color: #F3E3C3B3; font-size: 10px; font-family: "Bahnschrift"; }
     property <length> nx: root.left + Decor.needle * (root.right - root.left);
     Rectangle {
-        x: root.nx - 5px; y: 5px; width: 10px; height: root.height - 10px;
+        x: root.nx - 5px; y: 5px; width: 10px; height: root.height - 22px;
         background: @linear-gradient(90deg, #FF5A2800 0%, #FF5A286E 50%, #FF5A2800 100%);
     }
-    Rectangle { x: root.nx - 1.25px; y: 5px; width: 2.5px; height: root.height - 10px; background: #FF5A28; }
+    Rectangle { x: root.nx - 1.25px; y: 5px; width: 2.5px; height: root.height - 22px; background: #FF5A28; }
 }
 
 // One VU meter: a cream face with its scale and red zone, and a needle on a spring. Drawn for 124×80 and scaled.
@@ -333,9 +336,21 @@ component VuMeter inherits Rectangle {
     in property <string> channel;
     in property <float> angle: -48;
     border-radius: 6px; border-width: 1px; border-color: #140C06;
-    background: @linear-gradient(180deg, #F8ECCD 0%, #E2CA96 100%);
+    background: @radial-gradient(circle, #FFF4D6 0%, #F1DDB0 45%, #E2CA96 100%);
     clip: true;
     property <float> k: min(self.width / 124px, self.height / 80px);
+    Path {
+        x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
+        stroke: #281C12; stroke-width: 1px * root.k; fill: transparent;
+        commands: "M 21.87 35.87 A 54 54 0 0 1 83.96 22.67";
+    }
+    for n[i] in ["-20", "-10", "-5", "0", "+3"]: Text {
+        property <float> deg: i == 0 ? -48 : i == 1 ? -24 : i == 2 ? 0 : i == 3 ? 24 : 48;
+        x: root.ox + (62 + 64 * sin(self.deg * 1deg)) * 1px * root.k - self.width / 2;
+        y: root.oy + (72 - 64 * cos(self.deg * 1deg)) * 1px * root.k - self.height / 2;
+        text: n; font-size: 7px * root.k; font-family: "Bahnschrift";
+        color: i >= 3 ? #C8281E : #281C12;
+    }
     property <length> ox: (self.width - 124px * self.k) / 2;
     property <length> oy: (self.height - 80px * self.k) / 2;
     Path {
@@ -353,7 +368,7 @@ component VuMeter inherits Rectangle {
         stroke: #C8281E; stroke-width: 3px * root.k; fill: transparent;
         commands: "M 85.18 19.93 A 57 57 0 0 1 104.36 33.86";
     }
-    Text { x: root.ox + 53px * root.k; y: root.oy + 40px * root.k; text: "VU"; color: #281C12; font-size: 12px * root.k; font-weight: 700; font-family: "Bahnschrift"; }
+    Text { x: root.ox + 53px * root.k; y: root.oy + 44px * root.k; text: "VU"; color: #281C12; font-size: 12px * root.k; font-weight: 700; font-family: "Bahnschrift"; }
     Text { x: root.ox + 6px * root.k; y: root.oy + 62px * root.k; text: root.channel; color: #281C12B3; font-size: 10px * root.k; font-family: "Bahnschrift"; }
     Path {
         x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
@@ -684,6 +699,63 @@ component Captions inherits Rectangle {
     }
 }
 
+// A segmented control: a row of choices in one control, the current one filled (pressed in, in a beveled theme).
+component Segmented inherits Rectangle {
+    in property <[string]> options;
+    in property <int> current;
+    callback chosen(int);
+    height: 32px;
+    width: row.preferred-width;
+    border-radius: Th.bevel ? 0px : Th.radius-control;
+    background: Th.control;
+    border-width: Th.bevel ? 0px : 1px;
+    border-color: Th.control-stroke;
+    row := HorizontalLayout {
+        padding: Th.bevel ? 0px : 2px; spacing: Th.bevel ? 0px : 2px;
+        for o[i] in root.options: Rectangle {
+            width: max(64px, seg-label.preferred-width + 28px);
+            border-radius: Th.bevel ? 0px : max(0px, Th.radius-control - 2px);
+            background: Th.bevel ? (i == root.current ? Th.control.darker(8%) : Th.control)
+                : i == root.current ? Th.accent : (seg-ta.has-hover ? Th.subtle : transparent);
+            seg-ta := TouchArea { clicked => { root.chosen(i); } }
+            if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: i == root.current; }
+            seg-label := Text {
+                x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: o; font-size: 13px;
+                font-weight: i == root.current ? 600 : 400;
+                color: i == root.current && !Th.bevel ? Th.on-accent : Th.control-text;
+            }
+        }
+    }
+}
+
+// One setting: its name and what it does on the left, its control on the right.
+component SettingRow inherits Rectangle {
+    in property <string> label;
+    in property <string> note;
+    min-height: 68px;
+    border-radius: Th.bevel ? 0px : Th.radius-card;
+    background: Th.card;
+    drop-shadow-blur: 0px; drop-shadow-offset-x: Th.hard-shadow.alpha > 0 ? 4px : 0px; drop-shadow-offset-y: Th.hard-shadow.alpha > 0 ? 4px : 0px;
+    drop-shadow-color: Th.hard-shadow;
+    border-width: Th.bevel ? 0px : 1px;
+    border-color: Th.card-stroke;
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; }
+    HorizontalLayout {
+        padding-left: 16px; padding-right: 16px; padding-top: 12px; padding-bottom: 12px; spacing: 24px;
+        VerticalLayout {
+            alignment: center; spacing: 3px; horizontal-stretch: 1;
+            Text { text: root.label; color: Th.card-text; font-size: 14px; }
+            if root.note != "": Text { text: root.note; color: Th.card-text2; font-size: 12px; wrap: word-wrap; }
+        }
+        VerticalLayout { alignment: center; HorizontalLayout { alignment: end; @children } }
+    }
+}
+
+// A group of settings' heading.
+component GroupHeading inherits Text {
+    color: Th.text; font-size: 14px; font-weight: 600;
+}
+
 // A settings card: a heading, a line of explanation, and its controls.
 component SettingsCard inherits Rectangle {
     in property <string> heading;
@@ -695,7 +767,7 @@ component SettingsCard inherits Rectangle {
     if Th.bevel: Bevel { width: parent.width; height: parent.height; }
     VerticalLayout {
         padding: 16px; spacing: 10px;
-        Text { text: root.heading; color: Th.card-text; font-size: 14px; font-weight: 600; }
+        if root.heading != "": Text { text: root.heading; color: Th.card-text; font-size: 14px; font-weight: 600; }
         if root.note != "": Text { text: root.note; color: Th.card-text2; font-size: 12px; wrap: word-wrap; }
         @children
     }
@@ -1096,18 +1168,27 @@ export component FullView inherits Rectangle {
             PageTitle { x: 28px; y: 42px - self.height / 2; text: "Discover"; }
             HorizontalLayout {
                 x: 28px; y: 76px; height: 32px; spacing: 8px; alignment: start;
-                Btn { text: "Popular"; primary: Dir.discover-mode == "popular"; clicked => { Dir.discover-mode-chosen("popular"); } }
-                Btn { text: "Trending"; primary: Dir.discover-mode == "trending"; clicked => { Dir.discover-mode-chosen("trending"); } }
-                Btn { text: "Random"; primary: Dir.discover-mode == "random"; clicked => { Dir.discover-mode-chosen("random"); } }
+                Segmented {
+                    options: ["Popular", "Trending", "Random"];
+                    current: Dir.discover-mode == "trending" ? 1 : Dir.discover-mode == "random" ? 2 : 0;
+                    chosen(i) => { Dir.discover-mode-chosen(i == 1 ? "trending" : i == 2 ? "random" : "popular"); }
+                }
                 if Dir.discover-mode != "trending": Picker {
                     options: Dir.countries; current: Dir.country; placeholder: "Any country";
                     chosen(i) => { Dir.country-chosen(i); }
                 }
-                Btn { text: "Refresh"; clicked => { Dir.discover-refresh(); } }
+                Btn { icon: "M 13.5 8 A 5.5 5.5 0 1 1 11.9 4.1 M 12.2 1.6 L 12.2 4.6 L 9.2 4.6"; clicked => { Dir.discover-refresh(); } }
             }
-            if Dir.discover-status != "": Text { x: 28px; y: 124px; text: Dir.discover-status; color: Th.text2; font-size: 13px; }
+            property <string> where: Dir.country >= 0 && Dir.country < Dir.countries.length ? Dir.countries[Dir.country] : "";
+            Text {
+                x: 28px; y: 118px; color: Th.text2; font-size: 13px;
+                text: Dir.discover-status != "" ? Dir.discover-status
+                    : Dir.discover-mode == "trending" ? "Trending around the world"
+                    : Dir.discover-mode == "random" ? (parent.where != "" ? "A random handful from " + parent.where : "A random handful from everywhere")
+                    : (parent.where != "" ? "Popular in " + parent.where : "Popular everywhere");
+            }
             StationGrid {
-                x: 20px; y: 124px; width: parent.width - 40px; height: parent.height - 136px;
+                x: 20px; y: 144px; width: parent.width - 40px; height: parent.height - 156px;
                 cards: Dir.discover;
                 open(i) => { Dir.open("discover", i); }
                 play(i) => { Dir.play-now("discover", i); }
@@ -1147,42 +1228,39 @@ export component FullView inherits Rectangle {
             settings-col := VerticalLayout {
                 x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
                 HorizontalLayout { alignment: start; PageTitle { text: "Settings"; } }
-                SettingsCard {
-                    heading: "Layout";
-                    note: "Full is everything; Classic is the compact player of the Winamp years. Swap any time: the music carries on.";
-                    HorizontalLayout {
-                        spacing: 10px; alignment: start;
-                        Btn { text: "Full"; primary: true; }
-                        Btn { text: "Classic"; clicked => { root.to-classic(); } }
+                Rectangle { height: 4px; }
+                GroupHeading { text: "Appearance"; }
+                SettingRow {
+                    label: "Layout";
+                    note: "Full is everything; Classic is the compact player of the Winamp years. The music carries on.";
+                    Segmented { options: ["Full", "Classic"]; current: 0; chosen(i) => { if (i == 1) { root.to-classic(); } } }
+                }
+                SettingRow {
+                    label: "App theme";
+                    note: "Light or dark for the Default theme, or follow the system.";
+                    Segmented {
+                        options: ["System", "Light", "Dark"];
+                        current: root.appearance == "light" ? 1 : root.appearance == "dark" ? 2 : 0;
+                        chosen(i) => { root.choose-appearance(i == 1 ? "light" : i == 2 ? "dark" : "system"); }
                     }
                 }
-                SettingsCard {
-                    heading: "App theme";
-                    note: "Light or dark for the Default theme.";
-                    HorizontalLayout {
-                        spacing: 10px; alignment: start;
-                        Btn { text: "Use system setting"; primary: root.appearance == "system"; clicked => { root.choose-appearance("system"); } }
-                        Btn { text: "Light"; primary: root.appearance == "light"; clicked => { root.choose-appearance("light"); } }
-                        Btn { text: "Dark"; primary: root.appearance == "dark"; clicked => { root.choose-appearance("dark"); } }
-                    }
+                SettingRow {
+                    label: "Moving scenes";
+                    note: "Rain on the glass, people passing by. Only while Driftwave is in front; it holds still by itself on a slower computer.";
+                    Segmented { options: ["Moving", "Still"]; current: Scenery.motion-on ? 0 : 1; chosen(i) => { Scenery.motion-chosen(i == 0); } }
                 }
+                Rectangle { height: 8px; }
+                GroupHeading { text: "Theme"; }
                 SettingsCard {
-                    heading: "Moving scenes";
-                    note: "Some themes have a scene that moves, like rain on the glass and people passing by. It moves only while Driftwave is in front, and holds still by itself if it would slow this computer down.";
-                    HorizontalLayout {
-                        spacing: 10px; alignment: start;
-                        Btn { text: "Moving"; primary: Scenery.motion-on; clicked => { Scenery.motion-chosen(true); } }
-                        Btn { text: "Still"; primary: !Scenery.motion-on; clicked => { Scenery.motion-chosen(false); } }
-                    }
-                }
-                SettingsCard {
-                    heading: "Theme";
+                    heading: "";
                     note: "A look for the whole app, in both layouts.";
                     gallery := Rectangle {
+                        // Tiles that fill the row: as many as fit at 112 px or more.
                         property <int> cols: max(1, Math.floor((self.width + 8px) / 120px));
+                        property <length> tw: (self.width - (self.cols - 1) * 8px) / self.cols;
                         height: Math.ceil(root.themes.length / cols) * 96px;
                         for t[i] in root.themes: Rectangle {
-                            x: Math.mod(i, gallery.cols) * 120px; y: Math.floor(i / gallery.cols) * 96px; width: 112px; height: 88px;
+                            x: Math.mod(i, gallery.cols) * (gallery.tw + 8px); y: Math.floor(i / gallery.cols) * 96px; width: gallery.tw; height: 88px;
                             border-radius: Th.radius-control;
                             border-width: t.on ? 2px : 1px;
                             border-color: t.on ? Th.accent : (sw-ta.has-hover ? Th.text3 : Th.card-stroke);
@@ -1191,16 +1269,18 @@ export component FullView inherits Rectangle {
                             sw-ta := TouchArea { clicked => { root.choose-theme(t.id); } }
                             Rectangle { x: 10px; y: 10px; width: 60px; height: 34px; border-radius: 4px; background: t.card;
                                 Text { x: 8px; y: 6px; text: "Aa"; color: t.text; font-size: 15px; font-weight: 700; } }
-                            Rectangle { x: 76px; y: 12px; width: 26px; height: 8px; border-radius: 4px; background: t.accent; }
-                            Rectangle { x: 76px; y: 26px; width: 18px; height: 8px; border-radius: 4px; background: t.text.transparentize(60%); }
+                            Rectangle { x: parent.width - 36px; y: 12px; width: 26px; height: 8px; border-radius: 4px; background: t.accent; }
+                            Rectangle { x: parent.width - 36px; y: 26px; width: 18px; height: 8px; border-radius: 4px; background: t.text.transparentize(60%); }
                             Rectangle { x: 0; y: 54px; width: parent.width; height: 34px; background: #00000066;
                                 Text { x: 8px; y: (parent.height - self.height) / 2; width: parent.width - 16px; text: t.name; color: #FFFFFF; font-size: 11px; overflow: elide; } }
                         }
                     }
                 }
-                SettingsCard {
-                    heading: "About";
-                    note: "Driftwave " + root.version + ". Internet radio, one app, written in Rust. Made with Slint.";
+                Rectangle { height: 8px; }
+                GroupHeading { text: "About"; }
+                SettingRow {
+                    label: "Driftwave " + root.version;
+                    note: "Internet radio, one app, written in Rust. Made with Slint.";
                 }
             }
         }
@@ -1211,6 +1291,8 @@ export component FullView inherits Rectangle {
             Rectangle {
                 x: 4px; y: 8px; width: 300px; height: parent.height - 16px;
                 border-radius: Th.bevel ? 0px : Th.radius-card; background: Th.card; clip: true;
+                drop-shadow-blur: 0px; drop-shadow-offset-x: Th.hard-shadow.alpha > 0 ? 4px : 0px; drop-shadow-offset-y: Th.hard-shadow.alpha > 0 ? 4px : 0px;
+                drop-shadow-color: Th.hard-shadow;
                 border-width: Th.bevel ? 0px : Th.neon-player-on ? 2px : 1px;
                 border-color: Th.neon-player-on ? Th.neon-player : Th.card-stroke;
                 if Th.bevel: Bevel { width: parent.width; height: parent.height; }

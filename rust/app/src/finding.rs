@@ -170,8 +170,12 @@ impl App {
         let names = |f: &[Facet]| -> slint::ModelRc<slint::SharedString> {
             Rc::new(VecModel::from(f.iter().map(|x| slint::SharedString::from(x.name.as_str())).collect::<Vec<_>>())).into()
         };
+        let countries: slint::ModelRc<slint::SharedString> = Rc::new(VecModel::from(
+            self.find.countries.iter().map(|x| slint::SharedString::from(driftwave_core::station::short_country(&x.name))).collect::<Vec<_>>(),
+        ))
+        .into();
         let index = |f: &[Facet], v: &Option<String>| v.as_ref().and_then(|v| f.iter().position(|x| x.id() == v)).map(|i| i as i32).unwrap_or(-1);
-        dir.set_countries(names(&self.find.countries));
+        dir.set_countries(countries);
         dir.set_country(index(&self.find.countries, &self.find.country));
         dir.set_search_country(index(&self.find.countries, &self.find.search_country));
         dir.set_languages(names(&self.find.languages));
