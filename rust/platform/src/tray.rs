@@ -111,8 +111,9 @@ impl Tray {
 
     /// Menu choices since the last call.
     pub fn actions(&self) -> Vec<TrayAction> {
-        // Through the shared reader: a context menu's choices are left for it.
-        crate::context_menu::take(|id| self.actions.contains_key(&MenuId::new(id)))
+        // Through the shared reader: a context menu's choices are left for it; every other choice is the tray's, and
+        // one it doesn't know (from a menu it has since rebuilt) is dropped rather than left waiting.
+        crate::context_menu::take(|id| !crate::context_menu::is_context_menu_id(id))
             .into_iter()
             .filter_map(|id| self.actions.get(&MenuId::new(&id)).copied())
             .collect()
