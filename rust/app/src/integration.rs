@@ -77,17 +77,23 @@ impl Integration {
 
     /// Creates the tray icon and Now Playing; call once the window is showing (the Mac needs the event
     /// loop running and the main thread).
-    pub fn start(&mut self, tray: bool, media: bool, tray_icon: (Vec<u8>, u32, u32)) {
+    /// `hwnd` is the window's handle, which Windows' media controls need (None elsewhere).
+    /// Each part is optional: one that fails (or panics inside its library) is left out, never the whole app.
+    pub fn start(&mut self, tray: bool, media: bool, tray_icon: (Vec<u8>, u32, u32), hwnd: Option<*mut std::ffi::c_void>) {
+        use std::panic::{catch_unwind, AssertUnwindSafe};
         if tray {
-            match Tray::new(tray_icon.0, tray_icon.1, tray_icon.2, "Driftwave") {
-                Ok(t) => self.tray = Some(t),
-                Err(e) => crate::log(&format!("tray: {e}")),
+            match catch_unwind(AssertUnwindSafe(|| Tray::new(tray_icon.0, tray_icon.1, tray_icon.2, "Driftwave"))) {
+                Ok(Ok(t)) => self.tray = Some(t),
+                Ok(Err(e)) => crate::log(&format!("tray: {e}")),
+                Err(_) => crate::log("tray: failed to start"),
             }
         }
-        if media {
-            match Media::new("Driftwave", "driftwave", None) {
-                Ok(m) => self.media = Some(m),
-                Err(e) => crate::log(&format!("media controls: {e}")),
+        // Windows' media controls belong to a window: without its handle there are none.
+        if media && (hwnd.is_some() || !cfg!(windows)) {
+            match catch_unwind(AssertUnwindSafe(|| Media::new("Driftwave", "driftwave", hwnd))) {
+                Ok(Ok(m)) => self.media = Some(m),
+                Ok(Err(e)) => crate::log(&format!("media controls: {e}")),
+                Err(_) => crate::log("media controls: failed to start"),
             }
         }
         self.notifier = Some(Notifier::new());

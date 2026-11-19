@@ -1725,7 +1725,19 @@ fn main() -> Result<(), slint::PlatformError> {
         let integ = integ.clone();
         let (weak, up) = (ui.as_weak(), tray_up.clone());
         slint::Timer::single_shot(Duration::from_millis(300), move || {
-            integ.borrow_mut().start(with_tray, with_media, tray_icon());
+            // The window's handle, for Windows' media controls.
+            let hwnd = weak.upgrade().and_then(|ui| {
+                ui.window()
+                    .with_winit_window(|w: &winit::window::Window| {
+                        use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+                        match w.window_handle().ok()?.as_raw() {
+                            RawWindowHandle::Win32(h) => Some(h.hwnd.get() as *mut std::ffi::c_void),
+                            _ => None,
+                        }
+                    })
+                    .flatten()
+            });
+            integ.borrow_mut().start(with_tray, with_media, tray_icon(), hwnd);
             up.set(integ.borrow().has_tray());
             if let Some(ui) = weak.upgrade() {
                 ui.global::<Prefs>().set_notifications_available(integ.borrow().notifications_available());

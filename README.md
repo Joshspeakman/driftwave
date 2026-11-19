@@ -51,6 +51,9 @@ cargo build --release -p driftwave-audio --bin driftwave-player   # the headless
 The playback tests drive the headless player against real streams and a local test server: `scripts/*.ps1` on
 Windows, `scripts/*.sh` on the Mac. They need Python 3 and ffmpeg.
 
+`scripts\launch-test.ps1` launches the app itself with the parts only a real launch otherwise starts (the
+notification-area icon and the system media controls) and fails on a panic. Run it before packaging a release.
+
 ### A Windows release
 
 `scripts\package-windows.ps1` builds the app and makes `dist\Driftwave-<version>-win-x64.zip` and its `.sha256`:
