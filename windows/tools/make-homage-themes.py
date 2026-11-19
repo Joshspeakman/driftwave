@@ -282,28 +282,72 @@ THEMES.append(theme(
 
 # MARK: the street
 
+def street_lights():
+    """
+    People in the street beyond the glass: soft out-of-focus lights (phones, lit umbrellas, a shop's glow on a coat)
+    walking by with a slight bob, and now and then a car's headlights or tail lights. Each fades in and out.
+    """
+    def bokeh(colour, x, y, size, dx, seconds, pause, start, peak, bob=1.0, pair=None):
+        c = colour.lstrip("#")
+        item = {"type": "radial", "in": "window", "x": x, "y": y, "w": size, "h": size, "withPhoto": True,
+                "fill": [["#E6" + c, 0], ["#80" + c, 0.35], ["#00" + c, 1]],
+                "motion": {"kind": "pass", "x": dx, "bob": bob, "seconds": seconds, "pause": pause, "start": start,
+                           "max": peak}}
+        if pair:
+            item["repeat"] = {"n": 2, "dx": pair}
+            item["h"] = round(size * 0.65)
+        return item
+    return [
+        bokeh("#FFF1DC", "18%", "74%", 26, 380, 34, 10, 0, 0.9, 1.2),
+        bokeh("#FF6FA8", "62%", "71%", 34, -420, 40, 6, 13, 0.75),
+        bokeh("#7FE8FF", "40%", "78%", 18, 300, 28, 16, 21, 0.85, 1.4),
+        bokeh("#FFE2B0", "75%", "69%", 22, -300, 36, 12, 5, 0.8),
+        bokeh("#FFC070", "8%", "80%", 30, 460, 44, 8, 30, 0.7, 1.1),
+        bokeh("#DCE8FF", "50%", "66%", 14, -220, 30, 20, 17, 0.7, 0.6),
+        bokeh("#FF8FD0", "30%", "70%", 20, 260, 38, 14, 9, 0.6, 0.9),
+        # A car's headlights from the right, and later one's tail lights from the left.
+        bokeh("#FFF6E8", "100%", "86%", 46, -1500, 14, 46, 8, 0.9, 0, pair=42),
+        bokeh("#FF3B30", "-4%", "84%", 30, 1500, 17, 52, 35, 0.55, 0, pair=40),
+    ]
+
+
 THEMES.append(theme(
     "night-market", "Night Market",
-    "A rainy night in Tokyo's neon streets (a real photograph of Kabukich\u014d) with rain falling over it.",
+    "A rainy night in Tokyo, seen through dark tinted glass: neon blooming through, rain running down the window "
+    "(a real photograph of Kabukichō), and every panel lit like a neon tube.",
     "dark", "none",
-    tokens("#05070C", "#8C070A12", "#A60B111C", "#3337E0FF", "#B3111A28", "#4437E0FF", "#2237E0FF", "#2237E0FF", "#F2F4FF",
-           "#B8C4DC", "#7A869E", "#FF4F8B", "#4FE3FF", "#05070C", "#F00B111C", pane="#A6070A12"),
+    tokens("#04050A", "#8C06080F", "#9906080F", "#CC37E0FF", "#B30A0F1A", "#CCFF3D88", "#2637E0FF", "#4D37E0FF", "#F4F6FF",
+           "#C8D2EA", "#8892AA", "#FF3D88", "#5CF2FF", "#0A0410", "#F2070910", pane="#B305070D"),
     {"body": "Yu Gothic UI", "title": "Yu Gothic UI", "titleSize": 30, "titleWeight": "Bold", "titleSpacing": 60},
     {"control": 2, "overlay": 4, "card": 4, "cover": 0.06},
-    {"windowTitle": {"font": "Yu Gothic UI", "size": 13, "weight": "bold", "color": "#FFFFFF"},
-     "vignette": {"opacity": 0.4},
-     "titleShadow": {"color": "#FF4F8B", "blur": 14},
+    {"windowTitle": {"font": "Yu Gothic UI", "size": 13, "weight": "bold", "color": "#9FF6FF"},
+     "vignette": {"opacity": 0.45},
+     "titleShadow": {"color": "#FF3D88", "blur": 18},
+     # The street through the glass, its neon glowing (breathing very slowly: a hum, never a flicker).
      "scene": {
          "surfaces": "translucent",
-         "layers": photo("photo-night-market.jpg", "#B3000000") + rain(0.45, 0.65) + [
-             text("\u591c\u5e02 \u30fb \u96e8", 4, 12, 16, "#FF8FB8", font="Yu Gothic UI", weight="bold", glow="#FF4F8B", glowRadius=2),
-             text("\u4e8c\u3064\u3067\u5341\u5206\u3067\u3059\u3088\uff01", "30%", "44%", 26, "#FFFFFF", region="content", font="Yu Gothic UI",
-                  weight="bold", glow="#FF4F8B", id="two", hidden=True),
+         "layers": photo("photo-night-market-glass.jpg", "#99000000") + [
+             {"type": "image", "src": "night-market-neon.png", "in": "window", "x": 0, "y": 0, "opacity": 0.7,
+              "motion": {"kind": "breathe", "seconds": 9, "min": 0.5, "max": 0.85}},
+         ] + street_lights() + [
+             # Heavy rain beyond the glass, out of focus like the street: a dense fine sheet and a nearer, softer one,
+             # each moving along its own slant.
+             {"type": "image", "src": "rain-glass-far.png", "in": "window", "x": 0, "y": 0, "loopY": 0.9, "loopX": 5.7,
+              "tile": 512, "opacity": 0.55},
+             {"type": "image", "src": "rain-glass-near.png", "in": "window", "x": 0, "y": 0, "loopY": 0.5, "loopX": 3.2,
+              "tile": 512, "opacity": 0.6},
+             text("夜市 ・ 雨", 4, 12, 16, "#FF8FB8", font="Yu Gothic UI", weight="bold", glow="#FF3D88", glowRadius=2),
+             text("二つで十分ですよ！", "30%", "44%", 26, "#FFFFFF", region="content", font="Yu Gothic UI",
+                  weight="bold", glow="#FF3D88", id="two", hidden=True),
          ],
          "eggs": [
              {"trigger": "type:noodles", "show": "two", "say": "Four bowls? Two is enough.", "seconds": 6},
              {"trigger": "idle:120", "say": "The rain never stops here. Neither does the radio.", "seconds": 6},
-         ]}}))
+         ]},
+     # Rain on the outside of the window: drops cling, then run down and leave wet trails.
+     "drips": {"density": 2.4},
+     # Neon tubes round the page (cyan) and the player (pink).
+     "neonEdges": {"content": "#37E0FF", "player": "#FF3D88", "bar": "#FF3D88", "glow": 16, "opacity": 0.8}}))
 
 # MARK: pixel themes (pixel art only in the title-bar chrome; plain textures behind the content)
 
