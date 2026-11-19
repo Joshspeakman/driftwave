@@ -1068,6 +1068,7 @@ dependencies = [
  "driftwave-audio",
  "driftwave-core",
  "driftwave-vis",
+ "objc2 0.6.5",
  "serde_json",
  "slint",
  "slint-build",
@@ -4297,8 +4298,6 @@ dependencies = [
 [[package]]
 name = "softbuffer"
 version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aac18da81ebbf05109ab275b157c22a653bb3c12cf884450179942f81bcbf6c3"
 dependencies = [
  "as-raw-xcb-connection",
  "bytemuck",
