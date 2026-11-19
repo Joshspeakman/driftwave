@@ -388,8 +388,7 @@ impl App {
         let rows: Vec<StationRow> = self
             .stations
             .iter()
-            .enumerate()
-            .map(|(_, s)| StationRow {
+            .map(|s| StationRow {
                 name: s.name.clone().into(),
                 detail: {
                     let codec = s.codec.to_uppercase();

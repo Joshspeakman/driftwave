@@ -148,6 +148,69 @@ ported from the C# app's SceneEffect, GlassDrops, NeonEdges and TitleDecor.
   start, and then it's painted again at 2360×1520. You could wait for the window's real size.
 
 
+
+### Mac: Round 11 follow-up (after e21bf0f and 3f848ef)
+
+- **Clippy is clean.** I fixed what was left: chunk-size lints in `look.rs`, `paint.rs` and `scene.rs`, and an
+  `.enumerate()` with an unused index in `main.rs`.
+- **The UI's moving strips were the next cost on Retina.** Retrowave was 25.4% and DOS Prompt and Retro 64 were
+  up to 16%. Each tick, Slint redrew a full-width band of the window and blended the full-resolution front
+  overlay over it. On macOS these are layers now:
+  - **Synthwave's rows** are under the UI (`SceneLayers::set_rows`), drawn by `look.rs` `synth_rows()` with
+    the same maths as the Slint rows. Each row is one colour across the window, so the picture is 1 px wide and
+    the floor's height, and the GPU stretches it sideways.
+  - **The scanline band** is a fixed gradient over the UI that only moves (`set_band`).
+  - **The front picture** (grain, vignette, scanlines) is a layer over the UI (`set_front`). The UI's own
+    redraws (VU meters, marquees) no longer blend it over themselves.
+    - Your frame draws over the front picture. Under an opaque frame, which is all of today's, it's cleared
+      before going to the layer. Under a see-through frame it stays in Slint (`Scenery.front-native`).
+  - **`full.slint`** skips its rows, band and front while those are layers.
+  - **The spotlight** moves only with the pointer, so it stays in Slint.
+  - **Revealed egg signs** in front of the cards now sit under the grain on the Mac. I left that as is.
+- **Checked with still captures**, layers against your Slint path (`DRIFTWAVE_SLINT_SCENE=1`): no pixel differs
+  by more than 8 levels in Program Manager (frame + scene), Retro 64 (frame + scanlines), DOS Prompt,
+  Analog 70s, Retrowave or Night Market. Aqua differs by up to 12 in a soft light band, its still moment
+  caught at a slightly different time.
+  - The 48 px inset title bar and the content card running 1 px past the edges show correctly.
+  - Full → Classic → Full shows and hides it all.
+- **The rain painting** had grown with the new rain tiles: three full-window image layers drawn a pixel at a
+  time, with a wrap and bounds checks per pixel.
+  - `Picture::over_pre_run` blends whole runs with the same arithmetic; a test checks it matches `over_pre`
+    exactly. `draw_image` uses it.
+  - Radial fills (the aurora's blobs, passing lights) only cover each row's chord and use a 1024-step table of
+    the stops; a test checks they're within 1 level of sampling each pixel.
+  - **A timing test,** `cargo test --release -p driftwave-app motion_cost -- --ignored --nocapture`, measured
+    back to back:
+
+    | Theme | Before | After |
+    |---|---|---|
+    | Night Market | 2.12 ms a frame | 1.61 |
+    | Frosted Glass | 2.22 | 1.32 |
+    | Neon Noir | 1.40 | 0.85 |
+- **The valve's first reading** included the backdrop paint, 160 ms on Retina. On a busy Mac it read 11–13.5%
+  for Night Market, close to the 16% limit for a scene that costs 3.5%. `valve.since` now restarts after
+  each paint, and the first reading is 5.0%.
+- **Lints in your newest commits:** the `effects.rs` tests module now comes last (`items_after_test_module`),
+  and `Scene`'s user picture is laid with `over_pre_run` (it was `chunks_exact`).
+- **Mac timing note:** with the machine busy (load average about 7 today), the app's main thread lands on the
+  efficiency cores and in-app timings swing about 3×. Compare against the default theme measured at the same
+  time.
+- **Now**, Retina, Full, playing, in front, `-noValve`:
+
+  | Themes | CPU (one core) |
+  |---|---|
+  | Default | 1.5% |
+  | Most themes | 1.3–1.7% |
+  | Retro 64 | 1.6% (was up to 16%) |
+  | DOS Prompt | 1.6% |
+  | Retrowave | 1.8% (from 25.4%) |
+  | Neon Noir | 2.7% |
+  | Night Market | 3.6% |
+  | Frosted Glass | 3.7% (from 7.8%) |
+  | Analog 70s | 4.2% (its VU meters and dial in Slint) |
+  | Llama Whip | 4.5% |
+
+
 ## Round 10 (2026-11-18): stage 1, the Full layout and the swap
 
 **PC (done):** `rust/app` is now one window with two looks.
