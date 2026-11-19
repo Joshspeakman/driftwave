@@ -69,6 +69,9 @@ has it. Don't propose bridges, hybrids or a second program.
 - **Playback tests:**
   - On the Mac: `scripts/*.sh`. `scripts/package-mac.sh [--nightly]` builds `Driftwave.app` (ad-hoc signed) in
     `~/ProjectBuilds/shortwave-macos/app`.
+  - **Launch tests** run the app with what only a real launch starts: `scripts/launch-test.sh` on the Mac (menu bar,
+    scene layers; `--media` adds Now Playing, and refuses while anything holds the audio output),
+    `scripts/launch-test.ps1` on the PC.
   - On the PC: `scripts/*.ps1` (smoke, behaviour, recording).
   - Both drive `driftwave-player`. Build it with
     `cargo build --release -p driftwave-audio --bin driftwave-player`.
