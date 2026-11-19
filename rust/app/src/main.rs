@@ -21,8 +21,10 @@
 #[global_allocator]
 static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+mod bg;
 mod covers;
 mod decor;
+mod editor;
 mod effects;
 mod eggs;
 mod finding;
@@ -61,7 +63,7 @@ thread_local! {
 /// The Full layout's window size by default.
 const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
-const FLAGS: [&str; 14] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve"];
+const FLAGS: [&str; 15] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
 const DEFAULT_WIDTH: f32 = 412.0;
 const DEFAULT_LIST_UNITS: f32 = 110.0;
@@ -207,6 +209,9 @@ struct App {
     look: look::Look,
     decor: decor::Decor,
     eggs: eggs::Eggs,
+    /// Your own background, and its playing GIF and GIPHY search.
+    bg: Option<bg::Picture>,
+    bg_state: bg::State,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -361,13 +366,17 @@ impl App {
         let fallback_body = if cfg!(target_os = "macos") { "Helvetica Neue" } else { "Segoe UI" };
         let fallback_lcd = if cfg!(target_os = "macos") { "Menlo" } else { "Consolas" };
         g.set_body_font(theme.and_then(|t| t.fonts.body.clone()).unwrap_or(fallback_body.into()).into());
-        g.set_lcd_font(theme.and_then(|t| t.fonts.lcd.clone()).unwrap_or(fallback_lcd.into()).into());
+        let lcd = theme.and_then(|t| t.fonts.lcd.clone()).unwrap_or(fallback_lcd.into());
+        let pixel_face = matches!(lcd.as_str(), "VT323" | "Press Start 2P");
+        g.set_lcd_small_font(if pixel_face { "Share Tech Mono".into() } else { lcd.clone().into() });
+        g.set_lcd_font(lcd.into());
         let mut choices = vec![Choice { id: "default".into(), name: "Default".into(), on: theme.is_none() }];
         choices.extend(self.themes.iter().map(|t| Choice { id: t.id.clone().into(), name: t.name.clone().into(), on: Some(&t.id) == id.as_ref() }));
         ui.set_themes(ModelRc::new(VecModel::from(choices)));
         self.settings["theme"] = json!(id.clone().unwrap_or_else(|| "default".into()));
         let owned = id.as_ref().and_then(|id| self.themes.iter().find(|t| &t.id == id)).cloned();
         self.apply_look(owned.as_ref(), &f, ui_font);
+        self.show_editor();
         log(&format!("theme {}", id.unwrap_or_else(|| "default".into())));
     }
 
@@ -966,7 +975,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let list_units = settings.get("listUnits").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_LIST_UNITS).max(62.0);
     let cache_dir = paths.favicons();
     let sorting_raw = settings.get("sorting").and_then(Value::as_str).map(String::from);
-    let appearance = settings.get("appearance").and_then(Value::as_str).unwrap_or("system").to_string();
+    // Test runs: -appearance light|dark|system.
+    let appearance = args.get("appearance").map(String::from).unwrap_or_else(|| settings.get("appearance").and_then(Value::as_str).unwrap_or("system").to_string());
     let full_size = (
         settings.get("fullWidth").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(FULL_SIZE.0).max(760.0),
         settings.get("fullHeight").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(FULL_SIZE.1).max(520.0),
@@ -1019,6 +1029,8 @@ fn main() -> Result<(), slint::PlatformError> {
         look: look::Look::default(),
         decor: decor::Decor::default(),
         eggs: eggs::Eggs::default(),
+        bg: None,
+        bg_state: bg::State::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
@@ -1029,12 +1041,42 @@ fn main() -> Result<(), slint::PlatformError> {
     }));
     {
         // Scenes move unless asked to hold still (-still, or "sceneMotion": false).
-        let mut a = app.borrow_mut();
-        let still = a.args.flag("still") || a.settings.get("sceneMotion").and_then(Value::as_bool) == Some(false);
-        a.look.still = still;
+        let still = {
+            let mut a = app.borrow_mut();
+            let still = a.args.flag("still") || a.settings.get("sceneMotion").and_then(Value::as_bool) == Some(false);
+            a.look.still = still;
+            still
+        };
         ui.global::<Scenery>().set_motion_on(!still);
         let w = app.clone();
         ui.global::<Scenery>().on_motion_chosen(move |on| w.borrow_mut().choose_motion(on));
+        // Your own background.
+        let b = ui.global::<Bg>();
+        let w = app.clone();
+        b.on_choose_file(move || w.borrow_mut().choose_background());
+        let w = app.clone();
+        b.on_remove(move || w.borrow_mut().remove_background());
+        let w = app.clone();
+        b.on_dim_changed(move |d| w.borrow_mut().set_background_dim(d));
+        let w = app.clone();
+        b.on_open_search(move || w.borrow_mut().open_giphy());
+        let w = app.clone();
+        b.on_search(move |q| w.borrow_mut().giphy_search(&q));
+        let w = app.clone();
+        b.on_pick(move |i| w.borrow_mut().giphy_pick(i as usize));
+        let w = app.clone();
+        b.on_key_changed(move |k| w.borrow_mut().set_giphy_key(&k));
+        b.set_builtin_key(option_env!("DRIFTWAVE_GIPHY_KEY").is_some_and(|k| !k.is_empty()));
+        {
+            let mut a = app.borrow_mut();
+            let key = a.settings.get("giphyKey").and_then(Value::as_str).unwrap_or("").to_string();
+            b.set_key(key.into());
+            // Test runs: -background <file> imports a picture or GIF (into the test folder) and uses it.
+            match a.args.get("background").map(std::path::PathBuf::from) {
+                Some(file) => a.use_background_file(file),
+                None => a.load_background(),
+            }
+        }
         let w = app.clone();
         let weak = ui.as_weak();
         ui.window().on_winit_window_event(move |window, event| {
@@ -1369,6 +1411,40 @@ fn main() -> Result<(), slint::PlatformError> {
         app.apply_theme(id);
         app.save_settings();
     });
+    // Customize Theme.
+    {
+        let ed = ui.global::<Ed>();
+        let a = app.clone();
+        ed.on_customize(move || a.borrow_mut().customize_theme());
+        let a = app.clone();
+        ed.on_import(move || a.borrow_mut().import_theme());
+        let a = app.clone();
+        ed.on_export(move || a.borrow_mut().export_theme());
+        let a = app.clone();
+        ed.on_delete(move || a.borrow_mut().delete_theme());
+        let a = app.clone();
+        ed.on_set_name(move |n| a.borrow_mut().edit_name(&n));
+        let a = app.clone();
+        ed.on_set_base(move |b| a.borrow_mut().edit_base(&b));
+        let a = app.clone();
+        ed.on_set_token(move |k, h| a.borrow_mut().edit_token(&k, &h));
+        let a = app.clone();
+        ed.on_set_font(move |w, v| a.borrow_mut().edit_font(&w, &v));
+        let a = app.clone();
+        ed.on_set_size(move |v| a.borrow_mut().edit_title_size(&v));
+        let a = app.clone();
+        ed.on_set_weight(move |i| a.borrow_mut().edit_weight(i));
+        let a = app.clone();
+        ed.on_set_spacing(move |v| a.borrow_mut().edit_spacing(&v));
+        let a = app.clone();
+        ed.on_set_upper(move |on| a.borrow_mut().edit_upper(on));
+        let a = app.clone();
+        ed.on_set_corners(move |v| a.borrow_mut().edit_corners(v));
+        let a = app.clone();
+        ed.on_set_cover(move |v| a.borrow_mut().edit_cover(v));
+        let a = app.clone();
+        ed.on_toggle_effect(move |k, on| a.borrow_mut().edit_effect(&k, on));
+    }
     let a = app.clone();
     ui.on_choose_theme(move |id| {
         let id = id.to_string();
@@ -1417,6 +1493,13 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         });
         std::mem::forget(timer);
+    }
+    // Test runs: -customize opens the theme editor (a copy of the theme), -scroll <px> scrolls Settings.
+    if app.borrow().args.flag("customize") {
+        app.borrow_mut().customize_theme();
+    }
+    if let Some(px) = app.borrow().args.num("scroll") {
+        ui.global::<Dir>().set_settings_scroll(-(px as f32));
     }
     // Test runs: -egg <trigger> [-eggAt <s>] sets an easter egg off (konami, type:word, click:id, idle:s).
     if let Some(trigger) = app.borrow().args.get("egg").map(String::from) {

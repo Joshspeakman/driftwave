@@ -81,10 +81,10 @@
         },
         {
           "type": "rect",
-          "in": "window",
-          "x": "-30%",
+          "in": "titlebar-full",
+          "x": 0,
           "y": 0,
-          "w": 160,
+          "w": 120,
           "h": 2,
           "fill": [
             "#00FFFFFF",
@@ -92,16 +92,10 @@
           ],
           "angle": "h",
           "scatter": {
-            "n": 22,
+            "n": 14,
             "seed": 3,
             "w": "100%",
-            "h": "100%"
-          },
-          "motion": {
-            "kind": "scroll",
-            "x": 1600,
-            "seconds": 3.5,
-            "randomOffset": 3.5
+            "h": 44
           }
         },
         {

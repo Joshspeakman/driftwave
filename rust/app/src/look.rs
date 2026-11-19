@@ -239,6 +239,22 @@ impl App {
         th.set_title_cursor(cursor.is_some());
         th.set_title_cursor_color(slint_colour(cursor.and_then(|o| colour(o, "color")).unwrap_or(f.text)));
 
+        // Window chrome of an era: caption buttons (win95, win31, xp, mac, platinum), bevels, selection, a centred title.
+        let chrome = fx("chrome");
+        let captions = chrome.and_then(|o| o.get("captions")).and_then(Value::as_str).unwrap_or("fluent");
+        th.set_captions(captions.into());
+        th.set_title_center(chrome.and_then(|o| o.get("center")).and_then(Value::as_bool) == Some(true));
+        th.set_title_plate(slint_colour(chrome.and_then(|o| colour(o, "plate")).unwrap_or(Color { a: 0, r: 0, g: 0, b: 0 })));
+        th.set_bevel(chrome.and_then(|o| o.get("bevel")).and_then(Value::as_bool) == Some(true));
+        let bc = |k: &str, d: Color| slint_colour(chrome.and_then(|o| colour(o, k)).unwrap_or(d));
+        th.set_bevel_light(bc("bevelLight", Color { a: 255, r: 255, g: 255, b: 255 }));
+        th.set_bevel_hi(bc("bevelHi", Color { a: 255, r: 0xDF, g: 0xDF, b: 0xDF }));
+        th.set_bevel_shadow(bc("bevelShadow", Color { a: 255, r: 0x80, g: 0x80, b: 0x80 }));
+        th.set_bevel_dark(bc("bevelDark", Color { a: 255, r: 0, g: 0, b: 0 }));
+        th.set_selection(bc("selection", Color { a: 0, r: 0, g: 0, b: 0 }));
+        th.set_selection_text(bc("selectionText", Color { a: 255, r: 255, g: 255, b: 255 }));
+        th.set_hard_shadow(bc("hardShadow", Color { a: 0, r: 0, g: 0, b: 0 }));
+
         // Neon tubes, and a thick screen frame.
         let neon = fx("neonEdges");
         th.set_neon_content_on(neon.is_some_and(|o| o.get("content").is_some()));
@@ -328,15 +344,22 @@ impl App {
 
         // The scene, and the panels that let it show through: a theme's see-through colours are see-through
         // whenever there's something behind them.
-        self.look.scene = Scene::for_theme(theme);
+        let user = self.bg.as_ref().map(|p| p.frames[0].clone());
+        self.look.scene = match user {
+            Some(img) => Some(Scene::with_user(theme, img, self.bg_dim(), f.background)),
+            None => Scene::for_theme(theme),
+        };
         let behind = self.look.scene.as_ref().is_some_and(Scene::has_backdrop);
+        let user = self.bg.is_some();
         self.look.panels = behind.then(|| {
             let own = |k: &str, solid: Color| theme.and_then(|t| t.colors.get(k).copied()).unwrap_or(solid);
+            // Your background shows through every theme: smoky glass in the theme's colours (as the C# app did).
+            let glass = |c: Color, a: f64| if user { Color { a: (a * 255.0) as u8, ..c } } else { c };
             Panels {
-                surface: own("surface", f.surface),
-                card: own("card", f.card),
-                pane: own("pane", f.pane),
-                control: own("control", f.control),
+                surface: glass(own("surface", f.surface), 0.72),
+                card: glass(own("card", f.card), 0.72),
+                pane: glass(own("pane", f.pane), 0.62),
+                control: glass(own("control", f.control), 0.8),
                 text: f.text2,
                 card_text: f.card_text2,
                 pane_text: f.pane_text,
@@ -509,6 +532,7 @@ impl App {
             }
         }
 
+        self.tick_background(ui, now, focused && ambient);
         if self.look.scene.is_none() {
             self.park_look(ui);
             return;
@@ -657,6 +681,22 @@ impl App {
             crate::paint::frost(&mut back, 0, (g.title * scale).round() as usize, bw, bh, r);
         }
         // The full-window scaled art isn't needed until the next backdrop (motion's pictures are smaller).
+        // Retrowave's sun: its own picture over the page's glass, in its real colours.
+        {
+            let scenery = ui.global::<Scenery>();
+            let page = g.region(Some("content"));
+            match scene.effects().sun_picture(g.width * scale, g.height * scale, (page.x + page.w / 2.0) * scale, scale, 0.4) {
+                Some((p, x, y)) => {
+                    scenery.set_sun(Image::from_rgba8_premultiplied(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&p.px, p.w as u32, p.h as u32)));
+                    scenery.set_sun_x(x / scale);
+                    scenery.set_sun_y(y / scale);
+                    scenery.set_sun_w(p.w as f32 / scale);
+                    scenery.set_sun_h(p.h as f32 / scale);
+                    scenery.set_sun_on(true);
+                }
+                None => scenery.set_sun_on(false),
+            }
+        }
         scene.forget_large((back.w * back.h / 2) as u64);
         // See-through panels: as see-through as the theme asks, unless the picture behind would drown their text.
         // With motion, a little more (lights pass behind them).

@@ -32,7 +32,14 @@
   },
   "corners": {},
   "effects": {
-    "tiles": {"colors": ["#121212", "#1A1A1A", "#161616"], "ink": "#5A5A5A"},
+    "tiles": {
+      "colors": [
+        "#121212",
+        "#1A1A1A",
+        "#161616"
+      ],
+      "ink": "#5A5A5A"
+    },
     "spotlight": {
       "radius": 560,
       "opacity": 0.42

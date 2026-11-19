@@ -37,7 +37,14 @@
     "cover": 0
   },
   "effects": {
-    "tiles": {"colors": ["#000080", "#008080", "#808080"], "flat": true},
+    "tiles": {
+      "colors": [
+        "#000080",
+        "#008080",
+        "#808080"
+      ],
+      "flat": true
+    },
     "frame": {
       "color": "#000080",
       "thickness": 4
@@ -58,27 +65,6 @@
           "w": "100%",
           "h": 48,
           "fill": "#000080"
-        },
-        {
-          "type": "bevel",
-          "in": "titlebar",
-          "x": 0,
-          "y": 12,
-          "w": 26,
-          "h": 24,
-          "fill": "#C0C0C0",
-          "edge": 2,
-          "id": "menu",
-          "clickable": true
-        },
-        {
-          "type": "rect",
-          "in": "titlebar",
-          "x": 6,
-          "y": 22,
-          "w": 14,
-          "h": 4,
-          "fill": "#000000"
         }
       ],
       "eggs": [
@@ -88,16 +74,18 @@
           "seconds": 9
         },
         {
-          "trigger": "click:menu",
-          "say": "Restore, Move, Size, Minimise, Maximise, Close, Switch To... Driftwave.",
-          "seconds": 5
-        },
-        {
           "trigger": "type:win",
           "say": "C:\\> win  -- starting Driftwave for Workgroups...",
           "seconds": 5
         }
       ]
+    },
+    "chrome": {
+      "captions": "win31",
+      "bevel": true,
+      "selection": "#000080",
+      "selectionText": "#FFFFFF",
+      "center": true
     }
   }
 }

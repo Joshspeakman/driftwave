@@ -37,10 +37,18 @@
     "cover": 0
   },
   "effects": {
-    "tiles": {"colors": ["#000080", "#008080", "#800080", "#808000"], "flat": true},
+    "tiles": {
+      "colors": [
+        "#000080",
+        "#800000",
+        "#800080",
+        "#808000"
+      ],
+      "flat": true
+    },
     "windowTitle": {
-      "font": "Microsoft Sans Serif",
-      "size": 13,
+      "font": "Tahoma",
+      "size": 11,
       "weight": "bold",
       "color": "#FFFFFF"
     },
@@ -53,11 +61,7 @@
           "y": 0,
           "w": "100%",
           "h": 48,
-          "fill": [
-            "#000080",
-            "#1084D0"
-          ],
-          "angle": "h"
+          "fill": "#000080"
         },
         {
           "type": "bevel",
@@ -168,6 +172,12 @@
           "seconds": 5
         }
       ]
+    },
+    "chrome": {
+      "captions": "win95",
+      "bevel": true,
+      "selection": "#000080",
+      "selectionText": "#FFFFFF"
     }
   }
 }

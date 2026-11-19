@@ -36,7 +36,14 @@
     "cover": 0
   },
   "effects": {
-    "tiles": {"colors": ["#9DB689", "#AFC79A", "#8CA878"], "ink": "#2B3627"},
+    "tiles": {
+      "colors": [
+        "#9DB689",
+        "#AFC79A",
+        "#8CA878"
+      ],
+      "ink": "#2B3627"
+    },
     "windowTitle": {
       "font": "VT323",
       "size": 20,

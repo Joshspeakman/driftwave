@@ -61,7 +61,7 @@ impl Station {
             parts.push(format!("{} kbps", self.bitrate));
         }
         if !self.country.is_empty() {
-            parts.push(self.country.clone());
+            parts.push(short_country(&self.country));
         }
         parts.join(" · ")
     }
@@ -486,5 +486,72 @@ mod tests {
         assert_eq!(s.subtitle(), "MP3 · 128 kbps · Germany");
         let l = Station::local("Mine", "http://m", None);
         assert!(l.id.starts_with("local-") && l.is_local);
+    }
+}
+
+/// A country's name as people say it: the directory uses ISO's formal names ("The United States Of America",
+/// "Korea, Republic Of", "Viet Nam"), in title case even for "of" and "the".
+pub fn short_country(name: &str) -> String {
+    let n = name.trim();
+    let known = [
+        ("The United States Of America", "United States"),
+        ("United States Of America", "United States"),
+        ("The United Kingdom Of Great Britain And Northern Ireland", "United Kingdom"),
+        ("United Kingdom Of Great Britain And Northern Ireland", "United Kingdom"),
+        ("The Russian Federation", "Russia"),
+        ("Russian Federation", "Russia"),
+        ("Korea, Republic Of", "South Korea"),
+        ("The Republic Of Korea", "South Korea"),
+        ("Korea, Democratic People's Republic Of", "North Korea"),
+        ("Iran (Islamic Republic Of)", "Iran"),
+        ("Iran, Islamic Republic Of", "Iran"),
+        ("Viet Nam", "Vietnam"),
+        ("Bolivia (Plurinational State Of)", "Bolivia"),
+        ("Venezuela (Bolivarian Republic Of)", "Venezuela"),
+        ("Taiwan, Province Of China", "Taiwan"),
+        ("Tanzania, United Republic Of", "Tanzania"),
+        ("Moldova, Republic Of", "Moldova"),
+        ("The Netherlands", "Netherlands"),
+        ("Netherlands (Kingdom Of The)", "Netherlands"),
+        ("Syrian Arab Republic", "Syria"),
+        ("Lao People's Democratic Republic", "Laos"),
+        ("Congo, The Democratic Republic Of The", "DR Congo"),
+        ("The Democratic Republic Of The Congo", "DR Congo"),
+        ("Micronesia, Federated States Of", "Micronesia"),
+        ("Palestine, State Of", "Palestine"),
+        ("Brunei Darussalam", "Brunei"),
+        ("Holy See (Vatican City State)", "Vatican City"),
+        ("Türkiye", "Türkiye"),
+        ("The Philippines", "Philippines"),
+        ("The Dominican Republic", "Dominican Republic"),
+        ("The Czech Republic", "Czechia"),
+    ];
+    if let Some((_, short)) = known.iter().find(|(long, _)| long.eq_ignore_ascii_case(n)) {
+        return short.to_string();
+    }
+    // Otherwise: no leading "The", and the little words in lower case.
+    let n = n.strip_prefix("The ").unwrap_or(n);
+    n.split(' ')
+        .enumerate()
+        .map(|(i, w)| match (i, w) {
+            (0, _) => w.to_string(),
+            (_, "Of" | "And" | "The") => w.to_lowercase(),
+            _ => w.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+#[cfg(test)]
+mod short_country_tests {
+    use super::short_country;
+
+    #[test]
+    fn countries_read_as_people_say_them() {
+        assert_eq!(short_country("The United States Of America"), "United States");
+        assert_eq!(short_country("Korea, Republic Of"), "South Korea");
+        assert_eq!(short_country("Bosnia And Herzegovina"), "Bosnia and Herzegovina");
+        assert_eq!(short_country("The Bahamas"), "Bahamas");
+        assert_eq!(short_country("Germany"), "Germany");
     }
 }

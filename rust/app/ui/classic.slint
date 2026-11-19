@@ -29,6 +29,8 @@ export global Pal {
     in-out property <color> glow: #00000000;
     in-out property <string> body-font: "Segoe UI";
     in-out property <string> lcd-font: "Consolas";
+    // Small LCD labels: the LCD font, unless it's a pixel face that only reads when large.
+    in-out property <string> lcd-small-font: "Consolas";
     // The theme's picture as the skin under the panels' faces (see-through then), what lies over everything
     // (grain, scanlines), and the theme's neon on the panels' edges.
     in-out property <bool> skin-on;
@@ -177,8 +179,10 @@ component Emboss inherits Rectangle {
     in property <string> family: Pal.body-font;
     in property <int> weight: 700;
     in property <length> spacing;
+    // The embossed shadow only where it's big enough to read as relief (small, it smears the letters).
+    in property <bool> relief: root.size >= 10px;
     width: tx.preferred-width; height: tx.preferred-height;
-    Text { x: 0; y: 1px; text: root.text; color: #00000080; font-size: root.size; font-family: root.family; font-weight: root.weight; letter-spacing: root.spacing; }
+    if root.relief: Text { x: 0; y: 1px; text: root.text; color: #00000080; font-size: root.size; font-family: root.family; font-weight: root.weight; letter-spacing: root.spacing; }
     tx := Text { x: 0; y: 0; text: root.text; color: root.ink; font-size: root.size; font-family: root.family; font-weight: root.weight; letter-spacing: root.spacing; }
 }
 
@@ -212,7 +216,7 @@ component TitleBar inherits Rectangle {
     }
     tt := Emboss {
         x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
-        text: root.title; ink: Pal.title-text; size: 6 * u; family: Pal.lcd-font; spacing: 1.2 * u;
+        text: root.title; ink: Pal.title-text; size: max(9px, 6 * u); family: Pal.body-font; spacing: 1.2 * u;
     }
     @children
 }
@@ -257,7 +261,7 @@ component Pill inherits Button3D {
     Led { x: 3.5 * u; y: (parent.height - 3 * u) / 2; width: 3 * u; height: 3 * u; lit: root.on; }
     Text {
         x: 8 * u; y: (parent.height - self.height) / 2 + (root.down ? 1px : 0px); text: root.label;
-        font-size: 4.6 * u; font-weight: 800; letter-spacing: 0.3 * u; color: root.on ? Pal.glyph-on : Pal.glyph.transparentize(15%);
+        font-size: max(7.5px, 4.6 * u); font-weight: 800; letter-spacing: 0.3 * u; color: root.on ? Pal.glyph-on : Pal.glyph.transparentize(15%);
     }
 }
 
@@ -272,7 +276,7 @@ component Letter inherits Rectangle {
     background: ta.pressed ? #00000040 : (ta.has-hover ? #FFFFFF14 : transparent);
     ta := TouchArea { clicked => { root.clicked(); } }
     Text {
-        text: letter; font-family: Pal.lcd-font; font-size: 5.6 * u; font-weight: 700;
+        text: letter; font-family: Pal.lcd-font; font-size: max(8.5px, 5.6 * u); font-weight: 700;
         color: on ? Pal.lcd-lit : Pal.lcd-lit.transparentize(ta.has-hover ? 35% : 72%);
         x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
     }
@@ -415,11 +419,11 @@ export component ClassicView inherits Rectangle {
             TitleButton { x: parent.width - 19 * u; y: 1 * u; u: u; glyph: "shade"; clicked => { root.shaded = !root.shaded; root.panels-changed(); } }
             TitleButton { x: parent.width - 10 * u; y: 1 * u; u: u; glyph: "close"; clicked => { root.quit(); } }
             if shaded: Text {
-                x: 12 * u; y: (parent.height - self.height) / 2; text: root.marquee; color: Pal.title-text; font-family: Pal.lcd-font; font-size: 5.6 * u;
+                x: 12 * u; y: (parent.height - self.height) / 2; text: root.marquee; color: Pal.title-text; font-family: Pal.lcd-font; font-size: max(8.5px, 5.6 * u);
                 width: parent.width - 76 * u; overflow: elide;
             }
             if shaded: Text {
-                x: parent.width - 56 * u; y: (parent.height - self.height) / 2; color: Pal.title-text; font-family: Pal.lcd-font; font-size: 5.6 * u; font-weight: 700;
+                x: parent.width - 56 * u; y: (parent.height - self.height) / 2; color: Pal.title-text; font-family: Pal.lcd-font; font-size: max(8.5px, 5.6 * u); font-weight: 700;
                 text: (root.minutes < 10 ? "0" : "") + root.minutes + ":" + (root.seconds < 10 ? "0" : "") + root.seconds;
             }
         }
@@ -451,7 +455,7 @@ export component ClassicView inherits Rectangle {
             Rectangle { x: 42.3 * u; y: 13 * u; width: 1.7 * u; height: 1.7 * u; border-radius: 0.85 * u; background: root.playing ? Pal.lcd-lit : Pal.lcd-lit.transparentize(55%); }
             Digit { x: 46.5 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: root.seconds / 10; dim: !root.playing; }
             Digit { x: 57.5 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: mod(root.seconds, 10); dim: !root.playing; }
-            Text { x: 69 * u; y: 4 * u; text: root.clock-mode ? "CLK" : "ELAP"; color: Pal.lcd-lit.transparentize(45%); font-size: 4.6 * u; font-family: Pal.lcd-font; font-weight: 700; }
+            Text { x: 69 * u; y: 4 * u; text: root.clock-mode ? "CLK" : "ELAP"; color: Pal.lcd-lit.transparentize(45%); font-size: max(7.5px, 4.6 * u); font-family: Pal.lcd-small-font; font-weight: 700; }
             TouchArea { x: 18 * u; y: 2 * u; width: 52 * u; height: 19 * u; clicked => { root.toggle-clock(); } }
             // Glass: a reflection across the digits only (never over the moving spectrum, so it costs nothing per frame).
             Rectangle { x: 1px; y: 1px; width: parent.width - 2px; height: 11 * u; border-radius: 1px;
@@ -469,23 +473,23 @@ export component ClassicView inherits Rectangle {
             x: 101 * u; y: 16 * u; width: 171 * u; height: 13 * u; fill: Pal.lcd-back; clip: true;
             mq := Text {
                 x: 3 * u - root.marquee-offset; y: (parent.height - self.height) / 2;
-                text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 6.6 * u;
+                text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: max(9.5px, 6.6 * u);
             }
-            Text { x: mq.x + mq.width + 24 * u; y: mq.y; text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 6.6 * u; }
+            Text { x: mq.x + mq.width + 24 * u; y: mq.y; text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: max(9.5px, 6.6 * u); }
         }
         if !shaded: Rectangle {
             // Bitrate, sample rate, and mono / stereo LEDs. Blank ("--") until the stream says.
             x: 101 * u; y: 32 * u; width: 171 * u; height: 9 * u;
             Well { x: 0; width: 18 * u; height: parent.height; fill: Pal.lcd-back; shade: 3px;
-                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.kbps > 0 ? root.kbps : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 5.6 * u; font-weight: 700; } }
-            Text { x: 20 * u; y: (parent.height - self.height) / 2; text: "kbps"; color: Pal.glyph.transparentize(35%); font-size: 5.2 * u; }
+                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.kbps > 0 ? root.kbps : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.6 * u); font-weight: 700; } }
+            Text { x: 20 * u; y: (parent.height - self.height) / 2; text: "kbps"; color: Pal.glyph.transparentize(35%); font-size: max(8.5px, 5.2 * u); }
             Well { x: 37 * u; width: 14 * u; height: parent.height; fill: Pal.lcd-back; shade: 3px;
-                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.khz > 0 ? root.khz : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 5.6 * u; font-weight: 700; } }
-            Text { x: 53 * u; y: (parent.height - self.height) / 2; text: "kHz"; color: Pal.glyph.transparentize(35%); font-size: 5.2 * u; }
+                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.khz > 0 ? root.khz : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.6 * u); font-weight: 700; } }
+            Text { x: 53 * u; y: (parent.height - self.height) / 2; text: "kHz"; color: Pal.glyph.transparentize(35%); font-size: max(8.5px, 5.2 * u); }
             Led { x: 104 * u; y: 3 * u; width: 5 * u; height: 3 * u; lit: root.playing && root.mono; }
-            Text { x: 111 * u; y: (parent.height - self.height) / 2; text: "MONO"; font-size: 5 * u; font-weight: 700; color: Pal.glyph.transparentize(root.mono && root.playing ? 0% : 55%); }
+            Text { x: 111 * u; y: (parent.height - self.height) / 2; text: "MONO"; font-size: max(8px, 5 * u); font-weight: 700; color: Pal.glyph.transparentize(root.mono && root.playing ? 0% : 55%); }
             Led { x: 134 * u; y: 3 * u; width: 5 * u; height: 3 * u; lit: root.playing && root.stereo; }
-            Text { x: 141 * u; y: (parent.height - self.height) / 2; text: "STEREO"; font-size: 5 * u; font-weight: 700; color: Pal.glyph.transparentize(root.stereo && root.playing ? 0% : 55%); }
+            Text { x: 141 * u; y: (parent.height - self.height) / 2; text: "STEREO"; font-size: max(8px, 5 * u); font-weight: 700; color: Pal.glyph.transparentize(root.stereo && root.playing ? 0% : 55%); }
         }
         if !shaded: Path {
             // A speaker, for the volume.
@@ -498,11 +502,11 @@ export component ClassicView inherits Rectangle {
         }
         if !shaded: Text {
             x: 196 * u; y: 46 * u; text: Math.round(root.volume * 100) + "%"; color: Pal.glyph.transparentize(25%);
-            font-family: Pal.lcd-font; font-size: 5.2 * u; font-weight: 700;
+            font-family: Pal.lcd-font; font-size: max(8.5px, 5.2 * u); font-weight: 700;
         }
         if !shaded: Text {
             x: 214 * u; y: 46 * u; width: 58 * u; horizontal-alignment: right; overflow: elide;
-            text: root.status; color: Pal.glyph.transparentize(15%); font-family: Pal.lcd-font; font-size: 5.2 * u; font-weight: 700;
+            text: root.status; color: Pal.glyph.transparentize(15%); font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.2 * u); font-weight: 700;
         }
         if !shaded: Rectangle {
             // The buffer gauge: how much of the stream is waiting to play (live radio has nothing to seek).
@@ -515,7 +519,7 @@ export component ClassicView inherits Rectangle {
                 Rectangle { y: 0; height: parent.height / 2; border-radius: parent.border-radius; background: #FFFFFF26; }
             }
             Led { x: gauge + 4 * u; y: 1.5 * u; width: 5 * u; height: 3 * u; lit: root.playing; }
-            Text { x: gauge + 10.5 * u; y: (parent.height - self.height) / 2; text: "LIVE"; font-size: 5 * u; font-weight: 800;
+            Text { x: min(gauge + 10.5 * u, parent.width - self.width - 3 * u); y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u); font-weight: 800;
                 color: Pal.glyph.transparentize(root.playing ? 0% : 55%); }
         }
         if !shaded: Rectangle {
@@ -591,13 +595,13 @@ export component ClassicView inherits Rectangle {
                     }
                     Text {
                         x: 6.5 * u; y: (parent.height - self.height) / 2; width: parent.width - 80 * u; overflow: elide;
-                        text: (i + 1) + ". " + s.name; font-size: 5.2 * u;
+                        text: (i + 1) + ". " + s.name; font-size: max(8.5px, 5.2 * u);
                         color: i == root.selected ? Pal.list-selected-text : (s.playing ? Pal.list-playing : Pal.list-text);
                         font-weight: s.playing ? 700 : 400;
                     }
                     Text {
                         x: parent.width - self.width - 3 * u; y: (parent.height - self.height) / 2; width: 70 * u; horizontal-alignment: right; overflow: elide;
-                        text: s.detail; font-size: 5 * u; font-family: Pal.lcd-font;
+                        text: s.detail; font-size: max(8px, 5 * u); font-family: Pal.lcd-small-font;
                         color: i == root.selected ? Pal.list-selected-text : Pal.list-text.transparentize(40%);
                     }
                 }
@@ -618,11 +622,11 @@ export component ClassicView inherits Rectangle {
             Transport { x: 0; width: 20 * u; height: parent.height; u: u; glyph: "play"; clicked => { if (root.selected >= 0) { root.play-station(root.selected); } } }
             Well {
                 x: 23 * u; width: 110 * u; height: parent.height; fill: Pal.lcd-back; shade: 3px;
-                Text { x: 3 * u; y: (parent.height - self.height) / 2; text: root.list-summary; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 5.2 * u; font-weight: 700; }
+                Text { x: 3 * u; y: (parent.height - self.height) / 2; text: root.list-summary; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.2 * u); font-weight: 700; }
             }
             Text {
                 x: parent.width - self.width - 12 * u; y: (parent.height - self.height) / 2;
-                text: root.layout-name + " layout"; color: Pal.glyph.transparentize(50%); font-size: 5.2 * u;
+                text: root.layout-name + " layout"; color: Pal.glyph.transparentize(50%); font-size: max(8.5px, 5.2 * u);
             }
         }
     }
@@ -657,28 +661,28 @@ export component ClassicView inherits Rectangle {
             Flickable {
                 x: 2 * u; y: 2 * u; width: parent.width - 4 * u; height: parent.height - 4 * u;
                 content-height: (root.themes.length + 6) * 9 * u;
-                Text { x: 3 * u; y: 1 * u; text: "LAYOUT"; color: Pal.glyph.transparentize(45%); font-size: 4.6 * u; font-weight: 800; letter-spacing: 0.4 * u; }
+                Text { x: 3 * u; y: 1 * u; text: "LAYOUT"; color: Pal.glyph.transparentize(45%); font-size: max(7.5px, 4.6 * u); font-weight: 800; letter-spacing: 0.4 * u; }
                 Rectangle {
                     y: 7 * u; height: 9 * u; width: parent.width / 2; border-radius: 1px;
                     background: full-ta.has-hover ? Pal.list-selected-back : transparent;
                     full-ta := TouchArea { clicked => { root.to-full(); } }
-                    Text { x: 6 * u; y: (parent.height - self.height) / 2; text: "     Full"; font-size: 5.4 * u;
+                    Text { x: 6 * u; y: (parent.height - self.height) / 2; text: "     Full"; font-size: max(8.5px, 5.4 * u);
                         color: full-ta.has-hover ? Pal.list-selected-text : Pal.glyph; }
                 }
-                Text { x: parent.width / 2 + 3 * u; y: 9 * u; text: "✓  Classic"; color: Pal.glyph-on; font-size: 5.4 * u; }
-                Text { x: 3 * u; y: 19 * u; text: "THEME"; color: Pal.glyph.transparentize(45%); font-size: 4.6 * u; font-weight: 800; letter-spacing: 0.4 * u; }
+                Text { x: parent.width / 2 + 3 * u; y: 9 * u; text: "✓  Classic"; color: Pal.glyph-on; font-size: max(8.5px, 5.4 * u); }
+                Text { x: 3 * u; y: 19 * u; text: "THEME"; color: Pal.glyph.transparentize(45%); font-size: max(7.5px, 4.6 * u); font-weight: 800; letter-spacing: 0.4 * u; }
                 for t[i] in root.themes: Rectangle {
                     y: (i + 3) * 9 * u; height: 9 * u; width: parent.width; border-radius: 1px;
                     background: ta.has-hover ? Pal.list-selected-back : transparent;
                     ta := TouchArea { clicked => { root.choose-theme(t.id); } }
                     Text {
-                        x: 6 * u; y: (parent.height - self.height) / 2; font-size: 5.4 * u;
+                        x: 6 * u; y: (parent.height - self.height) / 2; font-size: max(8.5px, 5.4 * u);
                         text: (t.on ? "✓  " : "     ") + t.name;
                         color: ta.has-hover ? Pal.list-selected-text : (t.on ? Pal.glyph-on : Pal.glyph);
                     }
                 }
-                Text { x: 3 * u; y: (root.themes.length + 3.6) * 9 * u; text: "ABOUT"; color: Pal.glyph.transparentize(45%); font-size: 4.6 * u; font-weight: 800; letter-spacing: 0.4 * u; }
-                Text { x: 6 * u; y: (root.themes.length + 4.5) * 9 * u; text: "Driftwave " + root.version + "  ·  Made with Slint"; color: Pal.glyph; font-size: 5 * u; }
+                Text { x: 3 * u; y: (root.themes.length + 3.6) * 9 * u; text: "ABOUT"; color: Pal.glyph.transparentize(45%); font-size: max(7.5px, 4.6 * u); font-weight: 800; letter-spacing: 0.4 * u; }
+                Text { x: 6 * u; y: (root.themes.length + 4.5) * 9 * u; text: "Driftwave " + root.version + "  ·  Made with Slint"; color: Pal.glyph; font-size: max(8px, 5 * u); }
             }
         }
     }
