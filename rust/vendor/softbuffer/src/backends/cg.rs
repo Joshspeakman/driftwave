@@ -20,6 +20,18 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::ptr;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Driftwave: see-through frames. Off (the default), every pixel is shown opaque, as upstream does. On,
+/// pixels keep their (premultiplied) alpha and the layer is marked non-opaque, so layers the app puts
+/// beneath it (a theme's backdrop and its moving rain, stretched and blended by the GPU) show through
+/// wherever the UI is clear or see-through. Applies from the next present, which then copies the whole frame.
+static SEE_THROUGH: AtomicBool = AtomicBool::new(false);
+
+/// See [`SEE_THROUGH`].
+pub fn set_see_through(on: bool) {
+    SEE_THROUGH.store(on, Ordering::Relaxed);
+}
 
 /// Driftwave: presenting through IOSurfaces instead of a new CGImage per frame.
 ///
@@ -231,6 +243,8 @@ pub struct CGImpl<D, W> {
     /// Driftwave (see `iosurface`): the persistent drawing buffer and whether it holds the last frame.
     canvas: Vec<u32>,
     canvas_valid: bool,
+    /// Whether the last present was see-through (see `SEE_THROUGH`).
+    see_through: bool,
     /// The surfaces in rotation, which one is the layer's contents now, frames presented so far, and
     /// the damage of the last few frames (to bring an older surface up to date).
     surfaces: Vec<Surface>,
@@ -368,6 +382,7 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> SurfaceInterface<D, W> for CGImpl<
             observer,
             canvas: Vec::new(),
             canvas_valid: false,
+            see_through: false,
             surfaces: Vec::new(),
             current: None,
             frame: 0,
@@ -467,6 +482,16 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> BufferInterface for BufferImpl<'_,
             imp.damage.pop_front();
         }
 
+        // See-through switched: every surface needs the whole frame again, with or without alpha.
+        let see_through = SEE_THROUGH.load(Ordering::Relaxed);
+        if see_through != imp.see_through {
+            imp.see_through = see_through;
+            for s in &mut imp.surfaces {
+                s.frame = 0;
+            }
+            imp.layer.setOpaque(!see_through);
+        }
+
         // A surface of the right size that the window server isn't using, the most up to date first.
         imp.surfaces.retain(|s| s.width == w && s.height == h);
         if imp.current.is_some_and(|c| c >= imp.surfaces.len()) {
@@ -523,8 +548,12 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> BufferInterface for BufferImpl<'_,
                 for y in (r.y as usize).min(h)..(r.y as usize + r.height.get() as usize).min(h) {
                     let src = &imp.canvas[y * w + x0..y * w + x1];
                     let dst = std::slice::from_raw_parts_mut(base.add(y * stride).cast::<u32>().add(x0), x1 - x0);
-                    for (d, s) in dst.iter_mut().zip(src) {
-                        *d = *s | 0xFF00_0000; // opaque
+                    if see_through {
+                        dst.copy_from_slice(src);
+                    } else {
+                        for (d, s) in dst.iter_mut().zip(src) {
+                            *d = *s | 0xFF00_0000; // opaque
+                        }
                     }
                 }
             }

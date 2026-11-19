@@ -88,6 +88,9 @@ export global Scenery {
     in property <image> back;
     in property <bool> moving;
     in property <image> motion;
+    // macOS: the backdrop and motion are Core Animation layers beneath the window (look.rs), so the Full
+    // view is drawn see-through over them instead of drawing those two pictures itself.
+    in property <bool> native;
     in property <[SceneText]> texts;
     // What lies over everything (grain, vignette, scanlines): one still, mostly clear picture.
     in property <bool> front-on;
@@ -528,13 +531,13 @@ export component FullView inherits Rectangle {
     callback choose-theme(string);
     callback choose-appearance(string);
 
-    background: Th.background;
+    background: Scenery.on && Scenery.native ? transparent : Th.background;
     property <length> pane-w: 220px;
     property <length> title-h: 48px;
     out property <length> title-end: window-title.x + window-title.width;
 
-    if Scenery.on: Image { x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.back; image-fit: fill; }
-    if Scenery.on && Scenery.moving: Image {
+    if Scenery.on && !Scenery.native: Image { x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.back; image-fit: fill; }
+    if Scenery.on && !Scenery.native && Scenery.moving: Image {
         x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.motion; image-fit: fill; image-rendering: smooth;
     }
     property <length> player-w: show-player ? 312px : 0px;

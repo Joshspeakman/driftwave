@@ -34,6 +34,11 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Driftwave"
 
+# The built-in themes and their art (photos, drops), found by rust/app/src/resources.rs in Contents/Resources.
+# Fonts are built into the program.
+cp -R themes "$APP/Contents/Resources/themes"
+cp -R assets/theme-art "$APP/Contents/Resources/theme-art"
+
 # Icon: every size macOS asks for, from the 1024 px render of the logo.
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 mkdir "$WORK/AppIcon.iconset"

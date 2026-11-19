@@ -28,6 +28,10 @@ use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, Raw
 #[cfg(target_family = "wasm")]
 pub use backends::web::SurfaceExtWeb;
 
+/// Driftwave: on macOS, keep the frame's alpha so layers beneath it show through (see the CG backend).
+#[cfg(target_vendor = "apple")]
+pub use backends::cg::set_see_through;
+
 /// An instance of this struct contains the platform-specific data that must be managed in order to
 /// write to a window on that platform.
 #[derive(Clone, Debug)]

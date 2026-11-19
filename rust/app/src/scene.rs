@@ -18,7 +18,7 @@ use driftwave_core::theme::{Color, Theme};
 use image::{imageops, RgbaImage};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// The Full layout's geometry (logical px), for a scene's regions.
@@ -61,19 +61,9 @@ impl Geometry {
     }
 }
 
-/// The folder of theme art: next to the program, or (while developing) the repository's `assets/theme-art`.
+/// The folder of theme art (see `resources::find`).
 pub fn art_dir() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    let mut dir = exe.parent().map(Path::to_path_buf);
-    while let Some(d) = dir {
-        for candidate in [d.join("theme-art"), d.join("assets").join("theme-art")] {
-            if candidate.join("CREDITS.txt").exists() {
-                return Some(candidate);
-            }
-        }
-        dir = d.parent().map(Path::to_path_buf);
-    }
-    None
+    crate::resources::find("theme-art", "CREDITS.txt")
 }
 
 fn num(o: &Map<String, Value>, k: &str, d: f64) -> f64 {
@@ -388,6 +378,12 @@ impl Scene {
         let out = Arc::new(out);
         self.scaled.insert((id, w, h), out.clone());
         Some(out)
+    }
+
+    /// Lets go of scaled pictures bigger than `max_px` pixels: the backdrop's full-window ones (tens of MB on a
+    /// dense screen) are needed again only if the same size is painted again, which rescales them once.
+    pub fn forget_large(&mut self, max_px: u64) {
+        self.scaled.retain(|_, p| (p.width() as u64) * (p.height() as u64) <= max_px);
     }
 
     /// The still part, at `scale` px per logical px. With `still` (motion off), a moment of what would move too.
