@@ -361,7 +361,10 @@ impl App {
         let fallback_body = if cfg!(target_os = "macos") { "Helvetica Neue" } else { "Segoe UI" };
         let fallback_lcd = if cfg!(target_os = "macos") { "Menlo" } else { "Consolas" };
         g.set_body_font(theme.and_then(|t| t.fonts.body.clone()).unwrap_or(fallback_body.into()).into());
-        g.set_lcd_font(theme.and_then(|t| t.fonts.lcd.clone()).unwrap_or(fallback_lcd.into()).into());
+        let lcd = theme.and_then(|t| t.fonts.lcd.clone()).unwrap_or(fallback_lcd.into());
+        let pixel_face = matches!(lcd.as_str(), "VT323" | "Press Start 2P");
+        g.set_lcd_small_font(if pixel_face { "Share Tech Mono".into() } else { lcd.clone().into() });
+        g.set_lcd_font(lcd.into());
         let mut choices = vec![Choice { id: "default".into(), name: "Default".into(), on: theme.is_none() }];
         choices.extend(self.themes.iter().map(|t| Choice { id: t.id.clone().into(), name: t.name.clone().into(), on: Some(&t.id) == id.as_ref() }));
         ui.set_themes(ModelRc::new(VecModel::from(choices)));
