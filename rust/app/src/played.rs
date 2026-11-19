@@ -35,6 +35,21 @@ pub(crate) struct Tracks {
     just_saved: Option<Result<PathBuf, String>>,
 }
 
+/// Now, as the system writes a time without seconds ("2:46 PM", "14:46").
+fn short_time() -> String {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::Globalization::{GetTimeFormatEx, TIME_NOSECONDS};
+        let mut buf = [0u16; 64];
+        // SAFETY: a null locale and time mean the user's own and now; the buffer's length is passed.
+        let n = unsafe { GetTimeFormatEx(std::ptr::null(), TIME_NOSECONDS, std::ptr::null(), std::ptr::null(), buf.as_mut_ptr(), buf.len() as i32) };
+        if n > 1 {
+            return String::from_utf16_lossy(&buf[..n as usize - 1]);
+        }
+    }
+    chrono::Local::now().format("%H:%M").to_string()
+}
+
 /// "45 s", "15 min", "1 min 30 s".
 fn duration_text(s: i64) -> String {
     match (s / 60, s % 60) {
@@ -194,7 +209,7 @@ impl App {
         let mut p = Played {
             title: title.to_string(),
             station,
-            at: chrono::Local::now().format("%H:%M").to_string(),
+            at: short_time(),
             id: None,
             file: None,
             state: None,
@@ -353,10 +368,10 @@ impl App {
                     match p.state {
                         Some(RecordingState::Recording) if p.save_when_done => "Recording · saved when it ends",
                         Some(RecordingState::Recording) => "Recording",
-                        _ if recorded && decide => "Recorded · not saved yet",
+                        _ if recorded && decide => "Not saved yet",
                         Some(RecordingState::DiscardedBelowMinDuration) => "Too short to keep",
-                        Some(RecordingState::IdleIncomplete) if self.player.armed => "Joined partway: not recorded",
-                        Some(RecordingState::IdleUnsupported) if self.player.armed => "This stream can't be recorded",
+                        Some(RecordingState::IdleIncomplete) if self.player.armed => "Joined partway · not recorded",
+                        Some(RecordingState::IdleUnsupported) if self.player.armed => "Can't be recorded",
                         Some(RecordingState::DiscardedStreamFailure) if self.player.armed => "Interrupted",
                         _ => "",
                     }

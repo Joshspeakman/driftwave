@@ -2,7 +2,8 @@
 //!
 //! macOS: UNUserNotificationCenter, which only works from a bundled app (`Driftwave.app`, made by
 //! `scripts/package-mac.sh`); from a bare binary, such as `cargo run` or a test run, it does nothing
-//! rather than crash. Windows and Linux: not yet (the C# app used Windows app notifications).
+//! rather than crash. Windows: toast notifications under Driftwave's app id, which only an installed copy has (its
+//! Start-menu shortcut carries the id; see `winapp`). Linux: not yet.
 
 pub struct Notifier {
     #[cfg(target_os = "macos")]
@@ -32,7 +33,9 @@ impl Notifier {
     pub fn available(&self) -> bool {
         #[cfg(target_os = "macos")]
         return self.bundled;
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(windows)]
+        return crate::winapp::installed() && crate::winapp::shortcut_path().is_some_and(|p| p.exists());
+        #[cfg(not(any(target_os = "macos", windows)))]
         false
     }
 
@@ -51,8 +54,9 @@ impl Notifier {
             let block = RcBlock::new(move |granted: Bool, _err: *mut NSError| done(granted.as_bool()));
             center.requestAuthorizationWithOptions_completionHandler(UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound, &block);
         }
+        // Windows asks nothing first (the person can turn them off in Settings > System > Notifications).
         #[cfg(not(target_os = "macos"))]
-        done(false);
+        done(self.available());
     }
 
     /// Shows a new track: the song as the title, the artist under it, and the station.
@@ -74,7 +78,13 @@ impl Notifier {
             let request = UNNotificationRequest::requestWithIdentifier_content_trigger(&NSString::from_str("track"), &content, None);
             UNUserNotificationCenter::currentNotificationCenter().addNotificationRequest_withCompletionHandler(&request, None);
         }
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(windows)]
+        {
+            if self.available() {
+                let _ = crate::winapp::toast(song, &[artist.unwrap_or(""), station], "track");
+            }
+        }
+        #[cfg(not(any(target_os = "macos", windows)))]
         let _ = (song, artist, station);
     }
 }
