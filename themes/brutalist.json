@@ -55,6 +55,9 @@
       "blur": 0,
       "offsetX": 4,
       "offsetY": 4
+    },
+    "chrome": {
+      "hardShadow": "#111111"
     }
   }
 }

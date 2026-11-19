@@ -218,6 +218,7 @@ impl App {
         th.set_bevel_dark(bc("bevelDark", Color { a: 255, r: 0, g: 0, b: 0 }));
         th.set_selection(bc("selection", Color { a: 0, r: 0, g: 0, b: 0 }));
         th.set_selection_text(bc("selectionText", Color { a: 255, r: 255, g: 255, b: 255 }));
+        th.set_hard_shadow(bc("hardShadow", Color { a: 0, r: 0, g: 0, b: 0 }));
 
         // Neon tubes, and a thick screen frame.
         let neon = fx("neonEdges");

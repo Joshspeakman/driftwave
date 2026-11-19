@@ -299,17 +299,12 @@ fn aurora(p: &mut Picture, _scale: f32, a: &Aurora, t: f64) {
     let d = w.max(h) * 0.75;
     for (i, c) in a.colors.iter().enumerate() {
         let fi = i as f64;
-        let at = |k: f64| -> (f32, f32) {
-            (w * (0.5 + 0.38 * (k + fi * 2.1).sin() as f32) - d / 2.0, h * (0.5 + 0.34 * (k * 1.3 + fi * 1.7).cos() as f32) - d / 2.0)
-        };
-        let k0 = STILL_TIME * (0.05 + fi * 0.02);
-        let path: Vec<(f32, f32)> = std::iter::once(at(k0)).chain((1..=4).map(|k| at(k0 + k as f64 * 1.4))).chain(std::iter::once(at(k0))).collect();
-        let seconds = 60.0 + fi * 17.0;
-        let f = (t.rem_euclid(seconds) / seconds) as f32 * (path.len() - 1) as f32;
-        let j = (f as usize).min(path.len() - 2);
-        let s = f - j as f32;
-        let s = s * s * (3.0 - 2.0 * s);
-        let (x, y) = (path[j].0 + (path[j + 1].0 - path[j].0) * s, path[j].1 + (path[j + 1].1 - path[j].1) * s);
+        // A slow Lissajous figure: steady speed, no corners.
+        let tau = std::f64::consts::TAU;
+        let (t1, t2) = (60.0 + fi * 17.0, 77.0 + fi * 17.0);
+        let t = t + STILL_TIME;
+        let x = w * (0.5 + 0.38 * (tau * t / t1 + fi * 2.1).sin() as f32) - d / 2.0;
+        let y = h * (0.5 + 0.34 * (tau * t / t2 + fi * 1.7).cos() as f32) - d / 2.0;
         let light = Paint::Stops(vec![(0.0, [c[0], c[1], c[2], a.opacity]), (1.0, [c[0], c[1], c[2], 0.0])], b'v');
         p.fill(Rect { x, y, w: d, h: d }, Shape::Radial, &light, 1.0);
     }
