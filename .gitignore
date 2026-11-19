@@ -9,3 +9,5 @@ windows/**/obj/
 windows/**/*.user
 windows/.vs/
 windows/out/
+# Windows release packages (scripts/package-windows.ps1)
+dist/

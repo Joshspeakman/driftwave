@@ -414,6 +414,21 @@ export struct TrackRow {
     queued: bool,
 }
 
+// Settings' Updates rows.
+export global Upd {
+    // idle, checking, uptodate, available, downloading, installing, failed
+    in property <string> state: "idle";
+    in property <string> message;
+    in property <float> progress;
+    in property <bool> auto: true;
+    // An installed Windows copy, which can replace itself.
+    in property <bool> can-install;
+    callback check();
+    callback install();
+    callback notes();
+    callback auto-changed(bool);
+}
+
 // Settings' playback and recording rows, and Played Tracks' Save.
 export global Prefs {
     in property <bool> background: true;
@@ -1856,6 +1871,30 @@ export component FullView inherits Rectangle {
                             if Ed.confirm-delete: Btn { text: "Delete"; primary: true; danger: true; clicked => { Ed.delete(); } }
                         }
                     }
+                }
+                Rectangle { height: 8px; }
+                GroupHeading { text: "Updates"; }
+                SettingRow {
+                    label: "Updates";
+                    note: Upd.message;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        if Upd.state == "available": Btn { text: "Release Notes"; clicked => { Upd.notes(); } }
+                        if Upd.state == "available": Btn { text: Upd.can-install ? "Download and Install" : "Get It…"; primary: true; clicked => { Upd.install(); } }
+                        if Upd.state != "available": Btn {
+                            text: "Check Now"; enabled: Upd.state != "checking" && Upd.state != "downloading" && Upd.state != "installing";
+                            clicked => { Upd.check(); }
+                        }
+                    }
+                }
+                if Upd.state == "downloading" || Upd.state == "installing": Rectangle {
+                    height: 4px; border-radius: 2px; background: Th.control-stroke;
+                    Rectangle { x: 0; width: parent.width * (Upd.state == "installing" ? 1 : Upd.progress); border-radius: 2px; background: Th.accent; animate width { duration: 150ms; } }
+                }
+                SettingRow {
+                    label: "Check automatically";
+                    note: "At most once a day, when Driftwave starts.";
+                    Switch { on: Upd.auto; toggled(v) => { Upd.auto-changed(v); } }
                 }
                 Rectangle { height: 8px; }
                 GroupHeading { text: "About"; }
