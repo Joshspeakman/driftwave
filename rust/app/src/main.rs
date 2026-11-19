@@ -31,7 +31,9 @@ mod finding;
 mod integration;
 mod look;
 mod paint;
+mod migrate;
 mod played;
+mod update;
 mod scene;
 mod fullpal;
 mod palette;
@@ -64,7 +66,7 @@ thread_local! {
 /// The Full layout's window size by default.
 const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
-const FLAGS: [&str; 16] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize", "giphy"];
+const FLAGS: [&str; 17] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize", "giphy", "installUpdate"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
 const DEFAULT_WIDTH: f32 = 412.0;
 const DEFAULT_LIST_UNITS: f32 = 110.0;
@@ -215,6 +217,8 @@ struct App {
     bg_state: bg::State,
     /// The songs heard, and their recordings.
     played: played::Tracks,
+    /// Newer releases, and installing one.
+    updates: update::Updates,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -977,7 +981,18 @@ fn main() -> Result<(), slint::PlatformError> {
         }
         s
     } else {
-        std::fs::read(paths.support.join("settings.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_else(|| json!({}))
+        let mine = paths.support.join("settings.json");
+        match std::fs::read(&mine) {
+            Ok(b) => serde_json::from_slice(&b).unwrap_or_else(|_| json!({})),
+            // The first launch: the C# Driftwave's settings, themes and background, if it was used here.
+            Err(_) => match migrate::from_csharp(&paths) {
+                Some(s) => {
+                    let _ = std::fs::write(&mine, serde_json::to_vec_pretty(&s).unwrap_or_default());
+                    s
+                }
+                None => json!({}),
+            },
+        }
     };
 
     // Stations: a test run's from -library (read only) or a single -playURL; otherwise our own list, first copied
@@ -1063,6 +1078,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }),
         find: finding::Finding::default(),
         played: played::Tracks::default(),
+        updates: update::Updates::default(),
         look: look::Look::default(),
         decor: decor::Decor::default(),
         eggs: eggs::Eggs::default(),
@@ -1170,6 +1186,7 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.set_version(env!("CARGO_PKG_VERSION").into());
         a.player.armed = a.record_armed_setting();
         a.show_prefs();
+        a.show_updates();
         let width = if let Some(w) = a.args.num("width") {
             w as f32
         } else if a.args.flag("double") {
@@ -1559,6 +1576,20 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         });
         std::mem::forget(timer);
+    }
+    // Updates: Settings' row, and the check a few seconds after launch.
+    {
+        let u = ui.global::<Upd>();
+        let a = app.clone();
+        u.on_check(move || a.borrow_mut().check_updates());
+        let a = app.clone();
+        u.on_install(move || a.borrow_mut().install_update());
+        let a = app.clone();
+        u.on_notes(move || a.borrow().open_release_notes());
+        let a = app.clone();
+        u.on_auto_changed(move |on| a.borrow_mut().set_auto_updates(on));
+        let a = app.clone();
+        slint::Timer::single_shot(Duration::from_secs(5), move || a.borrow_mut().check_updates_at_launch());
     }
     // Test runs: -giphy opens the GIPHY search; -picker <n> opens Customize's colour picker on token n.
     if app.borrow().args.flag("giphy") {

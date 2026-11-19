@@ -51,6 +51,19 @@ cargo build --release -p driftwave-audio --bin driftwave-player   # the headless
 The playback tests drive the headless player against real streams and a local test server: `scripts/*.ps1` on
 Windows, `scripts/*.sh` on the Mac. They need Python 3 and ffmpeg.
 
+### A Windows release
+
+`scripts\package-windows.ps1` builds the app and makes `dist\Driftwave-<version>-win-x64.zip` and its `.sha256`:
+- the zip holds `Driftwave.exe` (with its icon and version, from the Windows SDK's `rc.exe`), the themes and their
+  art, `Install.ps1`, `uninstall.ps1` and a README;
+- `Install.ps1` installs for the current user (no admin rights) with a Start-menu shortcut carrying the app id
+  `Joshspeakman.Driftwave` (which notifications need) and a Settings > Apps entry;
+- published on a `v<version>` release of github.com/Joshspeakman/driftwave, the two files are what the in-app updater
+  (Settings > Updates) finds, checks and installs.
+
+Publishing a release is a separate, deliberate step. The first launch of the installed app brings the C# Driftwave's
+settings, themes and background across from `%APPDATA%\Driftwave`, which it only reads.
+
 ## Layout of the repository
 
 | Folder | What's in it |
