@@ -36,7 +36,13 @@
     "cover": 0.04
   },
   "effects": {
-    "tiles": {"colors": ["#7779AE", "#5F8EB0", "#8E8E8E"]},
+    "tiles": {
+      "colors": [
+        "#7779AE",
+        "#5F8EB0",
+        "#8E8E8E"
+      ]
+    },
     "windowTitle": {
       "font": "Segoe UI Semibold",
       "size": 13,
@@ -54,10 +60,10 @@
         },
         {
           "type": "line",
-          "in": "titlebar",
-          "x": 0,
+          "in": "titlebar-full",
+          "x": 74,
           "y": 15,
-          "x2": "100%",
+          "x2": -236,
           "y2": 0,
           "stroke": "#9A9A9A",
           "repeat": {
@@ -90,6 +96,16 @@
           "seconds": 5
         }
       ]
+    },
+    "chrome": {
+      "captions": "platinum",
+      "center": true,
+      "plate": "#DDDDDD",
+      "bevel": true,
+      "bevelLight": "#FFFFFF",
+      "bevelHi": "#EEEEEE",
+      "bevelShadow": "#AAAAAA",
+      "bevelDark": "#555555"
     }
   }
 }

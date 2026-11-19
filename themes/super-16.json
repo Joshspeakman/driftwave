@@ -36,7 +36,15 @@
     "cover": 0.12
   },
   "effects": {
-    "tiles": {"colors": ["#4F43AE", "#2E9E4F", "#D93D3D", "#3D5FD9", "#B8962A"]},
+    "tiles": {
+      "colors": [
+        "#4F43AE",
+        "#2E9E4F",
+        "#D93D3D",
+        "#3D5FD9",
+        "#B8962A"
+      ]
+    },
     "windowTitle": {
       "font": "Press Start 2P",
       "size": 10,

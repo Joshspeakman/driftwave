@@ -38,7 +38,15 @@
     "cover": 0
   },
   "effects": {
-    "tiles": {"colors": ["#111111", "#FF3D00", "#FFFFFF"], "flat": true, "border": "#000000"},
+    "tiles": {
+      "colors": [
+        "#111111",
+        "#FF3D00",
+        "#FFFFFF"
+      ],
+      "flat": true,
+      "border": "#000000"
+    },
     "concrete": {
       "opacity": 0.5
     },

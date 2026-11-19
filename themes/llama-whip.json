@@ -38,7 +38,14 @@
     "cover": 0
   },
   "effects": {
-    "tiles": {"colors": ["#2A2414", "#3A2E10", "#1C1A16"], "ink": "#D4AF37"},
+    "tiles": {
+      "colors": [
+        "#2A2414",
+        "#3A2E10",
+        "#1C1A16"
+      ],
+      "ink": "#D4AF37"
+    },
     "lcd": {
       "color": "#00E000",
       "background": "#050805"

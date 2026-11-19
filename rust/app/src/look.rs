@@ -204,6 +204,21 @@ impl App {
         th.set_title_cursor(cursor.is_some());
         th.set_title_cursor_color(slint_colour(cursor.and_then(|o| colour(o, "color")).unwrap_or(f.text)));
 
+        // Window chrome of an era: caption buttons (win95, win31, xp, mac, platinum), bevels, selection, a centred title.
+        let chrome = fx("chrome");
+        let captions = chrome.and_then(|o| o.get("captions")).and_then(Value::as_str).unwrap_or("fluent");
+        th.set_captions(captions.into());
+        th.set_title_center(chrome.and_then(|o| o.get("center")).and_then(Value::as_bool) == Some(true));
+        th.set_title_plate(slint_colour(chrome.and_then(|o| colour(o, "plate")).unwrap_or(Color { a: 0, r: 0, g: 0, b: 0 })));
+        th.set_bevel(chrome.and_then(|o| o.get("bevel")).and_then(Value::as_bool) == Some(true));
+        let bc = |k: &str, d: Color| slint_colour(chrome.and_then(|o| colour(o, k)).unwrap_or(d));
+        th.set_bevel_light(bc("bevelLight", Color { a: 255, r: 255, g: 255, b: 255 }));
+        th.set_bevel_hi(bc("bevelHi", Color { a: 255, r: 0xDF, g: 0xDF, b: 0xDF }));
+        th.set_bevel_shadow(bc("bevelShadow", Color { a: 255, r: 0x80, g: 0x80, b: 0x80 }));
+        th.set_bevel_dark(bc("bevelDark", Color { a: 255, r: 0, g: 0, b: 0 }));
+        th.set_selection(bc("selection", Color { a: 0, r: 0, g: 0, b: 0 }));
+        th.set_selection_text(bc("selectionText", Color { a: 255, r: 255, g: 255, b: 255 }));
+
         // Neon tubes, and a thick screen frame.
         let neon = fx("neonEdges");
         th.set_neon_content_on(neon.is_some_and(|o| o.get("content").is_some()));
