@@ -99,6 +99,7 @@ or while Windows' animation effects are off. They also freeze into one fixed fra
 | `vu` | Player pane: left and right VU meters | |
 | `scene` | The theme's own decoration and easter eggs (see "Scenes") | `layers`, `eggs` |
 | `tiles` | Placeholder covers in the theme's own colours (one per station, by name) | `colors` (array), `flat`, `ink` (the antenna; else chosen by brightness), `border` |
+| `chrome` | Window chrome of an era: caption buttons, 90s bevels on buttons, fields, cards and dialogs, the selection colour, a centred title, a hard card shadow | `captions` (`fluent`, `win95`, `win31`, `xp`, `mac`, `platinum`), `bevel`, `bevelLight`, `bevelHi`, `bevelShadow`, `bevelDark`, `selection`, `selectionText`, `center`, `plate`, `hardShadow` |
 
 **Cost.** Moving effects run on one clock at 24 frames a second, setting composition properties
 directly (no layout), so the window redraws only that often. They rest whenever the window isn't the
@@ -297,18 +298,14 @@ are used.
 
 ## Applying a theme (Windows)
 
-- **Colours switch live.** Picking a theme recolours WinUI's shared theme brushes, so every control,
-  dialog and popup follows.
-- **Some things need a restart.** WinUI reads fonts, control corner radii and the primary text colour
-  only when the app starts. Switching to a theme that differs in those shows "Restart to finish",
-  with a Restart Now button that brings back the station that was playing.
-- **High Contrast always uses Default.**
-- **Customising:** built-in themes can't be edited. Settings > Appearance > Customize Theme makes a
-  copy, which is saved under the user's themes. In the copy you can change:
+- **Everything switches live:** colours, fonts, corners, effects and scenes, in both layouts, with no
+  restart.
+- **Customising:** built-in themes can't be edited. Settings > Theme > Customize Theme makes a copy
+  (of Default too), which is saved under the user's themes as you go. In the copy you can change:
   - every colour
   - the fonts, title size, weight, case and spacing
   - corners and cover roundness
-  - the backdrop and the light or dark base
+  - the light or dark base
   - which effects are on
 
-  Themes can be exported and imported as files.
+  Themes can be exported, imported (as files) and deleted.

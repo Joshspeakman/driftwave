@@ -320,7 +320,7 @@ impl Effects {
     pub fn sun_picture(&self, w: f32, h: f32, sun_x: f32, scale: f32, alpha: f32) -> Option<(Picture, f32, f32)> {
         let s = self.synthwave.as_ref()?;
         let horizon = h * 0.68;
-        let r = w.min(h) * 0.2;
+        let r = w.min(h) * 0.15;
         let (cx, cy) = (sun_x, horizon - r * 0.3);
         let (x0, y0) = ((cx - r - 1.0).floor().max(0.0), (cy - r - 1.0).floor().max(0.0));
         let (pw, ph) = ((2.0 * r + 3.0).ceil() as usize, (horizon - y0).ceil().max(1.0) as usize);

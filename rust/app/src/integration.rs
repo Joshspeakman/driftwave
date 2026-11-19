@@ -134,12 +134,20 @@ impl Integration {
 
     /// Call when the Notifications setting is turned on: asks macOS once. `done(false)` means it can't
     /// notify (not allowed, or not running as a bundled app), so the setting should go back off.
-    #[allow(dead_code)] // for the Notifications toggle when Settings gains it
     pub fn request_notifications(&self, done: impl Fn(bool) + Send + Sync + 'static) {
         match &self.notifier {
             Some(n) => n.request_permission(done),
             None => done(false),
         }
+    }
+
+    /// The notification-area (menu bar) icon is up: closing the window can leave Driftwave running there.
+    pub fn has_tray(&self) -> bool {
+        self.tray.is_some()
+    }
+
+    pub fn notifications_available(&self) -> bool {
+        self.notifier.as_ref().is_some_and(|n| n.available())
     }
 
     /// Requests since the last call: the tray menu, media keys, and other copies of the app.

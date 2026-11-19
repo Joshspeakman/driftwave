@@ -120,7 +120,10 @@ pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
                 (rgb(h, 0.78, 0.22 + vary * 0.08), rgb((h + 0.03).rem_euclid(1.0), 0.72, 0.50 + vary * 0.1))
             }
         }
-        None => (rgb(hue, 0.5, 0.55), rgb((hue + 0.09) % 1.0, 0.55, 0.78)),
+        None => {
+            let hue = if (0.13..0.22).contains(&hue) { 0.06 + (hue - 0.13) * 0.4 } else { hue };
+            (rgb(hue, 0.5, 0.55), rgb((hue + 0.09) % 1.0, 0.55, 0.78))
+        }
     }
 }
 
