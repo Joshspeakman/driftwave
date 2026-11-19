@@ -37,7 +37,14 @@
     "cover": 0
   },
   "effects": {
-    "tiles": {"colors": ["#0000AA", "#00AAAA", "#AA00AA"], "flat": true},
+    "tiles": {
+      "colors": [
+        "#0000AA",
+        "#00AAAA",
+        "#AA00AA"
+      ],
+      "flat": true
+    },
     "cursor": {
       "color": "#AAAAAA"
     },

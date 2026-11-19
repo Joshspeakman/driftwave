@@ -55,6 +55,13 @@ pub struct Effects {
     dark: bool,
 }
 
+impl Effects {
+    /// No effects at all (a scene that's only your own background).
+    pub fn none() -> Effects {
+        Effects::default()
+    }
+}
+
 /// When the aurora's still frame sits on its paths (C#: EffectsClock.StillTime).
 const STILL_TIME: f64 = 30.0;
 
@@ -252,42 +259,18 @@ fn concrete(p: &mut Picture, scale: f32, opacity: f32, dark_base: bool) {
     }
 }
 
-/// Retrowave: the sky, a striped setting sun, the floor and its vanishing lines. (The rows rolling towards you are
-/// the UI's.) Returns nothing; the horizon is at 60% of the height.
+/// Retrowave: the sky, the floor and its vanishing lines. The sun is painted on its own (sun_picture), over the page's
+/// glass; the rows rolling towards you are the UI's. The horizon is at 68% of the height.
 fn synthwave(p: &mut Picture, scale: f32, s: &Synthwave, back: Rgba, sun_x: f32) {
     let (w, h) = (p.w as f32, p.h as f32);
     let horizon = h * 0.68;
     let sky = Paint::Stops(vec![(0.0, back), (0.7, s.sky), (1.0, mix(s.sky, s.sun_bottom, 0.45))], b'v');
     p.fill(Rect { x: 0.0, y: 0.0, w, h: horizon }, Shape::Rect(0.0), &sky, 1.0);
-    // The sun: a smooth disc cut into slices by gaps that widen towards the horizon (crisp, on whole pixels).
-    let r = w.min(h) * 0.2;
-    let (cx, cy) = (sun_x, horizon - r * 0.3);
-    let step = 6.0 * scale;
-    let (x0, x1) = ((cx - r - 1.0).max(0.0) as usize, ((cx + r + 1.0) as usize).min(p.w));
-    let (y0, y1) = ((cy - r - 1.0).max(0.0) as usize, (horizon as usize).min(p.h));
-    for py in y0..y1 {
-        let y = py as f32 + 0.5;
-        let frac = (y - (cy - r)) / (2.0 * r);
-        let gap = if frac < 0.42 { 0.0 } else { ((frac - 0.42) * 14.0).min(4.5) * scale };
-        // Each slice is `step` tall; its last `gap` rows are sky.
-        let into = (y - (cy - r)).rem_euclid(step);
-        if into >= step - gap {
-            continue;
-        }
-        let c = mix(s.sun_top, s.sun_bottom, frac.clamp(0.0, 1.0));
-        for px in x0..x1 {
-            let d = (px as f32 + 0.5 - cx).hypot(y - cy);
-            let cov = (r + 0.5 - d).clamp(0.0, 1.0);
-            if cov > 0.0 {
-                p.blend(py * p.w + px, [c[0], c[1], c[2]], cov);
-            }
-        }
-    }
     let floor = Paint::Stops(vec![(0.0, mix(back, s.grid, 0.18)), (1.0, back)], b'v');
     p.fill(Rect { x: 0.0, y: horizon, w, h: h - horizon }, Shape::Rect(0.0), &floor, 1.0);
     for i in -14..=14 {
         let i = i as f32;
-        p.line(cx + i * w * 0.012, horizon, cx + i * w * 0.11, h, 1.2 * scale, s.grid, 0.55);
+        p.line(sun_x + i * w * 0.012, horizon, sun_x + i * w * 0.11, h, 1.2 * scale, s.grid, 0.55);
     }
     let glow = mix(s.grid, [1.0, 1.0, 1.0, 1.0], 0.4);
     p.fill(Rect { x: 0.0, y: horizon - scale, w, h: 2.0 * scale }, Shape::Rect(0.0), &Paint::Solid(glow), 1.0);
@@ -299,17 +282,12 @@ fn aurora(p: &mut Picture, _scale: f32, a: &Aurora, t: f64) {
     let d = w.max(h) * 0.75;
     for (i, c) in a.colors.iter().enumerate() {
         let fi = i as f64;
-        let at = |k: f64| -> (f32, f32) {
-            (w * (0.5 + 0.38 * (k + fi * 2.1).sin() as f32) - d / 2.0, h * (0.5 + 0.34 * (k * 1.3 + fi * 1.7).cos() as f32) - d / 2.0)
-        };
-        let k0 = STILL_TIME * (0.05 + fi * 0.02);
-        let path: Vec<(f32, f32)> = std::iter::once(at(k0)).chain((1..=4).map(|k| at(k0 + k as f64 * 1.4))).chain(std::iter::once(at(k0))).collect();
-        let seconds = 60.0 + fi * 17.0;
-        let f = (t.rem_euclid(seconds) / seconds) as f32 * (path.len() - 1) as f32;
-        let j = (f as usize).min(path.len() - 2);
-        let s = f - j as f32;
-        let s = s * s * (3.0 - 2.0 * s);
-        let (x, y) = (path[j].0 + (path[j + 1].0 - path[j].0) * s, path[j].1 + (path[j + 1].1 - path[j].1) * s);
+        // A slow Lissajous figure: steady speed, no corners.
+        let tau = std::f64::consts::TAU;
+        let (t1, t2) = (60.0 + fi * 17.0, 77.0 + fi * 17.0);
+        let t = t + STILL_TIME;
+        let x = w * (0.5 + 0.38 * (tau * t / t1 + fi * 2.1).sin() as f32) - d / 2.0;
+        let y = h * (0.5 + 0.34 * (tau * t / t2 + fi * 1.7).cos() as f32) - d / 2.0;
         let light = Paint::Stops(vec![(0.0, [c[0], c[1], c[2], a.opacity]), (1.0, [c[0], c[1], c[2], 0.0])], b'v');
         p.fill(Rect { x, y, w: d, h: d }, Shape::Radial, &light, 1.0);
     }
@@ -333,5 +311,37 @@ mod tests {
                 let _ = e.front(w, h, s, true);
             }
         }
+    }
+}
+
+impl Effects {
+    /// The synthwave sun on its own (transparent around it): a smooth disc cut into slices by gaps that widen towards
+    /// the horizon, at `alpha`. With where its top left goes (px). The horizon is at 68% of `h`.
+    pub fn sun_picture(&self, w: f32, h: f32, sun_x: f32, scale: f32, alpha: f32) -> Option<(Picture, f32, f32)> {
+        let s = self.synthwave.as_ref()?;
+        let horizon = h * 0.68;
+        let r = w.min(h) * 0.2;
+        let (cx, cy) = (sun_x, horizon - r * 0.3);
+        let (x0, y0) = ((cx - r - 1.0).floor().max(0.0), (cy - r - 1.0).floor().max(0.0));
+        let (pw, ph) = ((2.0 * r + 3.0).ceil() as usize, (horizon - y0).ceil().max(1.0) as usize);
+        let mut p = Picture::new(pw, ph);
+        let step = 6.0 * scale;
+        for py in 0..ph {
+            let y = y0 + py as f32 + 0.5;
+            let frac = (y - (cy - r)) / (2.0 * r);
+            let gap = if frac < 0.42 { 0.0 } else { ((frac - 0.42) * 14.0).min(4.5) * scale };
+            if (y - (cy - r)).rem_euclid(step) >= step - gap {
+                continue;
+            }
+            let c = mix(s.sun_top, s.sun_bottom, frac.clamp(0.0, 1.0));
+            for px in 0..pw {
+                let d = (x0 + px as f32 + 0.5 - cx).hypot(y - cy);
+                let cov = (r + 0.5 - d).clamp(0.0, 1.0);
+                if cov > 0.0 {
+                    p.blend(py * pw + px, [c[0], c[1], c[2]], cov * alpha);
+                }
+            }
+        }
+        Some((p, x0, y0))
     }
 }

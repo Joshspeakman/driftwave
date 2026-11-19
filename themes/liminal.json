@@ -31,13 +31,39 @@
   },
   "corners": {},
   "effects": {
-    "tiles": {"colors": ["#C9B458", "#BFA94E", "#D2BD63"], "ink": "#5C4F1E"},
+    "tiles": {
+      "colors": [
+        "#C9B458",
+        "#BFA94E",
+        "#D2BD63"
+      ],
+      "ink": "#5C4F1E"
+    },
     "grain": {
       "opacity": 0.07
     },
     "vignette": {
       "opacity": 0.35,
       "color": "#3A3018"
+    },
+    "scene": {
+      "layers": [
+        {
+          "type": "rect",
+          "in": "window",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": "100%",
+          "fill": "#D9CC8E",
+          "opacity": 0.35,
+          "repeat": {
+            "n": 200,
+            "dx": 24
+          },
+          "id": "wallpaper"
+        }
+      ]
     }
   }
 }

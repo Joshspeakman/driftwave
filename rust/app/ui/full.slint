@@ -50,6 +50,21 @@ export global Th {
     in-out property <color> tile-ink: transparent;
     in-out property <color> tile-border: transparent;
     in-out property <bool> window-title-upper: false;
+    // Window chrome of an era (the "chrome" effect): caption style, a centred title (on a plate), 90s bevels, and
+    // the selection colour (Windows' navy).
+    in-out property <string> captions: "fluent";
+    in-out property <bool> title-center;
+    in-out property <color> title-plate: transparent;
+    in-out property <bool> bevel;
+    in-out property <color> bevel-light: #FFFFFF;
+    in-out property <color> bevel-hi: #DFDFDF;
+    in-out property <color> bevel-shadow: #808080;
+    in-out property <color> bevel-dark: #000000;
+    in-out property <color> selection: transparent;
+    in-out property <color> selection-text: #FFFFFF;
+    // A hard offset shadow under cards (Brutalist), clear for none.
+    in-out property <color> hard-shadow: transparent;
+
     // A hard shadow behind page titles (titleShadow with no blur), and a block cursor after them.
     in-out property <bool> title-hard: false;
     in-out property <length> title-hard-x: 3px;
@@ -112,11 +127,21 @@ export global Scenery {
     // macOS: the front picture is a layer over the window too (unless a see-through frame must go over it).
     in property <bool> front-native;
     in property <[SceneText]> texts;
+    // Your own background's GIF, playing over its first frame (which the backdrop holds), and its dim.
+    in property <bool> user-anim;
+    in property <image> user-image;
+    in property <float> user-dim;
     // What lies over everything (grain, vignette, scanlines): one still, mostly clear picture.
     in property <bool> front-on;
     in property <image> front;
     // Synthwave's rows rolling towards you (phase 0–1), the scanlines' slow band, and Stealth's spotlight.
     in property <bool> synth-on;
+    in property <bool> sun-on;
+    in property <image> sun;
+    in property <length> sun-x;
+    in property <length> sun-y;
+    in property <length> sun-w;
+    in property <length> sun-h;
     in property <color> synth-grid: #FF2E97;
     in property <float> synth-phase;
     in property <bool> band-on;
@@ -277,12 +302,13 @@ component SpectrumBars inherits Rectangle {
     for v[i] in Decor.bars: Rectangle {
         x: 6px + i * (root.bw + 3px); y: 6px; width: root.bw; height: 54px;
         Rectangle { background: @linear-gradient(0deg, #00C800 0%, #78E600 45%, #F0DC00 70%, #FF3C14 100%); }
-        Rectangle { y: 0; height: parent.height * (1 - v); background: Decor.lcd-back; }
-        if Decor.peaks[i] > 0: Rectangle {
-            y: clamp(parent.height * (1 - Decor.peaks[i]) - 2px, 0px, parent.height - 2px); height: 2px; background: #C8FFC8;
-        }
+        Rectangle { y: 0; height: (18 - Math.round(v * 18)) * 3px; background: Decor.lcd-back; }
     }
     for k in 18: Rectangle { x: 6px; y: 6px + k * 3px; width: root.width - 12px; height: 1px; background: Decor.lcd-back; }
+    for p[i] in Decor.peaks: Rectangle {
+        visible: p > 0;
+        x: 6px + i * (root.bw + 3px); y: 6px + (18 - max(1, Math.round(p * 18))) * 3px + 1px; width: root.bw; height: 2px; background: #C8FFC8;
+    }
 }
 
 // A backlit FM dial, 88 to 108 MHz; the pointer swings to each station's own spot.
@@ -304,17 +330,17 @@ component TuningDial inherits Rectangle {
         background: #F3E3C3.transparentize(self.major ? 0.1 : 0.45);
     }
     for m in 6: Text {
-        x: root.left + m * 4 / 20 * (root.right - root.left) - self.width / 2; y: root.height - 17px;
+        x: root.left + m * 4 / 20 * (root.right - root.left) - self.width / 2; y: root.height - 16px;
         text: 88 + m * 4; color: #F3E3C3; font-size: 11px; font-family: "Bahnschrift";
     }
     Text { x: 6px; y: 4px; text: "FM"; color: Decor.dial-ink; font-size: 10px; font-weight: 700; font-family: "Bahnschrift"; }
     Text { x: root.width - 28px; y: 4px; text: "MHz"; color: #F3E3C3B3; font-size: 10px; font-family: "Bahnschrift"; }
     property <length> nx: root.left + Decor.needle * (root.right - root.left);
     Rectangle {
-        x: root.nx - 5px; y: 5px; width: 10px; height: root.height - 10px;
+        x: root.nx - 5px; y: 5px; width: 10px; height: root.height - 22px;
         background: @linear-gradient(90deg, #FF5A2800 0%, #FF5A286E 50%, #FF5A2800 100%);
     }
-    Rectangle { x: root.nx - 1.25px; y: 5px; width: 2.5px; height: root.height - 10px; background: #FF5A28; }
+    Rectangle { x: root.nx - 1.25px; y: 5px; width: 2.5px; height: root.height - 22px; background: #FF5A28; }
 }
 
 // One VU meter: a cream face with its scale and red zone, and a needle on a spring. Drawn for 124×80 and scaled.
@@ -322,9 +348,21 @@ component VuMeter inherits Rectangle {
     in property <string> channel;
     in property <float> angle: -48;
     border-radius: 6px; border-width: 1px; border-color: #140C06;
-    background: @linear-gradient(180deg, #F8ECCD 0%, #E2CA96 100%);
+    background: @radial-gradient(circle, #FFF4D6 0%, #F1DDB0 45%, #E2CA96 100%);
     clip: true;
     property <float> k: min(self.width / 124px, self.height / 80px);
+    Path {
+        x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
+        stroke: #281C12; stroke-width: 1px * root.k; fill: transparent;
+        commands: "M 21.87 35.87 A 54 54 0 0 1 83.96 22.67";
+    }
+    for n[i] in ["-20", "-10", "-5", "0", "+3"]: Text {
+        property <float> deg: i == 0 ? -48 : i == 1 ? -24 : i == 2 ? 0 : i == 3 ? 24 : 48;
+        x: root.ox + (62 + 64 * sin(self.deg * 1deg)) * 1px * root.k - self.width / 2;
+        y: root.oy + (72 - 64 * cos(self.deg * 1deg)) * 1px * root.k - self.height / 2;
+        text: n; font-size: 7px * root.k; font-family: "Bahnschrift";
+        color: i >= 3 ? #C8281E : #281C12;
+    }
     property <length> ox: (self.width - 124px * self.k) / 2;
     property <length> oy: (self.height - 80px * self.k) / 2;
     Path {
@@ -342,7 +380,7 @@ component VuMeter inherits Rectangle {
         stroke: #C8281E; stroke-width: 3px * root.k; fill: transparent;
         commands: "M 85.18 19.93 A 57 57 0 0 1 104.36 33.86";
     }
-    Text { x: root.ox + 53px * root.k; y: root.oy + 40px * root.k; text: "VU"; color: #281C12; font-size: 12px * root.k; font-weight: 700; font-family: "Bahnschrift"; }
+    Text { x: root.ox + 53px * root.k; y: root.oy + 44px * root.k; text: "VU"; color: #281C12; font-size: 12px * root.k; font-weight: 700; font-family: "Bahnschrift"; }
     Text { x: root.ox + 6px * root.k; y: root.oy + 62px * root.k; text: root.channel; color: #281C12B3; font-size: 10px * root.k; font-family: "Bahnschrift"; }
     Path {
         x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
@@ -378,6 +416,59 @@ export struct Swatch {
     on: bool,
 }
 
+// A 90s 3D edge: two light lines top and left, two dark ones bottom and right (sunken: the reverse).
+component Bevel inherits Rectangle {
+    in property <bool> sunken;
+    property <color> tl1: root.sunken ? Th.bevel-shadow : Th.bevel-light;
+    property <color> tl2: root.sunken ? Th.bevel-dark : Th.bevel-hi;
+    property <color> br1: root.sunken ? Th.bevel-light : Th.bevel-dark;
+    property <color> br2: root.sunken ? Th.bevel-hi : Th.bevel-shadow;
+    Rectangle { x: 0; y: 0; width: parent.width - 1px; height: 1px; background: root.tl1; }
+    Rectangle { x: 0; y: 0; width: 1px; height: parent.height - 1px; background: root.tl1; }
+    Rectangle { x: 1px; y: 1px; width: parent.width - 3px; height: 1px; background: root.tl2; }
+    Rectangle { x: 1px; y: 1px; width: 1px; height: parent.height - 3px; background: root.tl2; }
+    Rectangle { x: 0; y: parent.height - 1px; width: parent.width; height: 1px; background: root.br1; }
+    Rectangle { x: parent.width - 1px; y: 0; width: 1px; height: parent.height; background: root.br1; }
+    Rectangle { x: 1px; y: parent.height - 2px; width: parent.width - 2px; height: 1px; background: root.br2; }
+    Rectangle { x: parent.width - 2px; y: 1px; width: 1px; height: parent.height - 2px; background: root.br2; }
+}
+
+// One raised 90s caption button (Windows 95, Windows 3.1, Mac OS 8), pressed in while held.
+component RetroButton inherits Rectangle {
+    in property <string> glyph; // min, max, restore, close, down, up, box
+    callback clicked();
+    background: Th.captions == "platinum" ? #DDDDDD : #C0C0C0;
+    ta := TouchArea { clicked => { root.clicked(); } }
+    Bevel { width: parent.width; height: parent.height; sunken: ta.pressed; }
+    property <length> o: ta.pressed ? 1px : 0px;
+    property <length> cx: Math.floor(self.width / 2 / 1px) * 1px + self.o;
+    property <length> cy: Math.floor(self.height / 2 / 1px) * 1px + self.o;
+    if root.glyph == "min": Rectangle { x: root.cx - 4px; y: root.cy + 2px; width: 6px; height: 2px; background: #000000; }
+    if root.glyph == "max": Rectangle {
+        x: root.cx - 5px; y: root.cy - 5px; width: 9px; height: 9px; border-width: 1px; border-color: #000000;
+        Rectangle { y: 0; height: 2px; background: #000000; }
+    }
+    if root.glyph == "restore": Rectangle {
+        Rectangle { x: root.cx - 3px; y: root.cy - 5px; width: 6px; height: 6px; border-width: 1px; border-color: #000000; Rectangle { y: 0; height: 2px; background: #000000; } }
+        Rectangle { x: root.cx - 5px; y: root.cy - 2px; width: 6px; height: 6px; border-width: 1px; border-color: #000000; background: #C0C0C0; Rectangle { y: 0; height: 2px; background: #000000; } }
+    }
+    if root.glyph == "close": Path {
+        x: root.cx - 4px; y: root.cy - 4px; width: 8px; height: 7px; viewbox-width: 8; viewbox-height: 7;
+        fill: transparent; stroke: #000000; stroke-width: 1.6px; commands: "M 0.5 0.5 L 7.5 6.5 M 7.5 0.5 L 0.5 6.5";
+    }
+    if root.glyph == "down": Path {
+        x: root.cx - 5px; y: root.cy - 2px; width: 9px; height: 5px; viewbox-width: 9; viewbox-height: 5; stroke: transparent;
+        fill: #000000; commands: "M 0 0 L 9 0 L 4.5 5 Z";
+    }
+    if root.glyph == "up": Path {
+        x: root.cx - 5px; y: root.cy - 3px; width: 9px; height: 5px; viewbox-width: 9; viewbox-height: 5; stroke: transparent;
+        fill: #000000; commands: "M 0 5 L 9 5 L 4.5 0 Z";
+    }
+    if root.glyph == "box": Rectangle {
+        x: root.cx - 3px; y: root.cy - 3px; width: 6px; height: 6px; border-width: 1px; border-color: #555555;
+    }
+}
+
 // A station's picture: its logo, or a soft two-colour tile with an antenna.
 component Cover inherits Rectangle {
     in property <image> source;
@@ -390,6 +481,7 @@ component Cover inherits Rectangle {
     clip: true;
     background: has-source && !small ? #00000000 : @linear-gradient(135deg, c1 0%, c2 100%);
     border-width: Th.tile-border.alpha > 0 && !(has-source && !small) ? 2px : 0px;
+    if Th.bevel && !(root.has-source && !root.small): Bevel { width: parent.width; height: parent.height; sunken: true; }
     border-color: Th.tile-border;
     property <color> mid: root.c1.mix(root.c2, 0.5);
     property <float> lum: (self.mid.red * 0.299 + self.mid.green * 0.587 + self.mid.blue * 0.114) / 255;
@@ -400,7 +492,9 @@ component Cover inherits Rectangle {
         x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
         border-radius: Th.radius-control <= 1px ? 0px : self.width * 0.14; clip: true; background: #FFFFFF;
         border-width: 1px; border-color: #0000001F;
-        drop-shadow-blur: 10px; drop-shadow-offset-y: 2px; drop-shadow-color: #00000030;
+        drop-shadow-blur: Th.hard-shadow.alpha > 0 ? 0px : 10px;
+        drop-shadow-offset-x: Th.hard-shadow.alpha > 0 ? 3px : 0px; drop-shadow-offset-y: Th.hard-shadow.alpha > 0 ? 3px : 2px;
+        drop-shadow-color: Th.hard-shadow.alpha > 0 ? Th.hard-shadow : #00000030;
         // The logo itself is never blown up past 1.25× (small favicons go blocky).
         property <length> art: min(self.width * 0.82, max(root.source.width, root.source.height) * 1.25px);
         Image { x: (parent.width - parent.art) / 2; y: (parent.height - parent.art) / 2; width: parent.art; height: parent.art;
@@ -420,15 +514,16 @@ component NavItem inherits Rectangle {
     in property <bool> selected;
     callback clicked();
     height: 36px;
-    border-radius: Th.radius-control;
-    background: selected ? Th.subtle : (ta.has-hover ? Th.subtle.transparentize(40%) : transparent);
+    property <bool> navy: Th.selection.alpha > 0 && root.selected;
+    border-radius: Th.selection.alpha > 0 ? 0px : Th.radius-control;
+    background: root.navy ? Th.selection : selected ? Th.subtle : (ta.has-hover ? Th.subtle.transparentize(40%) : transparent);
     ta := TouchArea { clicked => { root.clicked(); } }
-    if selected: Rectangle { x: 0; y: 10px; width: 3px; height: 16px; border-radius: 1.5px; background: Th.accent; }
+    if selected && Th.selection.alpha == 0: Rectangle { x: 0; y: 10px; width: 3px; height: 16px; border-radius: 1.5px; background: Th.accent; }
     Path {
         x: 14px; y: 10px; width: 16px; height: 16px; viewbox-width: 16; viewbox-height: 16;
-        fill: transparent; stroke: Th.pane-text; stroke-width: 1.3px; commands: root.icon;
+        fill: transparent; stroke: root.navy ? Th.selection-text : Th.pane-text; stroke-width: 1.3px; commands: root.icon;
     }
-    Text { x: 42px; y: (parent.height - self.height) / 2; text: root.label; color: Th.pane-text; font-size: 13px; }
+    Text { x: 42px; y: (parent.height - self.height) / 2; text: root.label; color: root.navy ? Th.selection-text : Th.pane-text; font-size: 13px; }
 }
 
 // A plain button in the theme's control colours.
@@ -444,25 +539,27 @@ component Btn inherits Rectangle {
     callback clicked();
     height: 32px;
     width: root.text == "" ? 32px : max(root.lead + root.tail > 0 ? 40px : 80px, label.preferred-width + root.lead + root.tail + 24px);
-    border-radius: Th.radius-control;
-    background: primary ? (ta.pressed ? Th.accent.darker(15%) : (ta.has-hover ? Th.accent.brighter(8%) : Th.accent))
+    border-radius: Th.bevel ? 0px : Th.radius-control;
+    background: Th.bevel ? Th.control : primary ? (ta.pressed ? Th.accent.darker(15%) : (ta.has-hover ? Th.accent.brighter(8%) : Th.accent))
         : (ta.pressed ? Th.control.darker(10%) : (ta.has-hover ? Th.control.brighter(6%) : Th.control));
-    border-width: 1px;
-    border-color: primary ? Th.accent.darker(10%) : Th.control-stroke;
+    border-width: Th.bevel ? (primary ? 1px : 0px) : 1px;
+    border-color: Th.bevel ? #000000 : primary ? Th.accent.darker(10%) : Th.control-stroke;
     ta := TouchArea { clicked => { root.clicked(); } }
+    if Th.bevel: Bevel { x: primary ? 1px : 0px; y: self.x; width: parent.width - 2 * self.x; height: parent.height - 2 * self.y; sunken: ta.pressed; }
     property <length> content-w: root.lead + label.preferred-width + root.tail;
     property <length> start: (root.width - self.content-w) / 2;
     if root.icon != "": Path {
         x: root.text == "" ? (parent.width - 16px) / 2 : root.start; y: (parent.height - 16px) / 2; width: 16px; height: 16px;
         viewbox-width: 16; viewbox-height: 16; fill: transparent; stroke-width: 1.3px;
-        stroke: primary ? Th.on-accent : Th.control-text; commands: root.icon;
+        stroke: primary && !Th.bevel ? Th.on-accent : Th.control-text; commands: root.icon;
     }
     if root.icon-fill != "": Path {
         x: root.text == "" ? (parent.width - 16px) / 2 : root.start; y: (parent.height - 16px) / 2; width: 16px; height: 16px;
         viewbox-width: 16; viewbox-height: 16; stroke: transparent;
-        fill: primary ? Th.on-accent : Th.control-text; commands: root.icon-fill;
+        fill: primary && !Th.bevel ? Th.on-accent : Th.control-text; commands: root.icon-fill;
     }
-    label := Text { x: root.start + root.lead; y: (parent.height - self.height) / 2; text: root.text; color: primary ? Th.on-accent : Th.control-text; font-size: 13px; }
+    label := Text { x: root.start + root.lead + (Th.bevel && ta.pressed ? 1px : 0px); y: (parent.height - self.height) / 2 + (Th.bevel && ta.pressed ? 1px : 0px);
+        text: root.text; color: primary && !Th.bevel ? Th.on-accent : Th.control-text; font-size: 13px; }
     if root.chevron: Path {
         x: root.start + root.lead + label.preferred-width + 8px; y: (parent.height - 6px) / 2 + 1px; width: 10px; height: 6px;
         viewbox-width: 10; viewbox-height: 6; fill: transparent; stroke-width: 1.2px;
@@ -509,17 +606,300 @@ component Caption inherits Rectangle {
     }
 }
 
+// The window's caption buttons in the theme's era: Windows 11 (fluent), Windows 95, Windows 3.1 (its control-menu
+// box on the left, ▼▲ on the right), XP's glossy squares, Mac OS X's traffic lights, or Mac OS 8's boxes.
+component Captions inherits Rectangle {
+    in property <bool> maximized;
+    in property <bool> active: true;
+    callback minimize();
+    callback toggle-maximize();
+    callback quit();
+    // Where the controls on the left (if any) end: the title bar's art starts after them.
+    out property <length> lead: Th.captions == "mac" ? 72px : (Th.captions == "win31" || Th.captions == "platinum") ? 34px : 0px;
+    if Th.captions == "fluent": Rectangle {
+        Caption { x: parent.width - 138px; y: 0; glyph: "min"; clicked => { root.minimize(); } }
+        Caption { x: parent.width - 92px; y: 0; glyph: root.maximized ? "restore" : "max"; clicked => { root.toggle-maximize(); } }
+        Caption { x: parent.width - 46px; y: 0; glyph: "close"; clicked => { root.quit(); } }
+    }
+    if Th.captions == "win95": Rectangle {
+        property <length> top: (parent.height - 14px) / 2;
+        RetroButton { x: parent.width - 58px; y: parent.top; width: 16px; height: 14px; glyph: "min"; clicked => { root.minimize(); } }
+        RetroButton { x: parent.width - 42px; y: parent.top; width: 16px; height: 14px; glyph: root.maximized ? "restore" : "max"; clicked => { root.toggle-maximize(); } }
+        RetroButton { x: parent.width - 22px; y: parent.top; width: 16px; height: 14px; glyph: "close"; clicked => { root.quit(); } }
+    }
+    if Th.captions == "win31": Rectangle {
+        property <length> top: (parent.height - 20px) / 2;
+        // The control-menu box: click for its menu, double-click to close.
+        RetroButton {
+            x: 8px; y: parent.top; width: 20px; height: 20px; glyph: "";
+            clicked => { menu.show(); }
+            Rectangle { x: 3px; y: 8px; width: 13px; height: 3px; background: #FFFFFF; border-width: 1px; border-color: #000000; }
+            menu := PopupWindow {
+                x: 0; y: 22px; width: 150px; height: 4 * 24px + 6px;
+                Rectangle {
+                    background: #FFFFFF; border-width: 1px; border-color: #000000;
+                    VerticalLayout {
+                        padding: 3px;
+                        for item[i] in ["Restore", "Minimize", "Maximize", "Close"]: Rectangle {
+                            height: 24px; background: menu-ta.has-hover ? #000080 : transparent;
+                            menu-ta := TouchArea {
+                                clicked => {
+                                    if (i == 0 || i == 2) { root.toggle-maximize(); }
+                                    if (i == 1) { root.minimize(); }
+                                    if (i == 3) { root.quit(); }
+                                }
+                            }
+                            Text { x: 10px; y: (parent.height - self.height) / 2; text: item; font-size: 12px;
+                                color: menu-ta.has-hover ? #FFFFFF : #000000; font-family: "Microsoft Sans Serif"; }
+                        }
+                    }
+                }
+            }
+        }
+        RetroButton { x: parent.width - 52px; y: parent.top; width: 20px; height: 20px; glyph: "down"; clicked => { root.minimize(); } }
+        RetroButton { x: parent.width - 30px; y: parent.top; width: 20px; height: 20px; glyph: "up"; clicked => { root.toggle-maximize(); } }
+    }
+    if Th.captions == "xp": Rectangle {
+        property <length> top: (parent.height - 21px) / 2;
+        for b[i] in ["min", root.maximized ? "restore" : "max", "close"]: Rectangle {
+            x: parent.width - 79px + i * 23px; y: parent.top; width: 21px; height: 21px;
+            border-radius: 3px; border-width: 1px; border-color: #FFFFFF;
+            background: b == "close"
+                ? (xp-ta.has-hover ? @linear-gradient(180deg, #F08E6A 0%, #D5492F 100%) : @linear-gradient(180deg, #E0573A 0%, #C42B1C 100%))
+                : (xp-ta.has-hover ? @linear-gradient(180deg, #6FA2FF 0%, #2C68E0 100%) : @linear-gradient(180deg, #4E8CF8 0%, #1550D0 100%));
+            drop-shadow-blur: 2px; drop-shadow-color: #00000040;
+            Rectangle { x: 2px; y: 2px; width: parent.width - 4px; height: parent.height * 0.4; border-radius: 2px; background: #FFFFFF30; }
+            xp-ta := TouchArea {
+                clicked => {
+                    if (b == "min") { root.minimize(); }
+                    if (b == "max" || b == "restore") { root.toggle-maximize(); }
+                    if (b == "close") { root.quit(); }
+                }
+            }
+            if b == "min": Rectangle { x: 5px; y: 13px; width: 7px; height: 3px; background: #FFFFFF; }
+            if b == "max": Rectangle { x: 5px; y: 5px; width: 11px; height: 11px; border-width: 1px; border-color: #FFFFFF; Rectangle { y: 0; height: 3px; background: #FFFFFF; } }
+            if b == "restore": Rectangle {
+                Rectangle { x: 8px; y: 4px; width: 8px; height: 8px; border-width: 1px; border-color: #FFFFFF; Rectangle { y: 0; height: 2px; background: #FFFFFF; } }
+                Rectangle { x: 5px; y: 8px; width: 8px; height: 8px; border-width: 1px; border-color: #FFFFFF; background: #2C68E0; Rectangle { y: 0; height: 2px; background: #FFFFFF; } }
+            }
+            if b == "close": Path { x: 5px; y: 5px; width: 11px; height: 11px; viewbox-width: 11; viewbox-height: 11; fill: transparent;
+                stroke: #FFFFFF; stroke-width: 2px; commands: "M 1 1 L 10 10 M 10 1 L 1 10"; }
+        }
+    }
+    if Th.captions == "mac": Rectangle {
+        mac-ta := TouchArea { x: 6px; y: (parent.height - 24px) / 2; width: 66px; height: 24px; }
+        for b[i] in ["close", "min", "zoom"]: Rectangle {
+            x: 14px + i * 20px; y: (parent.height - 12px) / 2; width: 12px; height: 12px; border-radius: 6px;
+            property <color> fill: b == "close" ? #FF5F57 : b == "min" ? #FEBC2E : #28C840;
+            background: root.active || mac-ta.has-hover ? self.fill : #CDCDCD;
+            border-width: 0.5px; border-color: (root.active || mac-ta.has-hover) ? self.fill.darker(25%) : #B5B5B5;
+            light-ta := TouchArea {
+                clicked => {
+                    if (b == "close") { root.quit(); }
+                    if (b == "min") { root.minimize(); }
+                    if (b == "zoom") { root.toggle-maximize(); }
+                }
+            }
+            if mac-ta.has-hover || light-ta.has-hover: Path {
+                x: 3px; y: 3px; width: 6px; height: 6px; viewbox-width: 6; viewbox-height: 6; fill: transparent;
+                stroke: #00000099; stroke-width: 1.1px;
+                commands: b == "close" ? "M 0.5 0.5 L 5.5 5.5 M 5.5 0.5 L 0.5 5.5" : b == "min" ? "M 0 3 L 6 3" : "M 3 0 L 3 6 M 0 3 L 6 3";
+            }
+        }
+    }
+    if Th.captions == "platinum": Rectangle {
+        property <length> top: (parent.height - 13px) / 2;
+        RetroButton { x: 10px; y: parent.top; width: 13px; height: 13px; glyph: "box"; clicked => { root.quit(); } }
+        RetroButton { x: parent.width - 42px; y: parent.top; width: 13px; height: 13px; glyph: "box"; clicked => { root.toggle-maximize(); } }
+        RetroButton { x: parent.width - 24px; y: parent.top; width: 13px; height: 13px; glyph: "min"; clicked => { root.minimize(); } }
+    }
+}
+
+// A segmented control: a row of choices in one control, the current one filled (pressed in, in a beveled theme).
+component Segmented inherits Rectangle {
+    in property <[string]> options;
+    in property <int> current;
+    callback chosen(int);
+    height: 32px;
+    width: row.preferred-width;
+    border-radius: Th.bevel ? 0px : Th.radius-control;
+    background: Th.control;
+    border-width: Th.bevel ? 0px : 1px;
+    border-color: Th.control-stroke;
+    row := HorizontalLayout {
+        padding: Th.bevel ? 0px : 2px; spacing: Th.bevel ? 0px : 2px;
+        for o[i] in root.options: Rectangle {
+            width: max(64px, seg-label.preferred-width + 28px);
+            border-radius: Th.bevel ? 0px : max(0px, Th.radius-control - 2px);
+            background: Th.bevel ? (i == root.current ? Th.control.darker(8%) : Th.control)
+                : i == root.current ? Th.accent : (seg-ta.has-hover ? Th.subtle : transparent);
+            seg-ta := TouchArea { clicked => { root.chosen(i); } }
+            if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: i == root.current; }
+            seg-label := Text {
+                x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: o; font-size: 13px;
+                font-weight: i == root.current ? 600 : 400;
+                color: i == root.current && !Th.bevel ? Th.on-accent : Th.control-text;
+            }
+        }
+    }
+}
+
+// One setting: its name and what it does on the left, its control on the right.
+component SettingRow inherits Rectangle {
+    in property <string> label;
+    in property <string> note;
+    min-height: 68px;
+    border-radius: Th.bevel ? 0px : Th.radius-card;
+    background: Th.card;
+    drop-shadow-blur: 0px; drop-shadow-offset-x: Th.hard-shadow.alpha > 0 ? 4px : 0px; drop-shadow-offset-y: Th.hard-shadow.alpha > 0 ? 4px : 0px;
+    drop-shadow-color: Th.hard-shadow;
+    border-width: Th.bevel ? 0px : 1px;
+    border-color: Th.card-stroke;
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; }
+    HorizontalLayout {
+        padding-left: 16px; padding-right: 16px; padding-top: 12px; padding-bottom: 12px; spacing: 24px;
+        VerticalLayout {
+            alignment: center; spacing: 3px; horizontal-stretch: 1;
+            Text { text: root.label; color: Th.card-text; font-size: 14px; }
+            if root.note != "": Text { text: root.note; color: Th.card-text2; font-size: 12px; wrap: word-wrap; }
+        }
+        VerticalLayout { alignment: center; HorizontalLayout { alignment: end; @children } }
+    }
+}
+
+// A group of settings' heading.
+component GroupHeading inherits Text {
+    color: Th.text; font-size: 14px; font-weight: 600;
+}
+
+// A GIF on GIPHY, for the search dialog: its title and still preview.
+export struct GiphyItem {
+    title: string,
+    preview: image,
+    ready: bool,
+}
+
+// Your own background (bg.rs): in use or not, its dim, the GIPHY key and search.
+export global Bg {
+    in property <bool> has;
+    in-out property <float> dim: 0.35;
+    in property <bool> builtin-key;
+    in-out property <string> key;
+    in property <string> status;
+    in-out property <bool> search-open;
+    in-out property <string> query;
+    in property <[GiphyItem]> results;
+    callback choose-file();
+    callback remove();
+    callback dim-changed(float);
+    callback open-search();
+    callback search(string);
+    callback pick(int);
+    callback key-changed(string);
+}
+
+// A horizontal slider, 0 to 1: its value follows the pointer; `released` says where it was let go.
+component Slider01 inherits Rectangle {
+    in-out property <float> value;
+    callback released(float);
+    height: 20px;
+    width: 180px;
+    Rectangle { y: 8px; height: 4px; border-radius: 2px; background: Th.control-stroke; }
+    Rectangle { x: 0; y: 8px; height: 4px; width: parent.width * root.value; border-radius: 2px; background: Th.accent; }
+    Rectangle {
+        x: clamp(parent.width * root.value - 9px, -9px, parent.width - 9px); y: 1px; width: 18px; height: 18px;
+        border-radius: Th.radius-control <= 1px ? 1px : 9px; background: Th.control; border-width: 1px; border-color: Th.control-stroke;
+        Rectangle { x: 5px; y: 5px; width: 8px; height: 8px; border-radius: Th.radius-control <= 1px ? 0px : 4px; background: Th.accent; }
+    }
+    TouchArea {
+        moved => { if (self.pressed) { root.value = clamp(self.mouse-x / self.width, 0, 1); } }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) { root.value = clamp(self.mouse-x / self.width, 0, 1); }
+            if (e.kind == PointerEventKind.up) { root.released(root.value); }
+        }
+    }
+}
+
+// Customize Theme (editor.rs): your own theme's colours, type, shape and effects, saved as you go.
+export struct TokenRow {
+    key: string,
+    label: string,
+    hex: string,
+    color: color,
+}
+
+export struct EffectRow {
+    key: string,
+    label: string,
+    on: bool,
+}
+
+export global Ed {
+    // The current theme is yours to change.
+    in property <bool> editable;
+    in property <string> name;
+    in property <string> base;
+    in property <[TokenRow]> tokens;
+    in property <string> body-font;
+    in property <string> title-font;
+    in property <string> title-size;
+    in property <int> weight;
+    in property <string> spacing;
+    in property <bool> upper;
+    in property <float> corners;
+    in property <float> cover;
+    in property <[EffectRow]> effects;
+    in-out property <bool> confirm-delete;
+    callback customize();
+    callback import();
+    callback export();
+    callback delete();
+    callback set-name(string);
+    callback set-base(string);
+    callback set-token(string, string);
+    callback set-font(string, string);
+    callback set-size(string);
+    callback set-weight(int);
+    callback set-spacing(string);
+    callback set-upper(bool);
+    callback set-corners(float);
+    callback set-cover(float);
+    callback toggle-effect(string, bool);
+}
+
+// A checkbox with its label.
+component Check inherits Rectangle {
+    in property <string> text;
+    in property <bool> checked;
+    callback toggled(bool);
+    height: 28px;
+    ta := TouchArea { clicked => { root.toggled(!root.checked); } }
+    Rectangle {
+        x: 0; y: (parent.height - 18px) / 2; width: 18px; height: 18px;
+        border-radius: Th.bevel ? 0px : 4px;
+        background: root.checked && !Th.bevel ? Th.accent : (Th.bevel ? Th.bevel-light : Th.control);
+        border-width: root.checked && !Th.bevel ? 0px : 1px; border-color: ta.has-hover ? Th.accent : Th.control-stroke;
+        if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
+        if root.checked: Path {
+            x: 3px; y: 4px; width: 12px; height: 10px; viewbox-width: 12; viewbox-height: 10; fill: transparent; stroke-width: 2px;
+            stroke: Th.bevel ? #000000 : Th.on-accent; commands: "M 1 5 L 4.5 8.5 L 11 1.5";
+        }
+    }
+    Text { x: 28px; y: (parent.height - self.height) / 2; width: parent.width - 28px; text: root.text; color: Th.card-text; font-size: 13px; overflow: elide; }
+}
+
 // A settings card: a heading, a line of explanation, and its controls.
 component SettingsCard inherits Rectangle {
     in property <string> heading;
     in property <string> note;
-    border-radius: Th.radius-card;
+    border-radius: Th.bevel ? 0px : Th.radius-card;
     background: Th.card;
-    border-width: 1px;
+    border-width: Th.bevel ? 0px : 1px;
     border-color: Th.card-stroke;
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; }
     VerticalLayout {
         padding: 16px; spacing: 10px;
-        Text { text: root.heading; color: Th.card-text; font-size: 14px; font-weight: 600; }
+        if root.heading != "": Text { text: root.heading; color: Th.card-text; font-size: 14px; font-weight: 600; }
         if root.note != "": Text { text: root.note; color: Th.card-text2; font-size: 12px; wrap: word-wrap; }
         @children
     }
@@ -570,6 +950,8 @@ export global Dir {
     in property <string> add-error;
     in property <string> add-cover;
     in property <string> message;
+    // How far Settings is scrolled (test runs set it with -scroll).
+    in-out property <length> settings-scroll;
     // What's typed in Search's field.
     in-out property <string> query;
     // A text field has the focus (typed easter-egg words don't count then).
@@ -636,11 +1018,16 @@ component Picker inherits Rectangle {
     callback chosen(int);
     height: 32px;
     width: max(130px, value.preferred-width + 44px);
-    border-radius: Th.radius-control;
-    background: ta.has-hover ? Th.control.brighter(6%) : Th.control;
-    border-width: 1px;
+    border-radius: Th.bevel ? 0px : Th.radius-control;
+    background: Th.bevel ? Th.bevel-light : ta.has-hover ? Th.control.brighter(6%) : Th.control;
+    border-width: Th.bevel ? 0px : 1px;
     border-color: Th.control-stroke;
     ta := TouchArea { clicked => { pop.show(); } }
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
+    if Th.bevel: Rectangle {
+        x: parent.width - 22px; y: 2px; width: 20px; height: parent.height - 4px; background: Th.control;
+        Bevel { width: parent.width; height: parent.height; sunken: ta.pressed; }
+    }
     value := Text { x: 12px; y: (parent.height - self.height) / 2; color: Th.control-text; font-size: 13px;
         text: root.current >= 0 && root.current < root.options.length ? root.options[root.current] : root.placeholder; }
     Path { x: parent.width - 22px; y: 13px; width: 10px; height: 6px; viewbox-width: 10; viewbox-height: 6; fill: transparent;
@@ -674,13 +1061,14 @@ component Field inherits Rectangle {
     in-out property <string> text <=> input.text;
     callback accepted(string);
     height: 32px;
-    border-radius: Th.radius-control;
-    background: Th.control;
-    border-width: 1px;
+    border-radius: Th.bevel ? 0px : Th.radius-control;
+    background: Th.bevel ? Th.bevel-light : Th.control;
+    border-width: Th.bevel ? 0px : 1px;
     border-color: input.has-focus ? Th.accent : Th.control-stroke;
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
     if input.text == "": Text { x: 10px; y: (parent.height - self.height) / 2; text: root.placeholder; color: Th.control-text.transparentize(45%); font-size: 13px; }
     input := TextInput {
-        x: 10px; y: (parent.height - self.height) / 2; width: parent.width - 20px;
+        x: 10px; y: 0; width: parent.width - 20px; height: parent.height; vertical-alignment: center;
         single-line: true; color: Th.control-text; font-size: 13px;
         accepted => { root.accepted(self.text); }
         changed has-focus => { Dir.typing = self.has-focus; }
@@ -748,9 +1136,14 @@ export component FullView inherits Rectangle {
     property <length> title-h: 48px;
     // A theme's screen frame (Retro 64's border): the layout sits inside it.
     property <length> inset: Th.frame-on ? Th.frame-thickness : 0px;
-    out property <length> title-end: window-title.x + window-title.width;
+    // Where the title bar's art starts: after the title, or after the controls on the left when the title is centred.
+    out property <length> title-end: Th.title-center ? max(captions.lead, 30px) - 16px : window-title.x + window-title.width;
 
     if Scenery.on && !Scenery.native: Image { x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.back; image-fit: fill; }
+    if Scenery.on && Scenery.user-anim: Rectangle {
+        Image { x: 0; y: 0; width: root.width; height: root.height; source: Scenery.user-image; image-fit: ImageFit.cover; image-rendering: smooth; }
+        Rectangle { background: #000000.transparentize(1 - Scenery.user-dim); }
+    }
     if Scenery.on && !Scenery.native && Scenery.moving: Image {
         x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.motion; image-fit: fill; image-rendering: smooth;
     }
@@ -793,28 +1186,36 @@ export component FullView inherits Rectangle {
             pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); } }
             double-clicked => { root.toggle-maximize(); }
         }
-        // The Driftwave sun.
-        Rectangle {
+        // The Driftwave sun (Mac and Windows 3.1 chrome put their own controls there).
+        if captions.lead == 0: Rectangle {
             x: 14px; y: (parent.height - 16px) / 2; width: 16px; height: 16px; border-radius: 8px; clip: true;
             background: @linear-gradient(180deg, #FFD36E 0%, #FF8A70 55%, #FF6FA8 100%);
             for k in 3: Rectangle { y: (8.5 + k * 2.4) * 1px; height: 1.2px; background: Th.background; }
         }
+        if Th.title-center && Th.title-plate.alpha > 0: Rectangle {
+            x: window-title.x - 8px; y: (parent.height - 20px) / 2; width: window-title.width + 16px; height: 20px; background: Th.title-plate;
+        }
         window-title := Text {
-            x: 40px; y: (parent.height - self.height) / 2; text: Th.window-title-upper ? "DRIFTWAVE" : "Driftwave";
+            x: Th.title-center ? (parent.width - self.width) / 2 : 40px;
+            y: (parent.height - self.height) / 2; text: Th.window-title-upper ? "DRIFTWAVE" : "Driftwave";
             color: root.active ? Th.window-title-color : Th.window-title-color.transparentize(40%);
             font-family: Th.window-title-font; font-size: Th.window-title-size; font-weight: Th.window-title-weight;
         }
         for t in Scenery.texts: GlowText {
-            property <length> x0: window-title.x + window-title.width + 16px;
+            property <length> x0: root.title-end + 16px;
             visible: t.opacity > 0 && t.region == "titlebar";
             x: self.x0 + (parent.width - 174px - self.x0) * t.xf + t.x;
             y: parent.height * t.yf + t.y;
             text: t.text; ink: t.ink.transparentize(1 - t.opacity); glows: t.glows; glow: t.glow.transparentize(1 - t.opacity); reach: t.reach; italic: t.italic;
             family: t.family; size: t.size; weight: t.weight;
         }
-        Caption { x: parent.width - 138px; y: 0; glyph: "min"; clicked => { root.minimize(); } }
-        Caption { x: parent.width - 92px; y: 0; glyph: root.maximized ? "restore" : "max"; clicked => { root.toggle-maximize(); } }
-        Caption { x: parent.width - 46px; y: 0; glyph: "close"; clicked => { root.quit(); } }
+        captions := Captions {
+            x: 0; y: 0; width: parent.width; height: parent.height;
+            maximized: root.maximized; active: root.active;
+            minimize => { root.minimize(); }
+            toggle-maximize => { root.toggle-maximize(); }
+            quit => { root.quit(); }
+        }
     }
 
     // ─────────── Navigation ───────────
@@ -839,6 +1240,7 @@ export component FullView inherits Rectangle {
     }
 
     // ─────────── The content card ───────────
+    Rectangle { x: pane-w; y: root.title-h + root.inset; width: Th.radius-card; height: Th.radius-card; background: Th.pane; }
     Rectangle {
         x: pane-w; y: root.title-h + root.inset; width: parent.width - pane-w - root.inset + (root.inset > 0 ? 0px : 1px);
         height: parent.height - root.title-h - 2 * root.inset + (root.inset > 0 ? 0px : 1px);
@@ -847,6 +1249,10 @@ export component FullView inherits Rectangle {
         border-width: Th.neon-content-on ? 0px : 1px;
         border-color: Th.card-stroke;
         clip: true;
+        if Scenery.sun-on: Image {
+            x: Scenery.sun-x - root.pane-w; y: Scenery.sun-y - root.title-h - root.inset; width: Scenery.sun-w; height: Scenery.sun-h;
+            source: Scenery.sun; image-fit: fill;
+        }
         // Neon: a tube round the page (the player has its own), 8 px in from the card's edges.
         if Th.neon-content-on: Rectangle {
             x: 8px; y: 8px; width: parent.width - 1px - 16px - (root.show-player ? root.player-w - 4px : 0px); height: parent.height - 1px - 16px;
@@ -905,18 +1311,27 @@ export component FullView inherits Rectangle {
             PageTitle { x: 28px; y: 42px - self.height / 2; text: "Discover"; }
             HorizontalLayout {
                 x: 28px; y: 76px; height: 32px; spacing: 8px; alignment: start;
-                Btn { text: "Popular"; primary: Dir.discover-mode == "popular"; clicked => { Dir.discover-mode-chosen("popular"); } }
-                Btn { text: "Trending"; primary: Dir.discover-mode == "trending"; clicked => { Dir.discover-mode-chosen("trending"); } }
-                Btn { text: "Random"; primary: Dir.discover-mode == "random"; clicked => { Dir.discover-mode-chosen("random"); } }
+                Segmented {
+                    options: ["Popular", "Trending", "Random"];
+                    current: Dir.discover-mode == "trending" ? 1 : Dir.discover-mode == "random" ? 2 : 0;
+                    chosen(i) => { Dir.discover-mode-chosen(i == 1 ? "trending" : i == 2 ? "random" : "popular"); }
+                }
                 if Dir.discover-mode != "trending": Picker {
                     options: Dir.countries; current: Dir.country; placeholder: "Any country";
                     chosen(i) => { Dir.country-chosen(i); }
                 }
-                Btn { text: "Refresh"; clicked => { Dir.discover-refresh(); } }
+                Btn { icon: "M 13.5 8 A 5.5 5.5 0 1 1 11.9 4.1 M 12.2 1.6 L 12.2 4.6 L 9.2 4.6"; clicked => { Dir.discover-refresh(); } }
             }
-            if Dir.discover-status != "": Text { x: 28px; y: 124px; text: Dir.discover-status; color: Th.text2; font-size: 13px; }
+            property <string> where: Dir.country >= 0 && Dir.country < Dir.countries.length ? Dir.countries[Dir.country] : "";
+            Text {
+                x: 28px; y: 118px; color: Th.text2; font-size: 13px;
+                text: Dir.discover-status != "" ? Dir.discover-status
+                    : Dir.discover-mode == "trending" ? "Trending around the world"
+                    : Dir.discover-mode == "random" ? (parent.where != "" ? "A random handful from " + parent.where : "A random handful from everywhere")
+                    : (parent.where != "" ? "Popular in " + parent.where : "Popular everywhere");
+            }
             StationGrid {
-                x: 20px; y: 124px; width: parent.width - 40px; height: parent.height - 136px;
+                x: 20px; y: 144px; width: parent.width - 40px; height: parent.height - 156px;
                 cards: Dir.discover;
                 open(i) => { Dir.open("discover", i); }
                 play(i) => { Dir.play-now("discover", i); }
@@ -928,7 +1343,7 @@ export component FullView inherits Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
             PageTitle { x: 28px; y: 42px - self.height / 2; text: "Search"; }
             search-box := Field {
-                x: 28px; y: 76px; width: min(420px, parent.width - 56px - 88px); placeholder: "Station name";
+                x: 28px; y: 76px; width: parent.width - 56px - 88px; placeholder: "Station name";
                 text <=> Dir.query;
                 accepted(t) => { Dir.search(t); }
             }
@@ -952,46 +1367,68 @@ export component FullView inherits Rectangle {
         // Settings.
         if root.page == "settings": Flickable {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
+            content-y <=> Dir.settings-scroll;
             content-height: settings-col.preferred-height + 40px;
             settings-col := VerticalLayout {
                 x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
                 HorizontalLayout { alignment: start; PageTitle { text: "Settings"; } }
-                SettingsCard {
-                    heading: "Layout";
-                    note: "Full is everything; Classic is the compact player of the Winamp years. Swap any time: the music carries on.";
-                    HorizontalLayout {
-                        spacing: 10px; alignment: start;
-                        Btn { text: "Full"; primary: true; }
-                        Btn { text: "Classic"; clicked => { root.to-classic(); } }
+                Rectangle { height: 4px; }
+                GroupHeading { text: "Appearance"; }
+                SettingRow {
+                    label: "Layout";
+                    note: "Full is everything; Classic is the compact player of the Winamp years. The music carries on.";
+                    Segmented { options: ["Full", "Classic"]; current: 0; chosen(i) => { if (i == 1) { root.to-classic(); } } }
+                }
+                SettingRow {
+                    label: "App theme";
+                    note: "Light or dark for the Default theme, or follow the system.";
+                    Segmented {
+                        options: ["System", "Light", "Dark"];
+                        current: root.appearance == "light" ? 1 : root.appearance == "dark" ? 2 : 0;
+                        chosen(i) => { root.choose-appearance(i == 1 ? "light" : i == 2 ? "dark" : "system"); }
                     }
                 }
-                SettingsCard {
-                    heading: "App theme";
-                    note: "Light or dark for the Default theme.";
+                SettingRow {
+                    label: "Background";
+                    note: Bg.has ? "Your own picture is behind the window, in every theme." : "A GIF or picture behind the whole window, in any theme. A GIF that flashes is refused.";
                     HorizontalLayout {
-                        spacing: 10px; alignment: start;
-                        Btn { text: "Use system setting"; primary: root.appearance == "system"; clicked => { root.choose-appearance("system"); } }
-                        Btn { text: "Light"; primary: root.appearance == "light"; clicked => { root.choose-appearance("light"); } }
-                        Btn { text: "Dark"; primary: root.appearance == "dark"; clicked => { root.choose-appearance("dark"); } }
+                        spacing: 8px;
+                        Btn { text: "Choose File…"; clicked => { Bg.choose-file(); } }
+                        Btn { text: "Search GIPHY…"; clicked => { Bg.open-search(); } }
+                        if Bg.has: Btn { text: "Remove"; clicked => { Bg.remove(); } }
                     }
                 }
-                SettingsCard {
-                    heading: "Moving scenes";
-                    note: "Some themes have a scene that moves, like rain on the glass and people passing by. It moves only while Driftwave is in front, and holds still by itself if it would slow this computer down.";
+                if Bg.has: SettingRow {
+                    label: "Dim";
+                    note: "Darkens your background so the text over it stays easy to read.";
                     HorizontalLayout {
-                        spacing: 10px; alignment: start;
-                        Btn { text: "Moving"; primary: Scenery.motion-on; clicked => { Scenery.motion-chosen(true); } }
-                        Btn { text: "Still"; primary: !Scenery.motion-on; clicked => { Scenery.motion-chosen(false); } }
+                        spacing: 12px; alignment: end;
+                        dim-slider := Slider01 { value: Bg.dim / 0.8; released(v) => { Bg.dim-changed(v * 0.8); } }
+                        Text { vertical-alignment: center; text: Math.round(dim-slider.value * 80) + "%"; color: Th.card-text2; font-size: 12px; min-width: 32px; }
                     }
                 }
+                SettingRow {
+                    label: "GIPHY key";
+                    note: Bg.builtin-key ? "Searching GIPHY uses the key built in; paste your own to use it instead." : "Searching GIPHY needs a key: paste yours (free from developers.giphy.com).";
+                    Field { width: 240px; placeholder: "Paste a key"; text <=> Bg.key; accepted(t) => { Bg.key-changed(t); } }
+                }
+                SettingRow {
+                    label: "Moving scenes";
+                    note: "Rain on the glass, people passing by. Only while Driftwave is in front; it holds still by itself on a slower computer.";
+                    Segmented { options: ["Moving", "Still"]; current: Scenery.motion-on ? 0 : 1; chosen(i) => { Scenery.motion-chosen(i == 0); } }
+                }
+                Rectangle { height: 8px; }
+                GroupHeading { text: "Theme"; }
                 SettingsCard {
-                    heading: "Theme";
+                    heading: "";
                     note: "A look for the whole app, in both layouts.";
                     gallery := Rectangle {
+                        // Tiles that fill the row: as many as fit at 112 px or more.
                         property <int> cols: max(1, Math.floor((self.width + 8px) / 120px));
+                        property <length> tw: (self.width - (self.cols - 1) * 8px) / self.cols;
                         height: Math.ceil(root.themes.length / cols) * 96px;
                         for t[i] in root.themes: Rectangle {
-                            x: Math.mod(i, gallery.cols) * 120px; y: Math.floor(i / gallery.cols) * 96px; width: 112px; height: 88px;
+                            x: Math.mod(i, gallery.cols) * (gallery.tw + 8px); y: Math.floor(i / gallery.cols) * 96px; width: gallery.tw; height: 88px;
                             border-radius: Th.radius-control;
                             border-width: t.on ? 2px : 1px;
                             border-color: t.on ? Th.accent : (sw-ta.has-hover ? Th.text3 : Th.card-stroke);
@@ -1000,16 +1437,125 @@ export component FullView inherits Rectangle {
                             sw-ta := TouchArea { clicked => { root.choose-theme(t.id); } }
                             Rectangle { x: 10px; y: 10px; width: 60px; height: 34px; border-radius: 4px; background: t.card;
                                 Text { x: 8px; y: 6px; text: "Aa"; color: t.text; font-size: 15px; font-weight: 700; } }
-                            Rectangle { x: 76px; y: 12px; width: 26px; height: 8px; border-radius: 4px; background: t.accent; }
-                            Rectangle { x: 76px; y: 26px; width: 18px; height: 8px; border-radius: 4px; background: t.text.transparentize(60%); }
+                            Rectangle { x: parent.width - 36px; y: 12px; width: 26px; height: 8px; border-radius: 4px; background: t.accent; }
+                            Rectangle { x: parent.width - 36px; y: 26px; width: 18px; height: 8px; border-radius: 4px; background: t.text.transparentize(60%); }
                             Rectangle { x: 0; y: 54px; width: parent.width; height: 34px; background: #00000066;
                                 Text { x: 8px; y: (parent.height - self.height) / 2; width: parent.width - 16px; text: t.name; color: #FFFFFF; font-size: 11px; overflow: elide; } }
                         }
                     }
                 }
-                SettingsCard {
-                    heading: "About";
-                    note: "Driftwave " + root.version + ". Internet radio, one app, written in Rust. Made with Slint.";
+                // Customize: make the current theme yours (a copy), or change your own.
+                HorizontalLayout {
+                    spacing: 8px; alignment: start;
+                    Btn { text: Ed.editable ? "Editing Your Theme" : "Customize Theme…"; primary: !Ed.editable; clicked => { Ed.customize(); } }
+                    Btn { text: "Import Theme…"; clicked => { Ed.import(); } }
+                    Btn { text: "Export Theme…"; clicked => { Ed.export(); } }
+                }
+                if Ed.editable: VerticalLayout {
+                    spacing: 12px;
+                    Rectangle { height: 4px; }
+                    GroupHeading { text: "Customize"; }
+                    SettingRow {
+                        label: "Name";
+                        note: "Your theme; built-in themes stay as they are.";
+                        Field { width: 240px; text: Ed.name; accepted(t) => { Ed.set-name(t); } }
+                    }
+                    SettingRow {
+                        label: "Base";
+                        note: "Light or dark: the window's controls and what colours a theme leaves out follow it.";
+                        Segmented { options: ["Light", "Dark"]; current: Ed.base == "light" ? 0 : 1; chosen(i) => { Ed.set-base(i == 0 ? "light" : "dark"); } }
+                    }
+                    SettingsCard {
+                        heading: "Colours";
+                        note: "A hex code each (#RRGGBB, or #AARRGGBB to see through). Press Enter to apply.";
+                        token-grid := Rectangle {
+                            property <int> cols: self.width > 560px ? 2 : 1;
+                            property <length> cw: (self.width - (self.cols - 1) * 16px) / self.cols;
+                            height: Math.ceil(Ed.tokens.length / self.cols) * 40px;
+                            for tk[i] in Ed.tokens: Rectangle {
+                                x: Math.mod(i, token-grid.cols) * (token-grid.cw + 16px); y: Math.floor(i / token-grid.cols) * 40px;
+                                width: token-grid.cw; height: 34px;
+                                Rectangle {
+                                    x: 0; y: 5px; width: 24px; height: 24px; border-radius: Th.bevel ? 0px : 5px;
+                                    background: tk.color; border-width: 1px; border-color: Th.card-stroke;
+                                }
+                                Text { x: 34px; y: (parent.height - self.height) / 2; width: parent.width - 34px - 112px; text: tk.label; color: Th.card-text; font-size: 13px; overflow: elide; }
+                                Field { x: parent.width - 104px; y: 1px; width: 104px; text: tk.hex; accepted(t) => { Ed.set-token(tk.key, t); } }
+                            }
+                        }
+                    }
+                    SettingsCard {
+                        heading: "Type";
+                        note: "Any installed font, or one of Driftwave's own: Orbitron, VT323, Press Start 2P, Share Tech Mono, Space Mono, Shrikhand.";
+                        HorizontalLayout {
+                            spacing: 12px;
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Text font"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 200px; text: Ed.body-font; placeholder: "Segoe UI"; accepted(t) => { Ed.set-font("body", t); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Title font"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 200px; text: Ed.title-font; placeholder: "Same as text"; accepted(t) => { Ed.set-font("title", t); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Title size"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 72px; text: Ed.title-size; accepted(t) => { Ed.set-size(t); } } }
+                            Rectangle { horizontal-stretch: 1; }
+                        }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Title weight"; color: Th.card-text2; font-size: 12px; }
+                                Segmented { options: ["Regular", "Semibold", "Bold", "Black"]; current: Ed.weight; chosen(i) => { Ed.set-weight(i); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Letter spacing"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 72px; text: Ed.spacing; accepted(t) => { Ed.set-spacing(t); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Titles"; color: Th.card-text2; font-size: 12px; }
+                                Segmented { options: ["As Written", "CAPITALS"]; current: Ed.upper ? 1 : 0; chosen(i) => { Ed.set-upper(i == 1); } } }
+                            Rectangle { horizontal-stretch: 1; }
+                        }
+                    }
+                    SettingsCard {
+                        heading: "Shape";
+                        note: "";
+                        HorizontalLayout {
+                            spacing: 24px; alignment: start;
+                            VerticalLayout { spacing: 6px;
+                                Text { text: "Corner radius: " + Math.round(corner-slider.value * 20) + " px"; color: Th.card-text2; font-size: 12px; }
+                                corner-slider := Slider01 { value: Ed.corners; released(v) => { Ed.set-corners(v); } } }
+                            VerticalLayout { spacing: 6px;
+                                Text { text: "Cover roundness: " + Math.round(cover-slider.value * 50) + "%"; color: Th.card-text2; font-size: 12px; }
+                                cover-slider := Slider01 { value: Ed.cover; released(v) => { Ed.set-cover(v); } } }
+                        }
+                    }
+                    SettingsCard {
+                        heading: "Effects";
+                        note: "Each effect uses the theme's colours. Its own settings (colours, sizes) are in the theme file: export it, edit it, import it.";
+                        fx-grid := Rectangle {
+                            property <int> cols: self.width > 560px ? 3 : 2;
+                            property <length> cw: (self.width - (self.cols - 1) * 12px) / self.cols;
+                            height: Math.ceil(Ed.effects.length / self.cols) * 30px;
+                            for fx[i] in Ed.effects: Check {
+                                x: Math.mod(i, fx-grid.cols) * (fx-grid.cw + 12px); y: Math.floor(i / fx-grid.cols) * 30px; width: fx-grid.cw;
+                                text: fx.label; checked: fx.on; toggled(on) => { Ed.toggle-effect(fx.key, on); }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        label: "Delete this theme";
+                        note: Ed.confirm-delete ? "Delete \"" + Ed.name + "\"? This can't be undone." : "Removes your theme for good (exported copies stay).";
+                        HorizontalLayout {
+                            spacing: 8px;
+                            if !Ed.confirm-delete: Btn { text: "Delete Theme…"; clicked => { Ed.confirm-delete = true; } }
+                            if Ed.confirm-delete: Btn { text: "Cancel"; clicked => { Ed.confirm-delete = false; } }
+                            if Ed.confirm-delete: Btn { text: "Delete"; primary: true; clicked => { Ed.delete(); } }
+                        }
+                    }
+                }
+                Rectangle { height: 8px; }
+                GroupHeading { text: "About"; }
+                SettingRow {
+                    label: "Driftwave " + root.version;
+                    note: "Internet radio, one app, written in Rust. Made with Slint.";
                 }
             }
         }
@@ -1019,9 +1565,12 @@ export component FullView inherits Rectangle {
             x: parent.width - root.player-w; y: 0; width: root.player-w; height: parent.height;
             Rectangle {
                 x: 4px; y: 8px; width: 300px; height: parent.height - 16px;
-                border-radius: Th.radius-card; background: Th.card; clip: true;
-                border-width: Th.neon-player-on ? 2px : 1px;
+                border-radius: Th.bevel ? 0px : Th.radius-card; background: Th.card; clip: true;
+                drop-shadow-blur: 0px; drop-shadow-offset-x: Th.hard-shadow.alpha > 0 ? 4px : 0px; drop-shadow-offset-y: Th.hard-shadow.alpha > 0 ? 4px : 0px;
+                drop-shadow-color: Th.hard-shadow;
+                border-width: Th.bevel ? 0px : Th.neon-player-on ? 2px : 1px;
                 border-color: Th.neon-player-on ? Th.neon-player : Th.card-stroke;
+                if Th.bevel: Bevel { width: parent.width; height: parent.height; }
                 if Th.neon-player-on: Rectangle {
                     x: 0.6px; y: 0.6px; width: parent.width - 1.2px; height: parent.height - 1.2px;
                     border-width: 0.75px; border-radius: max(0px, Th.radius-card - 0.6px); border-color: Th.neon-player.mix(#FFFFFF, 0.25);
@@ -1044,7 +1593,7 @@ export component FullView inherits Rectangle {
                     property <length> cover-s: clamp(240px - self.extra * 0.7, 140px, 240px);
                     property <length> y-name: 24px + self.top + self.cover-s + 16px;
                     property <length> y-song: self.y-name + min(52px, name.preferred-height) + 6px;
-                    property <length> y-ctl: self.y-song + (Decor.lcd ? 80px : 54px);
+                    property <length> y-ctl: self.y-song + (Decor.lcd ? 90px : 54px);
                     property <length> y-dec: self.y-ctl + 56px;
                     property <length> y-rec: self.y-dec + self.bars-h + self.vu-h + (Decor.analyzer || Decor.vu ? 0px : 4px);
                     if Decor.dial: TuningDial { x: 16px; y: 16px; width: parent.width - 32px; }
@@ -1055,7 +1604,7 @@ export component FullView inherits Rectangle {
                     if !Decor.lcd: Text { x: 20px; y: parent.y-song; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; color: Th.card-text; font-size: 13px; font-weight: 600;
                         horizontal-alignment: center; overflow: elide; }
                     if !Decor.lcd: Text { x: 20px; y: parent.y-song + 21px; width: parent.width - 40px; text: root.artist; color: Th.card-text2; font-size: 13px; horizontal-alignment: center; overflow: elide; }
-                    if Decor.lcd: LcdPanel { x: 16px; y: parent.y-song - 6px; width: parent.width - 32px; }
+                    if Decor.lcd: LcdPanel { x: 16px; y: parent.y-song + 4px; width: parent.width - 32px; }
                     if Decor.analyzer: SpectrumBars { x: 16px; y: parent.y-dec; width: parent.width - 32px; }
                     if Decor.vu: HorizontalLayout {
                         x: 16px; y: parent.y-dec + parent.bars-h; width: parent.width - 32px; height: 82px; spacing: 10px;
@@ -1117,6 +1666,10 @@ export component FullView inherits Rectangle {
     }
     // The spotlight: the dark closes in everywhere but round the pointer.
     if Scenery.spot-on: Rectangle {
+        x: root.pane-w; y: root.title-h; width: root.width - root.pane-w; height: root.height - root.title-h;
+        clip: true;
+        Rectangle {
+        x: -root.pane-w; y: -root.title-h; width: root.width; height: root.height;
         property <length> r: Scenery.spot-radius;
         property <color> dark: #000000.transparentize(1 - Scenery.spot-opacity);
         Rectangle {
@@ -1128,6 +1681,7 @@ export component FullView inherits Rectangle {
         Rectangle { x: 0; y: Scenery.spot-y + parent.r; width: root.width; height: max(0px, root.height - Scenery.spot-y - parent.r); background: parent.dark; }
         Rectangle { x: 0; y: Scenery.spot-y - parent.r; width: max(0px, Scenery.spot-x - parent.r); height: parent.r * 2; background: parent.dark; }
         Rectangle { x: Scenery.spot-x + parent.r; y: Scenery.spot-y - parent.r; width: max(0px, root.width - Scenery.spot-x - parent.r); height: parent.r * 2; background: parent.dark; }
+        }
     }
     if Th.frame-on: Rectangle { x: 0; y: 0; width: root.width; height: root.height; border-width: Th.frame-thickness; border-color: Th.frame-color; }
 
@@ -1190,6 +1744,48 @@ export component FullView inherits Rectangle {
         Caption { x: parent.width - 42px; y: 6px; width: 36px; height: 32px; glyph: "close"; clicked => { Dir.dismiss(); } }
     }
 
+    // GIPHY search: GIFs rated G; pick one to check and use it.
+    if Bg.search-open: Rectangle {
+        background: #00000099;
+        TouchArea { clicked => { Bg.search-open = false; } }
+        Rectangle {
+            x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; width: min(660px, parent.width - 48px); height: min(560px, parent.height - 48px);
+            border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.card-stroke;
+            drop-shadow-blur: 32px; drop-shadow-offset-y: 8px; drop-shadow-color: #00000080;
+            clip: true;
+            TouchArea { }
+            Text { x: 24px; y: 20px; text: "Search GIPHY"; color: Th.card-text; font-size: 20px; font-weight: 600; }
+            giphy-box := Field {
+                x: 24px; y: 60px; width: parent.width - 48px - 96px; placeholder: "Rain, city lights, waves…";
+                text <=> Bg.query;
+                accepted(t) => { Bg.search(t); }
+            }
+            Btn { x: parent.width - 24px - 88px; y: 60px; width: 88px; text: "Search"; primary: true; clicked => { Bg.search(giphy-box.text); } }
+            if Bg.status != "": Text { x: 24px; y: 104px; width: parent.width - 48px; text: Bg.status; color: Th.card-text2; font-size: 13px; wrap: word-wrap; }
+            results := Flickable {
+                x: 24px; y: 128px; width: parent.width - 48px; height: parent.height - 128px - 64px;
+                property <length> cw: (self.width - 3 * 8px) / 4;
+                content-height: Math.ceil(Bg.results.length / 4) * (self.cw * 0.75 + 30px);
+                for g[i] in Bg.results: Rectangle {
+                    x: Math.mod(i, 4) * (results.cw + 8px); y: Math.floor(i / 4) * (results.cw * 0.75 + 30px);
+                    width: results.cw; height: results.cw * 0.75 + 22px;
+                    pick-ta := TouchArea { clicked => { Bg.pick(i); } }
+                    Rectangle {
+                        y: 0; height: parent.width * 0.75; border-radius: Th.radius-control; clip: true;
+                        background: Th.subtle;
+                        border-width: pick-ta.has-hover ? 2px : 0px; border-color: Th.accent;
+                        if g.ready: Image { width: parent.width; height: parent.height; source: g.preview; image-fit: ImageFit.cover; }
+                    }
+                    Text { y: parent.width * 0.75 + 4px; width: parent.width; text: g.title; color: Th.card-text2; font-size: 11px; overflow: elide; }
+                }
+            }
+            Rectangle { y: parent.height - 64px; height: 64px; background: #0000001A;
+                Rectangle { y: 0; height: 1px; background: Th.divider; } }
+            Text { x: 24px; y: parent.height - 40px; text: "Powered by GIPHY"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
+            Btn { x: parent.width - 24px - self.width; y: parent.height - 48px; text: "Close"; clicked => { Bg.search-open = false; } }
+        }
+    }
+
     // A station's details.
     if Dir.details-open: Rectangle {
         background: #00000099;
@@ -1200,12 +1796,31 @@ export component FullView inherits Rectangle {
             drop-shadow-blur: 32px; drop-shadow-offset-y: 8px; drop-shadow-color: #00000080;
             clip: true;
             TouchArea { }
+            if Th.bevel: Bevel { width: parent.width; height: parent.height; }
+            if Th.bevel && Th.captions == "win95": Rectangle {
+                x: 3px; y: 3px; width: parent.width - 6px; height: 18px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
+                Text { x: 6px; y: (parent.height - self.height) / 2; text: "Station Details"; color: #FFFFFF; font-size: 12px; font-weight: 700; }
+                RetroButton { x: parent.width - 18px; y: 2px; width: 16px; height: 14px; glyph: "close"; clicked => { Dir.details-close(); } }
+            }
+            if Th.bevel && Th.captions == "win31": Rectangle {
+                x: 3px; y: 3px; width: parent.width - 6px; height: 20px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
+                RetroButton { x: 0; y: 0; width: 20px; height: 20px; glyph: ""; clicked => { Dir.details-close(); }
+                    Rectangle { x: 3px; y: 8px; width: 13px; height: 3px; background: #FFFFFF; border-width: 1px; border-color: #000000; } }
+                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: "Station Details"; color: #FFFFFF; font-size: 12px; font-weight: 700; }
+            }
+            if Th.bevel && Th.captions == "platinum": Rectangle {
+                x: 3px; y: 3px; width: parent.width - 6px; height: 20px; background: #DDDDDD;
+                for k in 6: Rectangle { x: 26px; y: 4px + k * 2px; width: parent.width - 34px; height: 1px; background: #AAAAAA; }
+                Rectangle { x: (parent.width - plat-title.width) / 2 - 8px; y: 0; width: plat-title.width + 16px; height: parent.height; background: #DDDDDD; }
+                plat-title := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: "Station Details"; color: #000000; font-size: 12px; font-weight: 700; }
+                RetroButton { x: 6px; y: 4px; width: 11px; height: 11px; glyph: "box"; clicked => { Dir.details-close(); } }
+            }
             Rectangle { y: parent.height - 64px; height: 64px; background: #0000001A;
                 Rectangle { y: 0; height: 1px; background: Th.divider; } }
             Cover { x: 24px; y: 24px; width: 132px; height: 132px; source: Dir.details.cover; has-source: Dir.details.has-cover;
                 small: Dir.details.small; c1: Dir.details.c1; c2: Dir.details.c2; }
-            Text { x: 172px; y: 28px; width: parent.width - 196px; text: Dir.details.name; color: Th.card-text; font-size: 20px; font-weight: 600; wrap: word-wrap; max-height: 56px; overflow: elide; }
-            Text { x: 172px; y: 88px; width: parent.width - 196px; text: Dir.details.subtitle; color: Th.card-text2; font-size: 13px; overflow: elide; }
+            det-name := Text { x: 172px; y: 28px; width: parent.width - 196px; text: Dir.details.name; color: Th.card-text; font-size: 20px; font-weight: 600; wrap: word-wrap; max-height: 56px; overflow: elide; }
+            Text { x: 172px; y: det-name.y + min(56px, det-name.preferred-height) + 6px; width: parent.width - 196px; text: Dir.details.subtitle; color: Th.card-text2; font-size: 13px; overflow: elide; }
             if Dir.details.local || Dir.details.orphaned: Rectangle {
                 x: 172px; y: 114px; height: 22px; width: tag-text.preferred-width + 16px; border-radius: 11px; background: Th.subtle;
                 tag-text := Text { x: 8px; y: (parent.height - self.height) / 2; color: Th.card-text2; font-size: 11px;

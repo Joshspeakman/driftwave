@@ -44,7 +44,7 @@ impl Visualizer for LiquidFeedback {
         "The music melting into itself: a slow zooming, turning, rippling feedback warp"
     }
     fn resolution(&self) -> f32 {
-        0.5
+        1.0
     }
 
     fn render(&mut self, a: &Analysis, c: &mut Canvas) {

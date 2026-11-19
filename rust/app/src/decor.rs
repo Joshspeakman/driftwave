@@ -159,7 +159,9 @@ impl App {
                 let a = self.decor.analysis.analyse(samples, *channels, *rate, 0.0, dt);
                 for (i, t) in targets.iter_mut().enumerate() {
                     let (lo, hi) = (i * BANDS / BARS, ((i + 1) * BANDS / BARS).max(i * BANDS / BARS + 1));
-                    *t = a.bands[lo..hi.min(BANDS)].iter().copied().fold(0.0, f32::max).clamp(0.0, 1.0);
+                    let v = a.bands[lo..hi.min(BANDS)].iter().copied().fold(0.0, f32::max).clamp(0.0, 1.0);
+                    // Typical music sits high in the analyzer's range: spread it so it moves through the middle.
+                    *t = ((v - 0.25) / 0.75).clamp(0.0, 1.0).powf(1.35);
                 }
             }
             let dec = &mut self.decor;

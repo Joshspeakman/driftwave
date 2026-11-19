@@ -279,6 +279,8 @@ pub struct Scene {
     effects: Effects,
     back: Color,
     art: HashMap<String, Arc<RgbaImage>>,
+    /// Your own background (its first frame) and how much it's dimmed: it replaces the theme's photo.
+    user: Option<(Arc<RgbaImage>, f32)>,
     /// Pictures scaled (and premultiplied) for a size, by file and fit.
     scaled: HashMap<(String, u32, u32), Arc<RgbaImage>>,
     /// Drop sprites scaled (filtered, premultiplied) to each size a drop has been.
@@ -303,6 +305,55 @@ fn motion_kind(l: &Map<String, Value>) -> Option<&str> {
 }
 
 impl Scene {
+    /// The scene for a theme with your own background behind it (any theme, Default too).
+    pub fn with_user(theme: Option<&Theme>, picture: Arc<RgbaImage>, dim: f32, back: Color) -> Scene {
+        let mut s = Scene::for_theme(theme).unwrap_or_else(|| Scene {
+            glass: false,
+            has_motion: false,
+            motion_fps: 12.0,
+            motion_scale: 0.5,
+            layers: Vec::new(),
+            neon: None,
+            drips: None,
+            effects: Effects::none(),
+            back: Color { a: 255, ..back },
+            art: HashMap::new(),
+            user: None,
+            scaled: HashMap::new(),
+            drop_art: HashMap::new(),
+            drops: Vec::new(),
+            drops_size: (0, 0),
+            seed: 0x2545_F491,
+        });
+        // Your picture shows sharp (dimmed), not frosted.
+        s.glass = false;
+        s.art.insert("\0user".into(), picture.clone());
+        s.user = Some((picture, dim.clamp(0.0, 0.8)));
+        s
+    }
+
+    /// The theme's photo (and what belongs to it) steps aside for your own background; rain and the rest stay.
+    fn photo(&self, l: &Map<String, Value>) -> bool {
+        self.user.is_some()
+            && (l.get("withPhoto").and_then(Value::as_bool) == Some(true)
+                || (str_of(l, "type") == Some("image") && !l.contains_key("loopX") && !l.contains_key("loopY") && matches!(str_of(l, "in"), None | Some("window"))))
+    }
+
+    /// Your background, cover-fitted and dimmed, over the picture so far.
+    fn draw_user(&mut self, p: &mut Picture) {
+        let Some((_, dim)) = self.user.clone() else { return };
+        if let Some(img) = self.scaled("\0user", p.w as u32, p.h as u32, true) {
+            for (i, s) in img.as_raw().chunks_exact(4).enumerate() {
+                p.over_pre(i, s, 256);
+            }
+        }
+        if dim > 0.0 {
+            for i in 0..p.w * p.h {
+                p.blend(i, [0.0, 0.0, 0.0], dim);
+            }
+        }
+    }
+
     /// The scene for a theme, or None when it has nothing to draw.
     pub fn for_theme(theme: Option<&Theme>) -> Option<Scene> {
         let t = theme?;
@@ -342,12 +393,17 @@ impl Scene {
             effects,
             back: t.colors.get("background").copied().map(|c| Color { a: 255, ..c }).unwrap_or(Color { a: 255, r: 0, g: 0, b: 0 }),
             art: HashMap::new(),
+            user: None,
             scaled: HashMap::new(),
             drop_art: HashMap::new(),
             drops: Vec::new(),
             drops_size: (0, 0),
             seed: 0x2545_F491,
         })
+    }
+
+    pub fn effects(&self) -> &Effects {
+        &self.effects
     }
 
     /// A glass theme (its scene's `surfaces` are "translucent"): the picture under its panels is frosted.
@@ -357,7 +413,7 @@ impl Scene {
 
     /// Whether anything lies behind the panels (then see-through panels show it).
     pub fn has_backdrop(&self) -> bool {
-        !self.layers.is_empty() || self.drips.is_some() || self.neon.is_some() || self.effects.any_behind()
+        self.user.is_some() || !self.layers.is_empty() || self.drips.is_some() || self.neon.is_some() || self.effects.any_behind()
     }
 
     fn picture(&mut self, name: &str) -> Option<Arc<RgbaImage>> {
@@ -407,7 +463,11 @@ impl Scene {
         let mut p = Picture::filled(w, h, [b.r, b.g, b.b]);
         let page = g.region(Some("content"));
         self.effects.behind(&mut p, scale, still, (page.x + page.w / 2.0) * scale);
+        self.draw_user(&mut p);
         for l in self.layers.clone().iter() {
+            if self.photo(l) {
+                continue;
+            }
             if !moving(l) {
                 self.draw(&mut p, l, g, scale, 0.0, Mode::Still);
             } else if motion_kind(l) == Some("breathe") {
@@ -451,15 +511,16 @@ impl Scene {
     /// panel art), still, at `w`×`h` logical px. None when the theme has no picture of its own.
     pub fn skin(&mut self, w: f32, h: f32, scale: f32) -> Option<Picture> {
         let whole = |l: &Map<String, Value>| matches!(str_of(l, "in"), None | Some("window")) && str_of(l, "type") == Some("image");
-        if !self.layers.iter().any(whole) && !self.effects.any_behind() && self.drips.is_none() && self.effects.vignette.is_none() {
+        if self.user.is_none() && !self.layers.iter().any(whole) && !self.effects.any_behind() && self.drips.is_none() && self.effects.vignette.is_none() {
             return None;
         }
         let g = Geometry { width: w, height: h, title: 0.0, pane: 0.0, player: 0.0, title_end: 0.0 };
         let b = self.back;
         let mut p = Picture::filled((w * scale).round() as usize, (h * scale).round() as usize, [b.r, b.g, b.b]);
         self.effects.behind(&mut p, scale, true, w * scale / 2.0);
+        self.draw_user(&mut p);
         for l in self.layers.clone().iter().filter(|l| matches!(str_of(l, "in"), None | Some("window"))) {
-            if motion_kind(l) == Some("pass") {
+            if motion_kind(l) == Some("pass") || self.photo(l) {
                 continue;
             }
             let mode = if motion_kind(l) == Some("breathe") { Mode::Middle } else { Mode::Still };
@@ -527,8 +588,8 @@ impl Scene {
                 }
             }
             let (w, h) = (coord(l.get("w"), region.w, 10.0) * c.jw, coord(l.get("h"), region.h, 10.0) * c.jh);
-            let x = region.x + coord(l.get("x"), region.w, 0.0) + c.ox + dx;
-            let mut y = region.y + coord(l.get("y"), region.h, 0.0) + c.oy + dy;
+            let x = region.x + coord(l.get("x"), region.w, 0.0) + num(l, "dx", 0.0) as f32 + c.ox + dx;
+            let mut y = region.y + coord(l.get("y"), region.h, 0.0) + num(l, "dy", 0.0) as f32 + c.oy + dy;
             if str_of(l, "anchor") == Some("bottom") {
                 y -= h;
             }
