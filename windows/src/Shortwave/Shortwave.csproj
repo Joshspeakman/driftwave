@@ -43,5 +43,7 @@
   <ItemGroup>
     <AssemblyMetadata Include="ShortwaveCommit" Value="$(ShortwaveCommit)" />
     <AssemblyMetadata Include="ShortwaveBranch" Value="$(ShortwaveBranch)" />
+    <!-- GIPHY API key for background search: set DRIFTWAVE_GIPHY_KEY when building releases (never committed) -->
+    <AssemblyMetadata Include="GiphyKey" Value="$(DRIFTWAVE_GIPHY_KEY)" />
   </ItemGroup>
 </Project>

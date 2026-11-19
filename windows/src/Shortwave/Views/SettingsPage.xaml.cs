@@ -22,6 +22,7 @@ public sealed partial class SettingsPage : UserControl
         ThemeBox.ItemsSource = AppThemes.All.Select(t => t.Title()).ToList();
         ThemeHost.Children.Add(new ThemeSettings(app, hwnd, () => new Border { Style = (Style)Resources["Card"] }));
         UpdateHost.Children.Add(new UpdateSettings(app, (Style)Resources["Card"]));
+        BackgroundHost.Children.Add(new BackgroundSettings(app, hwnd, (Style)Resources["Card"]));
         // Test runs: -scrollTo updates shows the Updates section (for screenshots).
         if (Diagnostics.ScrollTo == "updates")
             Loaded += (_, _) => DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,

@@ -12,6 +12,7 @@ public sealed class AppModel : Observable
     public Preferences Settings { get; }
     public Theming.ThemeManager Themes { get; }
     public Updater Updates { get; }
+    public Backgrounds Backgrounds { get; }
     public AppPaths Paths { get; } = new(Diagnostics.IsTestRun ? "ShortwaveTestRun" : "Driftwave");
     public RadioBrowser Api { get; } = new();
     public ImageStore Images { get; }
@@ -48,6 +49,10 @@ public sealed class AppModel : Observable
         Settings = new Preferences(Paths);
         Themes = new Theming.ThemeManager(Settings, Paths);
         Updates = new Updater(Paths, Settings, ui);
+        Backgrounds = new Backgrounds(Paths, Settings);
+        // Test runs: -background <file> sets a background through the same import (and flash check) as Settings.
+        if (Diagnostics.IsTestRun && Diagnostics.Value("background") is { } bgFile)
+            _ = Backgrounds.UseFile(bgFile).ContinueWith(t => Diagnostics.Log("background result: " + (t.Result ?? "ok")), TaskScheduler.Default);
         Images = new ImageStore(Paths);
         Player = new Player(Settings, Paths, Api, ui);
         library = LibraryFile.Load(Paths.Library);

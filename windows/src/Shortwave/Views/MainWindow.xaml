@@ -15,6 +15,9 @@
         </Grid.RowDefinitions>
         <!-- Theme layers: background colour, effects behind the UI, effects in front of it (no clicks) -->
         <Border x:Name="BackdropFill" Grid.RowSpan="2" />
+        <!-- Your own background (Settings > Appearance > Background), darkened by UserDim -->
+        <Image x:Name="UserBackground" Grid.RowSpan="2" Stretch="UniformToFill" IsHitTestVisible="False" />
+        <Border x:Name="UserDim" Grid.RowSpan="2" IsHitTestVisible="False" />
         <Grid x:Name="EffectsBack" Grid.RowSpan="2" IsHitTestVisible="False" />
         <Grid x:Name="AppTitleBar" Padding="16,0,0,0">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">

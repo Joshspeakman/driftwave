@@ -82,9 +82,13 @@ public static class EffectsClock
     }
 
     static bool Moving => windowVisible && windowActive && !Frozen;
+    static bool? lastMoving;
+    /// <summary>Raised when effects start or stop moving (window shown and active, or not).</summary>
+    public static event Action<bool>? MovingChanged;
 
     static void Update()
     {
+        if (lastMoving != Moving) { lastMoving = Moving; MovingChanged?.Invoke(Moving); }
         bool want = subscribers.Count > 0 && Moving;
         if (want == running) return;
         running = want;

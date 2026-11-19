@@ -53,7 +53,8 @@ public partial class App : Application
             switch (e.PropertyName)
             {
                 case nameof(Preferences.ThemeId): Model.Themes.ApplyChosen(); break;
-                case nameof(Preferences.Appearance) or nameof(Preferences.EffectsEnabled) or nameof(Preferences.EffectIntensity): ApplyTheme(); break;
+                case nameof(Preferences.Appearance) or nameof(Preferences.EffectsEnabled) or nameof(Preferences.EffectIntensity)
+                    or nameof(Preferences.BackgroundFile) or nameof(Preferences.BackgroundDim): ApplyTheme(); break;
             }
         };
         main.Activate();

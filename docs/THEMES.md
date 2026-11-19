@@ -179,6 +179,26 @@ it.
 | `stealth` | Stealth | | dark | Black on black, dim grey type, a spotlight that follows the pointer |
 | `analog-70s` | Analog 70s | 70s hi-fi receivers | dark | Walnut, cream and orange, backlit tuning dial, VU meters, Shrikhand |
 
+### Your own background
+
+**Settings > Appearance > Background** puts a GIF or picture behind the whole window, in any theme.
+
+- **Choose File…** takes a GIF, PNG, JPEG, WebP or BMP.
+- **Search GIPHY…** searches GIF results rated G.
+  - Results show "Powered by GIPHY".
+  - Searching needs a GIPHY API key: either the one built into release builds (`DRIFTWAVE_GIPHY_KEY` at build
+    time, never committed), or your own, pasted under *GIPHY key*.
+- **Dim** darkens the picture (0–80%, 35% by default).
+- **How it shows:** the theme's surfaces become smoky glass, and a theme's own still pictures step aside, while
+  moving layers such as rain stay.
+- **When GIFs move:** they loop only while the window is shown and active, and when Windows' animation effects are
+  on.
+- **The flash check:** every GIF is checked before it's used. Each frame is composited at 64 px and measured for
+  brightness and saturated red (`ShortwaveCore/FlashCheck.cs`, with unit tests). Anything that flashes more than
+  three times a second is refused, following WCAG 2.3.1.
+- **Where the files go:** pictures are copied into the data folder's `Backgrounds` folder.
+- **Testing:** in test runs, `-background <file>` does the same import.
+
 ### Homage themes
 
 These are tributes to computers, phones and consoles people loved. `windows/tools/make-homage-themes.py`

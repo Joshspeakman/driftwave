@@ -72,7 +72,7 @@ public static class Diagnostics
     /// <summary>Test runs use their own data folder and settings, so they never touch the real app's data.</summary>
     public static readonly bool IsTestRun =
         Has("-muted") || PlayURL != null || StartPage != null || SearchText != null || OpenFirstResult || OpenTrackDetail
-        || OpenMiniPlayer || OpenAddStation || ScrollTo != null || Screenshot != null || QuitAfter != null || ImportStations != null || ExportStations != null
+        || OpenMiniPlayer || OpenAddStation || ScrollTo != null || Value("background") != null || Screenshot != null || QuitAfter != null || ImportStations != null || ExportStations != null
         || Environment.GetEnvironmentVariable("SHORTWAVE_TEST") == "1";
 
     /// <summary>

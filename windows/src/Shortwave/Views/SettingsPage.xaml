@@ -21,6 +21,7 @@
             <StackPanel Padding="24,4,24,24" Spacing="4" MaxWidth="760" HorizontalAlignment="Stretch">
                 <TextBlock Text="Appearance" FontWeight="SemiBold" Margin="2,8,0,4" />
                 <StackPanel x:Name="ThemeHost" />
+                <StackPanel x:Name="BackgroundHost" Margin="0,4,0,0" />
                 <Border Style="{StaticResource Card}">
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
