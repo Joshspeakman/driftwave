@@ -34,9 +34,11 @@ pub struct Geometry {
 }
 
 impl Geometry {
-    /// The page's card (it holds the player too) and the player's card, as the Full layout draws them.
+    /// The page's neon tube (8 px in from the content card, and 8 px short of the player's) and the player's card,
+    /// as the Full layout draws them.
     pub fn content_card(&self) -> Rect {
-        Rect { x: self.pane, y: self.title, w: (self.width - self.pane).max(0.0), h: (self.height - self.title).max(0.0) }
+        let right = if self.player > 0.0 { self.width - self.player - 4.0 } else { self.width - 8.0 };
+        Rect { x: self.pane + 8.0, y: self.title + 8.0, w: (right - self.pane - 8.0).max(0.0), h: (self.height - self.title - 16.0).max(0.0) }
     }
 
     pub fn player_card(&self) -> Option<Rect> {

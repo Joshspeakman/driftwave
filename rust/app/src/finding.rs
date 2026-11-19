@@ -227,6 +227,12 @@ impl App {
 
     pub(crate) fn search(&mut self, text: &str) {
         self.find.query = text.trim().to_string();
+        if let Some(ui) = self.ui.upgrade() {
+            let dir = ui.global::<super::Dir>();
+            if dir.get_query() != text {
+                dir.set_query(text.into());
+            }
+        }
         let order = SearchOrder::ALL[self.find.order.min(SearchOrder::ALL.len() - 1)];
         let query = StationSearch {
             name: self.find.query.clone(),
