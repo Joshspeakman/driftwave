@@ -37,6 +37,11 @@ pub enum Host {
 
 const PREFIX: &str = "ctx:";
 
+/// A context menu's choice (the tray leaves these for it).
+pub fn is_context_menu_id(id: &str) -> bool {
+    id.starts_with(PREFIX)
+}
+
 static PENDING: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 /// Native menu choices (their ids) that `mine` claims, leaving the rest for their own menu's next look.
