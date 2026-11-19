@@ -308,7 +308,7 @@ component Slider inherits Rectangle {
     }
     TouchArea {
         moved => { if (self.pressed) { root.changed(clamp((self.mouse-x - root.knob / 2) / (root.width - root.knob), 0, 1)); } }
-        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.changed(clamp((self.mouse-x - root.knob / 2) / (root.width - root.knob), 0, 1)); } }
+        pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.changed(clamp((self.mouse-x - root.knob / 2) / (root.width - root.knob), 0, 1)); } }
     }
 }
 

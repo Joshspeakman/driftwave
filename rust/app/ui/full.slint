@@ -885,7 +885,7 @@ component Slider01 inherits Rectangle {
     TouchArea {
         moved => { if (self.pressed) { root.value = clamp(self.mouse-x / self.width, 0, 1); } }
         pointer-event(e) => {
-            if (e.kind == PointerEventKind.down) { root.value = clamp(self.mouse-x / self.width, 0, 1); }
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.value = clamp(self.mouse-x / self.width, 0, 1); }
             if (e.kind == PointerEventKind.up) { root.released(root.value); }
         }
     }
@@ -1171,7 +1171,7 @@ component ColourPicker inherits Rectangle {
             mouse-cursor: crosshair;
             moved => { if (self.pressed) { root.sat = clamp(self.mouse-x / self.width, 0, 1); root.val = 1 - clamp(self.mouse-y / self.height, 0, 1); } }
             pointer-event(e) => {
-                if (e.kind == PointerEventKind.down) { root.sat = clamp(self.mouse-x / self.width, 0, 1); root.val = 1 - clamp(self.mouse-y / self.height, 0, 1); }
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.sat = clamp(self.mouse-x / self.width, 0, 1); root.val = 1 - clamp(self.mouse-y / self.height, 0, 1); }
                 if (e.kind == PointerEventKind.up) { root.picked(root.now); }
             }
         }
@@ -1189,7 +1189,7 @@ component ColourPicker inherits Rectangle {
             // A grey has no hue to change: choosing one gives it some colour.
             moved => { if (self.pressed) { root.hue = clamp(self.mouse-x / self.width, 0, 0.9999) * 360; } }
             pointer-event(e) => {
-                if (e.kind == PointerEventKind.down) {
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                     root.hue = clamp(self.mouse-x / self.width, 0, 0.9999) * 360;
                     if (root.sat < 0.05) { root.sat = 0.6; }
                     if (root.val < 0.05) { root.val = 0.8; }
@@ -2060,7 +2060,7 @@ export component FullView inherits Rectangle {
                             Rectangle { x: 5px; y: 5px; width: 8px; height: 8px; border-radius: 4px; background: Th.accent; } }
                         TouchArea {
                             moved => { if (self.pressed) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
-                            pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
+                            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
                         }
                     }
                     // Recording.
@@ -2362,11 +2362,11 @@ export component FullView inherits Rectangle {
 
     // Resize borders (the window has no system frame).
     if !root.maximized: TouchArea { x: parent.width - 6px; y: root.title-h; width: 6px; height: parent.height - root.title-h - 12px; mouse-cursor: ew-resize;
-        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("e"); } } }
+        pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-edge("e"); } } }
     if !root.maximized: TouchArea { x: 0; y: root.title-h; width: 6px; height: parent.height - root.title-h - 12px; mouse-cursor: ew-resize;
-        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("w"); } } }
+        pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-edge("w"); } } }
     if !root.maximized: TouchArea { x: 12px; y: parent.height - 6px; width: parent.width - 24px; height: 6px; mouse-cursor: ns-resize;
-        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("s"); } } }
+        pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-edge("s"); } } }
     if !root.maximized: TouchArea { x: parent.width - 12px; y: parent.height - 12px; width: 12px; height: 12px; mouse-cursor: nwse-resize;
-        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("se"); } } }
+        pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize-edge("se"); } } }
 }
