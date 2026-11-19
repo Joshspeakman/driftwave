@@ -121,8 +121,8 @@ impl Picture {
         }
         let a = a.min(1.0);
         let p = &mut self.px[i * 4..i * 4 + 4];
-        for k in 0..3 {
-            p[k] = (c[k] * 255.0 * a + p[k] as f32 * (1.0 - a) + 0.5) as u8;
+        for (d, s) in p.iter_mut().zip(c) {
+            *d = (s * 255.0 * a + *d as f32 * (1.0 - a) + 0.5) as u8;
         }
         p[3] = (a * 255.0 + p[3] as f32 * (1.0 - a) + 0.5) as u8;
     }
@@ -137,8 +137,8 @@ impl Picture {
         }
         let inv = 255 - a;
         let p = &mut self.px[i * 4..i * 4 + 4];
-        for k in 0..3 {
-            p[k] = (((s[k] as u32 * o) >> 8) + div255(p[k] as u32 * inv)).min(255) as u8;
+        for (d, &v) in p.iter_mut().zip(&s[..3]) {
+            *d = (((v as u32 * o) >> 8) + div255(*d as u32 * inv)).min(255) as u8;
         }
         p[3] = (a + div255(p[3] as u32 * inv)).min(255) as u8;
     }
@@ -185,6 +185,7 @@ impl Picture {
 
     /// A line `width` px thick from (x0, y0) to (x1, y1), anti-aliased. Level and upright thin lines sit on whole
     /// pixels, so they're crisp.
+    #[allow(clippy::too_many_arguments)]
     pub fn line(&mut self, mut x0: f32, mut y0: f32, mut x1: f32, mut y1: f32, width: f32, c: Rgba, alpha: f32) {
         if alpha <= 0.002 || width <= 0.0 {
             return;
@@ -344,8 +345,8 @@ pub fn fixed(o: f32) -> u32 {
 pub fn premultiply(img: &mut RgbaImage) {
     for p in img.pixels_mut() {
         let a = p.0[3] as u16;
-        for k in 0..3 {
-            p.0[k] = ((p.0[k] as u16 * a + 127) / 255) as u8;
+        for v in &mut p.0[..3] {
+            *v = ((*v as u16 * a + 127) / 255) as u8;
         }
     }
 }

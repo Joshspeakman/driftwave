@@ -417,7 +417,8 @@ impl App {
         }
         let scale = ui.window().scale_factor();
         let size = ui.window().size();
-        if size.width < 8 || size.height < 8 {
+        // Nothing to paint for until the window is on screen (its size isn't final before then).
+        if size.width < 8 || size.height < 8 || !ui.window().is_visible() {
             return;
         }
         let (lw, lh) = (size.width as f32 / scale, size.height as f32 / scale);
