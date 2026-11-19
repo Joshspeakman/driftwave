@@ -17,6 +17,7 @@
 //! -screenshotDelay <s>, -quitAfter <s>.
 
 mod covers;
+mod decor;
 mod effects;
 mod finding;
 mod integration;
@@ -201,6 +202,7 @@ struct App {
     covers: covers::Covers,
     find: finding::Finding,
     look: look::Look,
+    decor: decor::Decor,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -725,6 +727,7 @@ impl App {
             let focused = !self.args.flag("inactive")
                 && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
             self.tick_look(&ui, now, dt, focused);
+            self.tick_decor(&ui, dt, focused);
         }
         // Minimised, shaded or in the Full layout: nothing else moves but the clock.
         if ui.window().is_minimized() || ui.get_shaded() || !classic {
@@ -1005,6 +1008,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }),
         find: finding::Finding::default(),
         look: look::Look::default(),
+        decor: decor::Decor::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
