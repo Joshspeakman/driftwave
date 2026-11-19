@@ -1,7 +1,7 @@
 //! HLS radio: a master playlist (pick a variant), then the media playlist refreshed by media sequence
 //! so each segment is fetched once, demuxed (MPEG-TS), decoded, and its timed-ID3 titles read.
 
-use crate::decode::{self, FrameDecoder, FrameSplitter, PcmBlock};
+use crate::decode::{self, BitrateMeter, FrameDecoder, FrameSplitter, PcmBlock};
 use crate::engine::Event;
 use crate::net;
 use crate::resample::Resampler;
@@ -25,6 +25,8 @@ pub struct Host<'a> {
     pub push: PushFn<'a>,
     pub mark: Box<dyn Fn(&str) + 'a>,
     pub buffered: Box<dyn Fn() -> f64 + 'a>,
+    /// The stream's bitrate in kbps (the variant's BANDWIDTH, else measured from the frames).
+    pub set_kbps: Box<dyn Fn(u32) + 'a>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,6 +39,11 @@ pub struct MediaPlaylist {
 
 /// The variant to play from a master playlist: the highest bandwidth (radio variants are all small).
 pub fn pick_variant(text: &str, base: &Url) -> Option<Url> {
+    pick_variant_with_bandwidth(text, base).map(|v| v.0)
+}
+
+/// The chosen variant and its BANDWIDTH in bits per second (0 when not stated).
+pub fn pick_variant_with_bandwidth(text: &str, base: &Url) -> Option<(Url, u64)> {
     let mut best: Option<(u64, Url)> = None;
     let mut bandwidth: Option<u64> = None;
     for line in text.lines().map(str::trim) {
@@ -56,7 +63,7 @@ pub fn pick_variant(text: &str, base: &Url) -> Option<Url> {
             }
         }
     }
-    best.map(|b| b.1)
+    best.map(|(bw, u)| (u, bw))
 }
 
 pub fn parse_media(text: &str, base: &Url) -> MediaPlaylist {
@@ -90,11 +97,18 @@ fn send(host: &Host, e: Event) {
 /// Plays until stopped, the stream ends, or it fails.
 pub fn run(mut host: Host, url: &Url) -> Result<(), String> {
     let (final_url, _, text) = net::fetch_text(url, host.user_agent, 1 << 20).map_err(|e| e.to_string())?;
+    let mut stated_kbps = None;
     let media_url = if text.contains("#EXT-X-STREAM-INF") {
-        pick_variant(&text, &final_url).ok_or_else(|| "The HLS playlist has no playable stream.".to_string())?
+        let (u, bw) = pick_variant_with_bandwidth(&text, &final_url).ok_or_else(|| "The HLS playlist has no playable stream.".to_string())?;
+        if bw >= 1000 {
+            stated_kbps = Some((bw / 1000) as u32);
+            (host.set_kbps)((bw / 1000) as u32);
+        }
+        u
     } else {
         final_url
     };
+    let mut meter = BitrateMeter::default();
     let mut next_seq: Option<u64> = None;
     let mut demux = TsDemuxer::new();
     let mut decoder: Option<(AudioKind, Box<dyn FrameDecoder>, FrameSplitter)> = None;
@@ -153,7 +167,14 @@ pub fn run(mut host: Host, url: &Url) -> Result<(), String> {
                             send(&host, Event::Connected { titles: false, format: None, kind: format!("hls/{}", dec.name()) });
                             announced = true;
                         }
+                        let format = if kind == AudioKind::Adts { RecordableFormat::Aac } else { RecordableFormat::Mp3 };
                         for frame in split.feed(&es) {
+                            if stated_kbps.is_none() {
+                                meter.add(format, &frame);
+                                if let Some(k) = meter.kbps() {
+                                    (host.set_kbps)(k);
+                                }
+                            }
                             if let Ok(blocks) = dec.decode(&frame) {
                                 for b in blocks {
                                     (host.push)(&mut resampler, &b);

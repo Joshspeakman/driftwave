@@ -11,7 +11,14 @@ pub struct Connection {
     pub content_type: Option<String>,
     /// `icy-metaint`: audio bytes between metadata blocks, when the server sends titles.
     pub meta_int: Option<usize>,
+    /// `icy-br`: the station's stated bitrate in kbps.
+    pub bitrate: Option<u32>,
     pub reader: Box<dyn Read + Send>,
+}
+
+/// `icy-br` values look like "128" or "128,128"; the first number counts.
+pub fn parse_icy_br(v: &str) -> Option<u32> {
+    v.split(|c: char| !c.is_ascii_digit()).find(|t| !t.is_empty())?.parse().ok().filter(|&n| n > 0)
 }
 
 #[derive(Debug)]
@@ -72,8 +79,9 @@ pub fn open(url: &Url, user_agent: &str, icy: bool) -> Result<Connection, NetErr
         }
         let content_type = resp.header("Content-Type").map(str::to_string);
         let meta_int = resp.header("icy-metaint").and_then(|v| v.trim().parse::<usize>().ok()).filter(|&n| n > 0);
+        let bitrate = resp.header("icy-br").and_then(parse_icy_br);
         let final_url = Url::parse(resp.get_url()).unwrap_or(url);
-        return Ok(Connection { url: final_url, content_type, meta_int, reader: Box::new(resp.into_reader()) });
+        return Ok(Connection { url: final_url, content_type, meta_int, bitrate, reader: Box::new(resp.into_reader()) });
     }
     Err(NetError::Other("Too many redirects.".into()))
 }
@@ -102,7 +110,7 @@ pub fn open_raw(url: &Url, user_agent: &str, icy: bool) -> io::Result<Connection
     if !ok {
         return Err(io::Error::other(format!("status: {}", status.trim())));
     }
-    let (mut content_type, mut meta_int) = (None, None);
+    let (mut content_type, mut meta_int, mut bitrate) = (None, None, None);
     loop {
         let mut line = String::new();
         if reader.read_line(&mut line)? == 0 || line.trim().is_empty() {
@@ -112,11 +120,12 @@ pub fn open_raw(url: &Url, user_agent: &str, icy: bool) -> io::Result<Connection
             match k.trim().to_ascii_lowercase().as_str() {
                 "content-type" => content_type = Some(v.trim().to_string()),
                 "icy-metaint" => meta_int = v.trim().parse::<usize>().ok().filter(|&n| n > 0),
+                "icy-br" => bitrate = parse_icy_br(v),
                 _ => {}
             }
         }
     }
-    Ok(Connection { url: url.clone(), content_type, meta_int, reader: Box::new(reader) })
+    Ok(Connection { url: url.clone(), content_type, meta_int, bitrate, reader: Box::new(reader) })
 }
 
 /// Fetches a small text body (a playlist), up to `max` bytes.

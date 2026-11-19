@@ -6,7 +6,7 @@
 //! the buffer runs dry never shows as "loading".
 
 use crate::analysis::{Analyzer, Meters};
-use crate::decode::{self, FrameDecoder, FrameSplitter, PcmBlock};
+use crate::decode::{self, BitrateMeter, FrameDecoder, FrameSplitter, PcmBlock};
 use crate::hls;
 use crate::net::{self, Connection};
 use crate::output::{self, OutputShared};
@@ -44,12 +44,24 @@ pub enum Event {
     State(PlayState),
     /// A connection is up. `titles`: the server sends ICY titles. `kind`: how it's decoded.
     Connected { titles: bool, format: Option<RecordableFormat>, kind: String },
+    /// The stream's own format changed: its decoded rate and channels (before conversion to the
+    /// output device), and its bitrate when known.
+    Format(StreamFormat),
     /// A title is now audible; `at` is the playback position in seconds.
     NowPlaying { title: String, at: f64 },
     Recorder(RecorderEvent),
     Saved(PathBuf),
     SaveFailed(String),
     Info(String),
+}
+
+/// What the station sends, as decoded (HE-AAC reports its full rate and its stereo).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamFormat {
+    pub rate: u32,
+    pub channels: u16,
+    /// From `icy-br`, the HLS variant's bandwidth, or the frame headers.
+    pub kbps: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +87,16 @@ struct Timeline {
     /// The stream thread has given up (or was stopped).
     ended: AtomicBool,
     failure: Mutex<Option<String>>,
+    /// Decoded rate and channels of the newest block, and the best bitrate known.
+    format: Mutex<Option<(u32, u16)>>,
+    kbps: Mutex<Option<u32>>,
+}
+
+impl Timeline {
+    fn stream_format(&self) -> Option<StreamFormat> {
+        let (rate, channels) = (*self.format.lock().unwrap())?;
+        Some(StreamFormat { rate, channels, kbps: *self.kbps.lock().unwrap() })
+    }
 }
 
 pub struct Engine {
@@ -82,6 +104,7 @@ pub struct Engine {
     stop: Arc<AtomicBool>,
     threads: Vec<JoinHandle<()>>,
     analyzer: Mutex<Analyzer>,
+    timeline: Arc<Timeline>,
 }
 
 impl Engine {
@@ -95,6 +118,8 @@ impl Engine {
             markers: Mutex::new(VecDeque::new()),
             ended: AtomicBool::new(false),
             failure: Mutex::new(None),
+            format: Mutex::new(None),
+            kbps: Mutex::new(None),
         });
         let _ = tx.send(Event::Info(format!(
             "output {} at {} Hz, {} ch{}",
@@ -107,7 +132,7 @@ impl Engine {
         {
             let (url, config, output, stop, timeline, tx) = (url.to_string(), config.clone(), output.clone(), stop.clone(), timeline.clone(), tx.clone());
             threads.push(thread::Builder::new().name("driftwave-stream".into()).spawn(move || {
-                let mut s = Stream { config, output, stop, timeline: timeline.clone(), tx, tracks: HashMap::new() };
+                let mut s = Stream { config, output, stop, timeline: timeline.clone(), tx, tracks: HashMap::new(), icy_br: None };
                 if let Err(message) = s.run(&url) {
                     *timeline.failure.lock().unwrap() = Some(message);
                 }
@@ -116,9 +141,15 @@ impl Engine {
         }
         {
             let (output, stop, timeline) = (output.clone(), stop.clone(), timeline.clone());
+            let timeline = timeline.clone();
             threads.push(thread::Builder::new().name("driftwave-control".into()).spawn(move || control(output, stop, timeline, tx)).expect("control thread"));
         }
-        (Engine { output, stop, threads, analyzer: Mutex::new(Analyzer::new()) }, rx)
+        (Engine { output, stop, threads, analyzer: Mutex::new(Analyzer::new()), timeline }, rx)
+    }
+
+    /// The stream's own format, once audio has been decoded.
+    pub fn format(&self) -> Option<StreamFormat> {
+        self.timeline.stream_format()
     }
 
     pub fn set_volume(&self, v: f32) {
@@ -184,7 +215,13 @@ fn control(output: Arc<OutputShared>, stop: Arc<AtomicBool>, timeline: Arc<Timel
     let mut state = PlayState::Loading;
     let _ = tx.send(Event::State(state.clone()));
     let mut current: Option<String> = None;
+    let mut format: Option<StreamFormat> = None;
     while !stop.load(Ordering::Relaxed) {
+        let f = timeline.stream_format();
+        if f.is_some() && f != format {
+            format = f;
+            let _ = tx.send(Event::Format(f.unwrap()));
+        }
         let buffered = output.buffered_seconds();
         let ended = timeline.ended.load(Ordering::Relaxed);
         let next = match state {
@@ -237,6 +274,8 @@ struct Stream {
     tx: Sender<Event>,
     /// Recorded tracks: id → (title, temporary file, format).
     tracks: HashMap<uuid::Uuid, (String, Option<PathBuf>)>,
+    /// The bitrate the station states (`icy-br`), if any.
+    icy_br: Option<u32>,
 }
 
 /// What a connection carries.
@@ -251,11 +290,13 @@ struct Sink {
     decoder: Box<dyn FrameDecoder>,
     resampler: Option<Resampler>,
     errors: u32,
+    format: RecordableFormat,
+    meter: BitrateMeter,
 }
 
 impl Sink {
-    fn new(decoder: Box<dyn FrameDecoder>) -> Sink {
-        Sink { decoder, resampler: None, errors: 0 }
+    fn new(format: RecordableFormat) -> Sink {
+        Sink { decoder: decode::for_format(format), resampler: None, errors: 0, format, meter: BitrateMeter::default() }
     }
 
     fn reset(&mut self) {
@@ -280,6 +321,21 @@ impl Stream {
     }
 
     fn decode_frames(&self, sink: &mut Sink, frames: Vec<Vec<u8>>) -> Result<(), String> {
+        // Without a stated bitrate, measure it from the frames.
+        let stated = self.icy_br.is_some();
+        for f in &frames {
+            if !stated {
+                sink.meter.add(sink.format, f);
+            }
+        }
+        if !stated {
+            if let Some(k) = sink.meter.kbps() {
+                let mut kb = self.timeline.kbps.lock().unwrap();
+                if kb.is_none_or(|old| old.abs_diff(k) >= 4) {
+                    *kb = Some(k);
+                }
+            }
+        }
         for f in frames {
             match sink.decoder.decode(&f) {
                 Ok(blocks) => {
@@ -415,6 +471,10 @@ impl Stream {
                 _ => None,
             };
             let titles = conn.meta_int.is_some();
+            self.icy_br = conn.bitrate;
+            if conn.bitrate.is_some() {
+                *self.timeline.kbps.lock().unwrap() = conn.bitrate;
+            }
             let kind_name = match &kind {
                 Kind::Frames(_) => sink.as_ref().map(|s| s.decoder.name()).unwrap_or_else(|| decode::for_format(format.unwrap()).name()).to_string(),
                 Kind::Ogg => "symphonia-ogg".to_string(),
@@ -429,7 +489,7 @@ impl Stream {
             match kind {
                 Kind::Frames(f) => {
                     if sink.is_none() {
-                        sink = Some(Sink::new(decode::for_format(f)));
+                        sink = Some(Sink::new(f));
                     } else if let Some(s) = sink.as_mut() {
                         s.reset();
                     }
@@ -541,10 +601,20 @@ fn self_ref(s: &mut Stream) -> hls::Host<'_> {
             let o = s.output.clone();
             move || o.buffered_seconds()
         }),
+        set_kbps: Box::new({
+            let tl = s.timeline.clone();
+            move |k| *tl.kbps.lock().unwrap() = Some(k)
+        }),
     }
 }
 
 fn s_push(output: Arc<OutputShared>, timeline: Arc<Timeline>, stop: Arc<AtomicBool>, resampler: &mut Option<Resampler>, b: &PcmBlock) {
+    {
+        let mut f = timeline.format.lock().unwrap();
+        if *f != Some((b.rate, b.channels)) {
+            *f = Some((b.rate, b.channels));
+        }
+    }
     let (rate, ch) = (output.rate, output.channels);
     if !resampler.as_ref().is_some_and(|r| r.matches(b.rate, b.channels as usize)) {
         *resampler = Some(Resampler::new(b.rate, b.channels as usize, rate, ch));

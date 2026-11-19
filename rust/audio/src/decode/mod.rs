@@ -149,6 +149,31 @@ fn compatible(a: &FrameHeader, b: &FrameHeader) -> bool {
     a.sample_rate == b.sample_rate && a.profile == b.profile
 }
 
+/// Average bitrate from frame headers, for stations that don't state one (`icy-br`).
+#[derive(Debug, Default)]
+pub struct BitrateMeter {
+    bits: u64,
+    seconds: f64,
+    frames: u32,
+}
+
+impl BitrateMeter {
+    pub fn add(&mut self, format: RecordableFormat, frame: &[u8]) {
+        if let Some(h) = audio_frames::header(format, frame) {
+            if h.sample_rate > 0 && h.samples > 0 {
+                self.bits += h.length as u64 * 8;
+                self.seconds += h.samples as f64 / h.sample_rate as f64;
+                self.frames += 1;
+            }
+        }
+    }
+
+    /// kbps once enough frames are in (about a second), rounded.
+    pub fn kbps(&self) -> Option<u32> {
+        (self.frames >= 40 && self.seconds > 0.0).then(|| (self.bits as f64 / self.seconds / 1000.0).round() as u32)
+    }
+}
+
 // MARK: symphonia decoders
 
 use symphonia::core::codecs::audio::well_known::{CODEC_ID_AAC, CODEC_ID_MP3};
