@@ -418,6 +418,7 @@ export struct TrackRow {
 export global Upd {
     // idle, checking, uptodate, available, downloading, installing, failed
     in property <string> state: "idle";
+    in property <string> title;
     in property <string> message;
     in property <float> progress;
     in property <bool> auto: true;
@@ -803,6 +804,8 @@ component Segmented inherits Rectangle {
 component SettingRow inherits Rectangle {
     in property <string> label;
     in property <string> note;
+    // 0 to 1 shows a progress bar under the note.
+    in property <float> progress: -1;
     min-height: 68px;
     border-radius: Th.bevel ? 0px : Th.radius-card;
     background: Th.card;
@@ -817,6 +820,17 @@ component SettingRow inherits Rectangle {
             alignment: center; spacing: 3px; horizontal-stretch: 1;
             Text { text: root.label; color: Th.card-text; font-size: 14px; }
             if root.note != "": Text { text: root.note; color: Th.card-text2; font-size: 12px; wrap: word-wrap; }
+            if root.progress >= 0 && !Th.bevel: Rectangle {
+                height: 6px; border-radius: 3px; background: Th.control-stroke;
+                Rectangle { x: 0; width: parent.width * root.progress; border-radius: 3px; background: Th.accent; animate width { duration: 150ms; } }
+            }
+            if root.progress >= 0 && Th.bevel: Rectangle {
+                height: 16px; background: Th.bevel-light;
+                Bevel { width: parent.width; height: parent.height; sunken: true; }
+                for k in Math.floor((self.width - 6px) * root.progress / 10px): Rectangle {
+                    x: 3px + k * 10px; y: 3px; width: 8px; height: parent.height - 6px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
+                }
+            }
         }
         VerticalLayout { alignment: center; HorizontalLayout { alignment: end; @children } }
     }
@@ -1098,20 +1112,31 @@ component SongText inherits Rectangle {
     in property <string> text;
     in property <color> ink;
     in property <int> weight: 400;
-    // Just changed: drawn transparent and a little low for a moment, then eased back into place.
+    // Just changed: the old line fades out as the new one fades in and settles into place.
     property <bool> fresh;
-    changed text => { self.fresh = true; }
+    property <string> last;
+    property <string> old;
+    init => { self.last = self.text; }
+    changed text => { self.old = self.last; self.last = self.text; self.fresh = true; }
     height: 18px;
     Timer { interval: 30ms; running: root.fresh; triggered => { root.fresh = false; } }
+    gone := Text {
+        width: parent.width; text: root.old; color: root.ink; font-size: 13px; font-weight: root.weight;
+        horizontal-alignment: center; overflow: elide; opacity: 0;
+    }
     label := Text {
         width: parent.width; text: root.text; color: root.ink; font-size: 13px; font-weight: root.weight;
         horizontal-alignment: center; overflow: elide;
     }
     states [
         new when root.fresh: {
+            gone.opacity: 1;
             label.opacity: 0;
             label.y: 3px;
-            out { animate label.opacity, label.y { duration: 320ms; easing: ease-out; } }
+            out {
+                animate gone.opacity { duration: 120ms; easing: ease-in; }
+                animate label.opacity, label.y { duration: 240ms; delay: 100ms; easing: ease-out; }
+            }
         }
     ]
 }
@@ -1810,7 +1835,7 @@ export component FullView inherits Rectangle {
                 // Customize: make the current theme yours (a copy), or change your own.
                 HorizontalLayout {
                     spacing: 8px; alignment: start;
-                    if !Ed.editable: Btn { text: "Customize Theme…"; primary: true; clicked => { Ed.customize(); } }
+                    if !Ed.editable: Btn { text: "Customize Theme…"; clicked => { Ed.customize(); } }
                     if Ed.editable: Text { vertical-alignment: center; text: "Editing: " + Ed.name; color: Th.text2; font-size: 13px; }
                     Btn { text: "Import Theme…"; clicked => { Ed.import(); } }
                     Btn { text: "Export Theme…"; clicked => { Ed.export(); } }
@@ -1937,21 +1962,18 @@ export component FullView inherits Rectangle {
                 Rectangle { height: 8px; }
                 GroupHeading { text: "Updates"; }
                 SettingRow {
-                    label: "Updates";
+                    label: Upd.title;
                     note: Upd.message;
+                    progress: Upd.state == "downloading" ? Upd.progress : Upd.state == "installing" ? 1 : -1;
                     HorizontalLayout {
                         spacing: 8px;
                         if Upd.state == "available": Btn { text: "Release Notes"; clicked => { Upd.notes(); } }
-                        if Upd.state == "available": Btn { text: Upd.can-install ? "Download and Install" : "Get It…"; primary: true; clicked => { Upd.install(); } }
+                        if Upd.state == "available": Btn { text: Upd.can-install ? "Download and Install" : "Open Download Page"; primary: true; clicked => { Upd.install(); } }
                         if Upd.state != "available": Btn {
                             text: "Check Now"; enabled: Upd.state != "checking" && Upd.state != "downloading" && Upd.state != "installing";
                             clicked => { Upd.check(); }
                         }
                     }
-                }
-                if Upd.state == "downloading" || Upd.state == "installing": Rectangle {
-                    height: 4px; border-radius: 2px; background: Th.control-stroke;
-                    Rectangle { x: 0; width: parent.width * (Upd.state == "installing" ? 1 : Upd.progress); border-radius: 2px; background: Th.accent; animate width { duration: 150ms; } }
                 }
                 SettingRow {
                     label: "Check automatically";
@@ -2038,17 +2060,17 @@ export component FullView inherits Rectangle {
                     }
                     // Recording.
                     Rectangle {
-                        x: 16px; y: parent.y-rec; width: parent.width - 32px; height: 52px; border-radius: Th.radius-control;
-                        background: Th.control; border-width: 1px; border-color: Th.control-stroke;
+                        x: 16px; y: parent.y-rec; width: parent.width - 32px; height: 52px; border-radius: Th.bevel ? 0px : Th.radius-control;
+                        background: Th.control; border-width: Th.bevel ? 0px : 1px; border-color: Th.control-stroke;
                         rec-ta := TouchArea { clicked => { root.toggle-record(); } }
+                        if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: rec-ta.pressed; }
                         Rectangle { x: 14px; y: 18px; width: 16px; height: 16px; border-radius: 8px; border-width: 2px;
                             border-color: root.recording ? #E0573A : Th.control-text.transparentize(45%); background: root.recording ? #E0573A : transparent; }
                         Text { x: 42px; y: 9px; width: parent.width - 54px; overflow: elide;
-                            text: !root.record-armed ? "Not Recording" : root.recording ? (Prefs.record-mode == "everything" ? "Recording · Saving All" : "Recording · Decide per Track")
-                                : (Prefs.record-mode == "everything" ? "Ready to Record · Save All" : "Ready to Record · Decide per Track");
+                            text: !root.record-armed ? "Not Recording" : root.recording ? "Recording" : "Ready to Record";
                             color: Th.control-text; font-size: 13px; font-weight: 600; }
                         Text { x: 42px; y: 28px; width: parent.width - 54px; overflow: elide; color: Th.control-text.transparentize(12%); font-size: 11px;
-                            text: !root.record-armed ? "Click to record each song as its own file." : Prefs.record-mode == "everything" ? "Every song is saved as it ends." : "Save songs from Played Tracks."; }
+                            text: !root.record-armed ? "Click to record each song as its own file." : Prefs.record-mode == "everything" ? "Save All: every song is kept." : "Decide per track: save from the list."; }
                     }
                     // Played songs.
                     Text { x: 18px; y: parent.y-rec + 68px; text: "Played Tracks"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
@@ -2209,18 +2231,19 @@ export component FullView inherits Rectangle {
             TouchArea { }
             if Th.bevel: Bevel { width: parent.width; height: parent.height; }
             EraCaption { x: 3px; y: 3px; width: parent.width - 6px; title: "Search GIPHY"; closed => { Bg.search-open = false; } }
-            Text { x: 24px; y: 20px + parent.cap; text: "Search GIPHY"; color: Th.card-text; font-size: 20px; font-weight: 600; }
+            property <length> body-y: self.cap > 0 ? self.cap + 18px : 60px;
+            if !(Th.bevel && (Th.captions == "win95" || Th.captions == "win31" || Th.captions == "platinum")): Text { x: 24px; y: 20px; text: "Search GIPHY"; color: Th.card-text; font-size: 20px; font-weight: 600; }
             giphy-box := Field {
-                x: 24px; y: 60px + parent.cap; width: parent.width - 48px - 96px; placeholder: "Rain, city lights, waves…";
+                x: 24px; y: parent.body-y; width: parent.width - 48px - 96px; placeholder: "Rain, city lights, waves…";
                 enabled: parent.keyed;
                 text <=> Bg.query;
                 accepted(t) => { Bg.search(t); }
             }
-            Btn { x: parent.width - 24px - 88px; y: 60px + parent.cap; width: 88px; text: "Search"; primary: true; enabled: parent.keyed; clicked => { Bg.search(giphy-box.text); } }
-            if Bg.status != "": Text { x: 24px; y: 104px + parent.cap; width: parent.width - 48px; text: Bg.status; color: Th.card-text2; font-size: 13px; wrap: word-wrap; }
+            Btn { x: parent.width - 24px - 88px; y: parent.body-y; width: 88px; text: "Search"; primary: true; enabled: parent.keyed; clicked => { Bg.search(giphy-box.text); } }
+            if Bg.status != "": Text { x: 24px; y: parent.body-y + 44px; width: parent.width - 48px; text: Bg.status; color: Th.card-text2; font-size: 13px; wrap: word-wrap; }
             // Nothing yet: what it's for (or what it needs).
             if Bg.status == "" && Bg.results.length == 0: VerticalLayout {
-                x: 48px; y: 140px + parent.cap; width: parent.width - 96px; height: parent.height - 220px - parent.cap; alignment: center; spacing: 8px;
+                x: 48px; y: parent.body-y + 80px; width: parent.width - 96px; height: parent.height - 160px - parent.body-y; alignment: center; spacing: 8px;
                 HorizontalLayout { alignment: center;
                     Path {
                         width: 40px; height: 40px; viewbox-width: 16; viewbox-height: 16; fill: transparent; stroke-width: 1px; stroke: Th.card-text2;
@@ -2240,7 +2263,7 @@ export component FullView inherits Rectangle {
                 }
             }
             results := Flickable {
-                x: 24px; y: 128px + parent.cap; width: parent.width - 48px; height: parent.height - 128px - 64px - parent.cap;
+                x: 24px; y: parent.body-y + 68px; width: parent.width - 48px; height: parent.height - parent.body-y - 68px - 64px;
                 property <length> cw: (self.width - 3 * 8px) / 4;
                 content-height: Math.ceil(Bg.results.length / 4) * (self.cw * 0.75 + 30px);
                 for g[i] in Bg.results: Rectangle {

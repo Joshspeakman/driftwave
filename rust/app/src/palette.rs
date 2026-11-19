@@ -103,11 +103,20 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
     let bright = dark && luminance(accent) > 0.3;
     let title_a = accent.mix(face, if bright { 0.55 } else { 0.25 });
     let title_b = accent.mix(face, if bright { 0.85 } else { 0.75 });
-    let title_text = readable(if bright { rgb(240, 248, 240) } else { on_accent }, title_a, 4.5);
+    // The title sits in the middle of the bar: read against the middle of its gradient.
+    let title_text = readable(if bright { rgb(240, 248, 240) } else { on_accent }, title_a.mix(title_b, 0.5), 4.5);
 
     // The LCD is always dark glass, tinted by the theme; its segments glow in the theme's accent text colour.
-    let lcd_back = back.mix(rgb(0, 0, 0), if dark { 0.75 } else { 0.88 });
-    let lcd_lit = readable(accent_text, lcd_back, 4.5);
+    // A theme whose screen is one colour (visTint) has its LCD in those colours instead.
+    let tint = theme.and_then(|t| t.effects.get("visTint")).map(|o| {
+        let c = |k: &str| o.get(k).and_then(serde_json::Value::as_str).and_then(Color::parse);
+        (c("back").unwrap_or(rgb(0, 0, 0)), c("ink").unwrap_or(rgb(255, 255, 255)))
+    });
+    let lcd_back = match tint {
+        Some((b, _)) => Color { a: 255, ..b },
+        None => back.mix(rgb(0, 0, 0), if dark { 0.75 } else { 0.88 }),
+    };
+    let lcd_lit = readable(tint.map(|(_, ink)| ink).unwrap_or(accent_text), lcd_back, 4.5);
     let lcd_ghost = Color { a: 26, ..lcd_lit };
 
     let button = if dark { control.mix(rgb(255, 255, 255), 0.08) } else { control.mix(rgb(255, 255, 255), 0.5) };
@@ -167,7 +176,7 @@ mod tests {
 
     fn check(name: &str, p: &ClassicPalette) {
         let pairs = [
-            ("title text", p.title_text, p.title_a, 4.5),
+            ("title text", p.title_text, p.title_a.mix(p.title_b, 0.5), 4.5),
             ("LCD", p.lcd_lit, p.lcd_back, 4.5),
             ("button glyph", p.glyph, p.button, 4.5),
             ("button on", p.glyph_on, p.button, 3.0),
@@ -180,6 +189,9 @@ mod tests {
             let c = contrast(fg, bg);
             assert!(c >= min - 0.01, "{name}: {part} contrast {c:.2} < {min}");
         }
+    }
+
+    fn dark_glass(name: &str, p: &ClassicPalette) {
         assert!(luminance(p.lcd_back) < 0.08, "{name}: the LCD should be dark glass");
     }
 
@@ -188,10 +200,17 @@ mod tests {
         let all = themes();
         assert!(all.len() >= 26, "found {} themes", all.len());
         for t in &all {
-            check(&t.name, &classic(Some(t), true));
+            let p = classic(Some(t), true);
+            check(&t.name, &p);
+            // The LCD is dark glass, unless the theme's screen is one colour of its own.
+            if !t.effects.contains_key("visTint") {
+                dark_glass(&t.name, &p);
+            }
         }
-        check("Default (dark)", &classic(None, true));
-        check("Default (light)", &classic(None, false));
+        for (name, p) in [("Default (dark)", classic(None, true)), ("Default (light)", classic(None, false))] {
+            check(name, &p);
+            dark_glass(name, &p);
+        }
     }
 
     #[test]
