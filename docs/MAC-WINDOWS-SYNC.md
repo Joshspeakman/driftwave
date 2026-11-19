@@ -49,6 +49,59 @@ toggled, with six visualizers paying homage to the classics of that era.
 2. Run `cargo test -p driftwave-vis -p driftwave-app`. The vis flash test takes about 40 s in a debug build.
 3. Report what looks wrong under "Mac: Round 6 results", with a snapshot (`-screenshot <file.bmp>`).
 
+### Mac: Round 6 results (2026-11-18)
+
+**It builds and runs on the Mac**, merged at d6775ad. Release build in about 1m45s; binary 12 MB.
+
+**Tests:**
+- `cargo test -p driftwave-vis -p driftwave-app`: all pass. vis is 3 + 4 tests plus the 2 flash-safety tests (25.8 s, debug build).
+- `cargo test -p driftwave-core`: 69 pass, 1 ignored.
+
+**Snapshot:** `docs/design/rust/classic-mac.png`, from `-screenshot`, muted, SomaFM Groove Salad, Liquid Feedback.
+- Fonts: Menlo for the marquee, numbers and list figures; Helvetica Neue for the body. The LCD's seven-segment digits are drawn, not a font.
+- Liquid Feedback, the mini spectrum and the scope line all move with the music.
+
+**Window controls**, checked with real mouse input on a muted run. Slint draws the buttons itself, so
+they're invisible to Accessibility; I clicked by position and checked the results through the Accessibility API and the
+window list.
+
+| Control | Result |
+|---|---|
+| Drag by the title bar | ✅ The window moved exactly by the drag (100, 50) |
+| D, double size | ✅ 550×812 → 825×1218 → back. ⚠️ **At double size the window is taller than a 14" MacBook Pro's usable screen** (998 pt). The bottom of the station list goes off-screen. Cap the height to the screen's visible frame, or scale the list panel instead |
+| A, always on top | ✅ The window level goes 0 → 3 (floating) → 0 |
+| Shade | ✅ The main panel folds to the one-line bar (time and title), and the shade button stays in place; unshading restores 812 pt |
+| Minimise | ✅ It goes to the Dock (`AXMinimized` 1), and Accessibility restores it |
+| Close | ✅ The app quits cleanly |
+
+**What looks wrong:**
+1. **CPU on the Mac is much higher than on the PC** (playing, in front, 14" MacBook Pro at 120 Hz, 2× Retina):
+
+   | Build | Visualizer on | Visualizer off (`-noVis`) | Memory |
+   |---|---|---|---|
+   | Software renderer (as committed) | **47%** | **28%** | 138 / 104 MB |
+   | Software renderer at `SLINT_SCALE_FACTOR=1` | 25% | 19% | 98 / 94 MB |
+   | femtovg (OpenGL), built locally, not committed | 34% | 20% | 123 / 94 MB |
+   | Without the three `animate`s, built locally, not committed | 48% | 26% | — |
+
+   - **Where the time goes:** `sample` on the `-noVis` run shows the cost isn't in our code. It's in **vImage colour
+     conversion**: `vLookupTable_Planar16WithClipping`, `vMatrixMultiply_Planar16S` and RGB888→ARGB8888. Each frame
+     softbuffer hands to CoreGraphics is colour-matched to the display's colour space (P3) at full Retina size.
+   - **What would fix it**, untested:
+     - present with the display's own colour space, or with the colour space left unset, so no conversion happens;
+     - redraw only the regions that changed;
+     - drop to about 10 fps when only the LCD clock is moving.
+   - **Which renderer:** femtovg's 34% isn't good enough either. Skia (Metal) is the other GPU option; it's
+     untested here. This may decide the renderer on the Mac separately from Windows.
+2. **The kHz box shows 48**, the output device's rate. SomaFM's MP3 is 44.1 kHz. The stream's own rate is the
+   `PcmBlock` rate before resampling; the engine could report it through an event or a getter. Say if you want me
+   to add it to `driftwave-audio`.
+3. **kbps shows "--"** for a `-playURL` station. The stream's `icy-br` header, or the frame headers, could fill it.
+4. **The "LIVE" label overlaps the right end of the buffer gauge.**
+
+The test runs left nothing behind. Josh's data wasn't touched: they used `DriftwaveRustTestRun`, which has no
+Mac Driftwave folder to copy from.
+
 ## Round 5 (2026-11-18): Rust on the Mac
 
 Josh asked for the work to be ready to test on the Mac, and chose **Rust on the Mac** over catching up the Swift app.
