@@ -91,6 +91,8 @@ impl Integration {
             }
         }
         self.notifier = Some(Notifier::new());
+        // A Dock click while the window is closed to the menu bar shows it again (macOS).
+        driftwave_platform::reopen::install();
         crate::log(&format!("integration: tray={} media={}", self.tray.is_some(), self.media.is_some()));
     }
 
@@ -171,6 +173,9 @@ impl Integration {
                 MediaCommand::Next => Action::Next,
                 MediaCommand::Previous => Action::Prev,
             }));
+        }
+        if driftwave_platform::reopen::take() {
+            out.push(Action::Show);
         }
         if let Some(l) = &self.listener {
             out.extend(l.messages.try_iter().map(|m| if m == "quit" { Action::Quit } else { Action::Show }));

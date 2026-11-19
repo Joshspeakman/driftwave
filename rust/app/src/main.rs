@@ -635,6 +635,16 @@ impl App {
         if classic {
             self.fit_window(&ui, false);
         }
+        // macOS: Classic resizes from its grip, so the window isn't resizable by the system there. Otherwise its
+        // corner resize zone, bigger than the edges, takes clicks on the close button 12 pt from the corner.
+        // Checked every tick: Slint sets it again from the size limits whenever those change.
+        if cfg!(target_os = "macos") {
+            ui.window().with_winit_window(|w: &winit::window::Window| {
+                if w.is_resizable() == classic {
+                    w.set_resizable(!classic);
+                }
+            });
+        }
         // Default follows the system's light or dark, checked every couple of seconds.
         if self.frame.is_multiple_of(48) {
             if let Some(dark) = ui.window().with_winit_window(|w: &winit::window::Window| w.theme().map(|t| t == winit::window::Theme::Dark)).flatten() {
@@ -733,20 +743,23 @@ impl App {
         ui.set_recording(self.player.writing && self.player.playing);
 
         // The Full layout: the theme's scene (painted when needed; what moves only while in front).
-        if !classic && !ui.window().is_minimized() {
+        // Closed to the menu bar (hidden): nothing to draw at all.
+        let shown = ui.window().is_visible() && !ui.window().is_minimized();
+        if !classic && shown {
             let focused = !self.args.flag("inactive")
                 && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
             self.tick_look(&ui, now, dt, focused);
             self.tick_decor(&ui, dt, focused);
             self.tick_eggs(&ui);
-        } else {
+        } else if classic {
+            // (Hidden in Full: the scene just waits, so it's there the moment the window shows again.)
             self.park_look(&ui);
         }
-        if classic && !ui.window().is_minimized() {
+        if classic && shown {
             self.tick_classic_look(&ui, now);
         }
         // Minimised, shaded or in the Full layout: nothing else moves but the clock.
-        if ui.window().is_minimized() || ui.get_shaded() || !classic {
+        if !shown || ui.get_shaded() || !classic {
             return;
         }
         // Behind other windows the moving parts keep going, at half the rate.
