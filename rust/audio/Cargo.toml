@@ -1,0 +1,24 @@
+[package]
+name = "driftwave-audio"
+description = "Driftwave's audio engine: HTTP/ICY/HLS streams, decoding, output, recording, levels"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "driftwave_audio"
+
+[[bin]]
+name = "driftwave-player"
+path = "src/bin/driftwave-player.rs"
+
+[dependencies]
+driftwave-core = { path = "../core" }
+ureq.workspace = true
+url.workspace = true
+uuid.workspace = true
+symphonia = { version = "0.6", default-features = false, features = ["mp3", "aac", "ogg", "vorbis"] }
+cpal = "0.18"
+rubato = "5"
+rustfft = "6"
