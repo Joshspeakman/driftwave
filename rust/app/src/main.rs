@@ -66,7 +66,7 @@ thread_local! {
 /// The Full layout's window size by default.
 const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
-const FLAGS: [&str; 17] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize", "giphy", "installUpdate"];
+const FLAGS: [&str; 18] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize", "giphy", "installUpdate", "fonts"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
 const DEFAULT_WIDTH: f32 = 412.0;
 const DEFAULT_LIST_UNITS: f32 = 110.0;
@@ -1641,6 +1641,14 @@ fn main() -> Result<(), slint::PlatformError> {
     // Test runs: -giphy opens the GIPHY search; -picker <n> opens Customize's colour picker on token n.
     if app.borrow().args.flag("giphy") {
         ui.global::<Bg>().set_search_open(true);
+    }
+    if app.borrow().args.flag("fonts") {
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(Duration::from_millis(1500), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.global::<Ed>().set_open_fonts(true);
+            }
+        });
     }
     if let Some(n) = app.borrow().args.num("picker") {
         let weak = ui.as_weak();
