@@ -8,6 +8,73 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 11 (2026-11-18): stage 2, finding stations; and the themes' look
+
+**PC (done), stage 2 (fd5cb0a):** finding stations, in `app/src/finding.rs` and `ui/full.slint`.
+- **Discover:** popular in your country (from the locale via `sys-locale`), trending, or random.
+- **Search:** name, plus country, language, tag and order pickers.
+- **Threading:** the station directory is called on background threads. A newer request makes an older one's
+  answer stale, and it's dropped.
+- **Details:** a station's dialog has play/stop, add to or remove from the library, and its homepage.
+- **Your own stations:** add a local station, with a cover chosen through `rfd`; import and export in the
+  exchange format, covers included.
+- **The player keeps the station it plays** (`player.current`), whether it came from the library, Discover or
+  Search. `player.station` is its place in the library, if it has one. Your integration view now reads
+  `player.current`.
+- **New dependencies:** `rfd`, `sys-locale`, `uuid`, `url`.
+
+**PC (done), themes (47b3a02):** until now the Full layout only recoloured themes. It now has their look,
+ported from the C# app's SceneEffect, GlassDrops, NeonEdges and TitleDecor.
+- **`app/src/scene.rs`:** a theme's scene, as two pictures.
+  - **The backdrop:** photos, gradients, the vignette, and the neon's light on the glass. It's painted once per
+    window size, after a resize settles.
+  - **The motion layer:** rain sheets, the neon breathe, passing lights, and drops running down the glass.
+    - It's painted at half size, 12 times a second.
+    - It runs only in the Full layout, and only while the window is in front.
+    - On dense screens it's capped at 0.6 px a point.
+  - With motion off, the backdrop holds a still moment of the rain and the drops.
+- **`app/src/look.rs`:**
+  - window titles and page titles (font, case, letter spacing, neon glow);
+  - neon tubes;
+  - the theme's signs, including `{time}`, `{time24}` and `{date}`;
+  - placeholder tiles in the theme's two accent hues;
+  - see-through panels, made just opaque enough for their text over the actual picture.
+- **Settings → Moving scenes:** Moving or Still, saved as `sceneMotion`.
+- **A valve:** if the whole app uses more than 16% of one core while a scene moves (measured every 6 s), the
+  scene holds still. `-noValve` turns it off for measuring, and `-still` starts still.
+- **Fonts:** the bundled theme fonts are built into the program with `import "...ttf"` in `app.slint`. Before,
+  they silently fell back to the system font.
+- **Tests:**
+  - every moving scene goes through `flash::is_flashing` for 24 s, over the whole window and over WCAG-sized
+    regions (Night Market, Neon Noir and Sixteen Blast all pass);
+  - see-through panels thicken only where the picture needs it.
+- **Measured on the PC** (Night Market, playing, in front, 1180×760 at 100%):
+
+  | State | CPU (one core) |
+  |---|---|
+  | Still | 2.5%, the same as Default |
+  | Moving | about 9.6% |
+  | Behind other windows | still |
+
+  The painting takes 2.0 ms a frame. The rest is Slint redrawing the whole window, which the rain dirties every
+  frame.
+- **Not yet:** the other effects (wood, VU, dial, grain, scanlines, synthwave, spotlight, frames, the LCD,
+  the analyzer, aurora, concrete, cursor), the scene layer types line, bevel, pixels and ellipse, and the easter
+  eggs. Classic still only recolours.
+
+### Asks for the Mac session
+
+1. **Pull and build.** New target dependencies:
+   - `windows-sys` on Windows;
+   - `libc` on unix, for the valve's `getrusage`.
+2. **Measure Night Market on the Retina screen.** Use Full, playing, in front, with the `-noValve` flag. Then
+   measure with the valve on and say whether it trips. If it does, I'd rather tune the cost than leave Macs
+   always still.
+3. **Packaging:** `scene::art_dir()` looks for `theme-art/` next to the program, else `assets/theme-art/` up
+   the tree. The app bundle needs `assets/theme-art` copied into `Contents/MacOS/theme-art` (or Resources,
+   and tell me so I can search there too). Themes are found the same way as before. Fonts are built in.
+4. **Check `{time}` on macOS.** It uses chrono's `%-I`, which should be fine.
+
 ## Round 10 (2026-11-18): stage 1, the Full layout and the swap
 
 **PC (done):** `rust/app` is now one window with two looks.
