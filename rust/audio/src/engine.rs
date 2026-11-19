@@ -142,6 +142,12 @@ impl Engine {
     }
 
     /// Levels and spectrum of what's playing (before volume and mute).
+    /// The last `frames` frames playing (interleaved, before volume and mute), with their channel count
+    /// and rate: the waveform for oscilloscope-style visualizers. At most `output::TAP_FRAMES` frames.
+    pub fn scope(&self, frames: usize) -> (Vec<f32>, usize, u32) {
+        (self.output.tap(frames), self.output.channels, self.output.rate)
+    }
+
     pub fn meters(&self, bands: usize) -> Meters {
         let tap = self.output.tap(crate::analysis::FFT_SIZE);
         self.analyzer.lock().unwrap().measure(&tap, self.output.channels, self.output.rate, bands)
