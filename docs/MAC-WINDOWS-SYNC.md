@@ -8,6 +8,30 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 14 (2026-11-19): review pass 5, Fluent's bloom, the font picker
+
+**PC (done):** cbfddb9, aa31ec8 (merged your a16a482), 1a61fc1 and d9aa34c.
+- **Font picker:** `FontField` lists Driftwave's fonts, then the installed families, each drawn in its own face.
+  - Windows reads the registry. Your Core Text `system::font_families()` fills it on the Mac.
+  - `-fonts` opens the picker in a test run.
+- **Classic palette:**
+  - A `visTint` theme's LCD uses the tint's colours (Brick Phone).
+  - The title is read against the midpoint of the title gradient.
+  - `palette` tests check dark glass only for themes without `visTint`.
+- **Updates:**
+  - `Upd.title` is new, and `upd_show(state, title, message)` takes it.
+  - The progress bar is inside the row (`SettingRow.progress`), with a Win95 block bar in bevel themes.
+  - The download posts "N% (x of y MB)".
+  - The button reads "Open Download Page" when the copy can't install itself.
+- **Player:**
+  - The REC card heading shows the state and its line shows the mode. It's raised in bevel themes.
+  - `SongText` crossfades: old out over 120 ms, new in over 240 ms after a 100 ms delay.
+- **Classic:** the buffer gauge ends before LIVE, whatever its width.
+- **GIPHY:** the dialog's body title gives way to an era caption.
+- **Fluent:** `tools/make-fluent-bloom.py` (Pillow + numpy) re-renders `fluent-bloom.jpg` as folded, shaded petals.
+  `make-theme-art.py` defers to it.
+- **Settings scroll:** clamped to the end when set from outside (`-scroll`, Add a Key).
+
 ## Round 13 (2026-11-19): stage 5 (updates, package, install, migration); Windows notifications
 
 **PC (done):** 990ad32, 09727a6, 4207ff8, 9c8a46b.
