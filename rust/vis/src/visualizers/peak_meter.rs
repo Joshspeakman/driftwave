@@ -11,6 +11,8 @@ pub struct PeakMeter {
     peaks: Vec<f32>,
     hold: Vec<f32>,
     fall: Vec<f32>,
+    /// The still background (gradient and scale lines), drawn once per size and copied each frame.
+    backdrop: Option<Canvas>,
 }
 
 const GREEN: Rgb = [0.12, 0.85, 0.35];
@@ -30,21 +32,25 @@ impl Visualizer for PeakMeter {
 
     fn render(&mut self, a: &Analysis, c: &mut Canvas) {
         let (w, h) = (c.w as f32, c.h as f32);
-        c.gradient([0.012, 0.016, 0.03], [0.02, 0.03, 0.05]);
-        let u = (h / 120.0).max(1.0); // one "LED unit" scales with the slot
+        let u = (h / 120.0).max(0.6); // one "LED unit" scales with the slot
+        let top = h * 0.06;
+        let floor = h * 0.66;
+        let span = floor - top;
+        if self.backdrop.as_ref().map(|b| (b.w, b.h)) != Some((c.w, c.h)) {
+            let mut b = Canvas::new(c.w, c.h);
+            b.gradient([0.012, 0.016, 0.03], [0.02, 0.03, 0.05]);
+            for k in 1..4 {
+                let y = top + span * k as f32 / 4.0;
+                b.fill_rect(0.0, y, w, y + u * 0.5, [0.05, 0.07, 0.1]);
+            }
+            self.backdrop = Some(b);
+        }
+        c.px.copy_from_slice(&self.backdrop.as_ref().expect("backdrop").px);
         let bars = ((w / (7.0 * u)) as usize).clamp(12, 64);
         if self.peaks.len() != bars {
             self.peaks = vec![0.0; bars];
             self.hold = vec![0.0; bars];
             self.fall = vec![0.0; bars];
-        }
-        let top = h * 0.06;
-        let floor = h * 0.66;
-        let span = floor - top;
-        // Faint scale lines behind the bars.
-        for k in 1..4 {
-            let y = top + span * k as f32 / 4.0;
-            c.fill_rect(0.0, y, w, y + u * 0.5, [0.05, 0.07, 0.1]);
         }
         let slot = w / bars as f32;
         let bar_w = (slot * 0.72).max(1.0);

@@ -41,10 +41,12 @@ fn main() {
         for f in 0..frames {
             let end = (f as f64 / 30.0 * rate as f64) as usize;
             let start = end.saturating_sub(2048);
+            let (dw, dh) = host.size();
             let px = host.frame(&audio[start * 2..end * 2], 2, rate, f as f64 / 30.0, 1.0 / 30.0);
             if f % 15 == 14 {
+                // The drawing size (the UI scales it up to the slot).
                 let mut file = std::fs::File::create(out.join(format!("{}-{:04}.ppm", v.id(), f))).unwrap();
-                write!(file, "P6\n{w} {h}\n255\n").unwrap();
+                write!(file, "P6\n{dw} {dh}\n255\n").unwrap();
                 let rgb: Vec<u8> = px.chunks(4).flat_map(|p| [p[0], p[1], p[2]]).collect();
                 file.write_all(&rgb).unwrap();
             }

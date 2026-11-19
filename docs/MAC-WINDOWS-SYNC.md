@@ -8,6 +8,58 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 8 (2026-11-18): resizable, polished, and very light
+
+Josh asked for three things:
+- **Resizable, like the original:** it felt too wide and too large.
+- **Polished:** it felt "a little unpolished… too flat… amateur".
+- **Lightweight:** it should take almost no computer resources, even with the visualizer on, and run on a potato.
+
+**PC (done, on `rust`):**
+- **Resizable.** `u` is now the window's width ÷ 275, so dragging the corner grip scales the whole player crisply,
+  and the height beyond the player and visualizer goes to the station list.
+  - The default is 412 px wide (was 550). D switches to a large size that fits the screen.
+  - The width and the list's height are saved.
+  - The grip calls winit's `drag_resize_window` (SouthEast).
+- **Polish:**
+  - one light direction, from the top left;
+  - glossy keys that sink when pressed, in one segmented transport strip of equal heights;
+  - recessed wells with inner shadows;
+  - digits that glow, with LCD glass over the digits only;
+  - LEDs, labelled REC / VIS / LIST pills (the mislabelled glyph button is gone), engraved title bars, a slider
+    knob with grip lines, a slim list scrollbar, and alternating rows.
+  - The tooltip text that never showed is removed.
+- **Light:**
+  - **Pacing:** one 24 Hz timer. The big visualizer draws every tick, and the marquee and mini spectrum every
+    other one. Behind other windows everything runs at half that. Minimised or shaded nothing moves. Once stopped
+    and settled, nothing draws, the marquee included.
+  - **Pixel budget:** visualizers draw within 60,000 pixels (soft ones at 0.5–0.8 resolution), and Slint scales
+    them up smoothly. Double size and Retina cost no more.
+  - **Adaptive quality:** if the big visualizer averages over 1.2 ms a frame, its budget steps down (and back up
+    under 0.45 ms). That bounds its cost on slow machines.
+  - **Backgrounds:** the static ones (Peak Meter, Waveland) are drawn once and copied.
+  - **Recording:** nothing is written unless REC is on (it was "Decide", which wrote temp files). The REC lamp
+    follows the recorder's events, and temp files are cleared on stop and quit.
+  - **Readouts:** kHz and mono/stereo are blank until the stream format arrives (your Round 7 item 2), rather
+    than guessed.
+- **Measured on the PC** (`-alwaysActive`, playing, Night Market, 412 px):
+  - in front: 2.9–4.3% of one core with the visualizer, 1.0% without;
+  - behind other windows: 1.4%;
+  - shaded: 0.0%; stopped: 0.0%;
+  - 24–37 MB.
+  - The vis flash test now also runs at 24 fps at the big slot and 12 fps at the mini's size; it passes.
+- **Test flags:** `-width <px>` sets the starting width. `-inactive` forces the behind-other-windows path, for
+  measuring, since a background script can't take the focus away.
+
+### Asks for the Mac session
+
+1. **Resize on the Mac.** winit's `drag_resize_window` may be unsupported on macOS (it logs `resize: …` with
+   DRIFTWAVE_LOG). If so, make the corner grip work there your way. One option: frameless windows that keep the
+   resizable style mask can be resized from their edges.
+2. **Re-measure on the 14"** (playing, at 412 and at double size), with your renderer choice from Round 7:
+   in front with and without the visualizer, `-inactive`, `-shade`, and stopped.
+3. Record results under "Mac: Round 8 results".
+
 ## Round 7 (2026-11-18): the Classic layout, lighter
 
 **PC (done):** answers to the Mac's Round 6 findings.
