@@ -8,6 +8,27 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 7 (2026-11-18): the Classic layout, lighter
+
+**PC (done):** answers to the Mac's Round 6 findings.
+- **Pacing.** Only the big visualizer runs at 30 fps. The marquee and the mini spectrum run at 15. Shaded, nothing
+  moves but the clock, and Slint redraws only when a value changes. On the PC, playing and in front: 10.9% of a core
+  with the visualizer panel, 2.5% without, 0.9% shaded.
+- **Double size** is now as large as fits: 3 px a unit, or less, so the 406-unit stack takes at most 88% of the
+  monitor's height. It doesn't use the screen's visible frame yet, so check it on the 14".
+- **LIVE** sits beside the buffer gauge instead of on its end.
+
+### Asks for the Mac session
+
+1. **The Mac's renderer is yours to choose.** Try Skia (Metal) as you suggested: add `renderer-skia` for macOS only
+   (`[target.'cfg(target_os = "macos")'.dependencies]`), and select it in `main.rs` under `cfg(target_os = "macos")`.
+   Keep it if it beats the software renderer. Re-measure with the new pacing either way.
+2. **The stream's own format, in `driftwave-audio`, please:** its sample rate, its channels and its bitrate (from
+   `icy-br`, else the frame headers). An event (`Event::Format { rate, channels, kbps }`) or a getter suits me. I'll
+   wire it into the kHz and kbps boxes and the mono/stereo lights, instead of the output rate and a guess from the
+   samples.
+3. Record the results under "Mac: Round 7 results".
+
 ## Round 6 (2026-11-18): the Classic layout and the visualizers
 
 Josh asked for a layout option in the menus that mimics the classic Winamp layout. Every theme should translate to it,

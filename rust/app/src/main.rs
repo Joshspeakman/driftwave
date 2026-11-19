@@ -123,6 +123,8 @@ struct App {
     /// With DRIFTWAVE_LOG: time spent in each part of the tick, logged every 150 ticks.
     profile: [f64; 4],
     ticks: u32,
+    /// Frames since launch, for pacing the parts that don't need every frame.
+    frame: u64,
 }
 
 impl App {
@@ -346,11 +348,20 @@ impl App {
             return;
         }
         let t0 = Instant::now();
+        self.frame += 1;
+        let shaded = ui.get_shaded();
+        // Every presented frame costs the most on high-density screens (the Mac colour-matches each one), so only the
+        // big visualizer runs at 30 a second. The marquee and the mini spectrum run at 15, and shaded nothing moves but
+        // the clock.
+        let half = self.frame % 2 == 0;
+        if shaded || (!half && !ui.get_show_vis()) {
+            return;
+        }
         // The marquee scrolls at a steady pace and wraps seamlessly.
         let u = ui.get_u();
         let span = ui.get_marquee_width() + 24.0 * u;
-        if span > 24.0 * u + 1.0 {
-            let off = (ui.get_marquee_offset() + 16.0 * u * dt) % span;
+        if half && span > 24.0 * u + 1.0 {
+            let off = (ui.get_marquee_offset() + 16.0 * u * dt * 2.0) % span;
             ui.set_marquee_offset(off);
         }
         // Real audio for the meters and the visualizers.
@@ -375,10 +386,10 @@ impl App {
         let t1 = Instant::now();
         let scale = ui.window().scale_factor();
         let t = (now - self.started).as_secs_f64();
-        if !ui.get_shaded() {
+        if half {
             let (w, h) = ((ui.get_mini_width() * scale) as usize, (ui.get_mini_height() * scale) as usize);
             self.mini.resize(w, h, scale);
-            let px = self.mini.frame(&samples, channels, rate, t, dt);
+            let px = self.mini.frame(&samples, channels, rate, t, dt * 2.0);
             ui.set_vis_mini(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, w as u32, h as u32)));
         }
         let t2 = Instant::now();
@@ -414,6 +425,24 @@ impl App {
             ui.set_vis_name(visualizers::by_id(next).map(|v| v.name()).unwrap_or("").into());
         }
         log(&format!("visualizer {next}"));
+    }
+}
+
+/// The double size: 3 pixels a unit, or less if the whole stack (406 units tall) wouldn't fit on the screen (leaving
+/// room for the menu bar, the dock or the taskbar).
+fn double_size(ui: &ClassicWindow) -> f32 {
+    let screen = ui
+        .window()
+        .with_winit_window(|w: &winit::window::Window| {
+            w.current_monitor().map(|m| {
+                let size = m.size().to_logical::<f64>(m.scale_factor());
+                (size.width as f32, size.height as f32)
+            })
+        })
+        .flatten();
+    match screen {
+        Some((w, h)) => (h * 0.88 / 406.0).min(w * 0.9 / 275.0).clamp(2.0, 3.0),
+        None => 3.0,
     }
 }
 
@@ -493,12 +522,13 @@ fn main() -> Result<(), slint::PlatformError> {
         marquee: String::new(),
         profile: [0.0; 4],
         ticks: 0,
+        frame: 0,
     }));
 
     {
         let a = app.borrow();
         let s = &a.settings;
-        ui.set_u(if a.args.flag("double") || s.get("double").and_then(Value::as_bool).unwrap_or(false) { 3.0 } else { 2.0 });
+        ui.set_u(if a.args.flag("double") || s.get("double").and_then(Value::as_bool).unwrap_or(false) { double_size(&ui) } else { 2.0 });
         ui.set_shaded(a.args.flag("shade") || s.get("shaded").and_then(Value::as_bool).unwrap_or(false));
         ui.set_show_vis(!a.args.flag("noVis") && s.get("showVisualizer").and_then(Value::as_bool).unwrap_or(true));
         ui.set_show_list(!a.args.flag("noList") && s.get("showList").and_then(Value::as_bool).unwrap_or(true));
@@ -604,7 +634,8 @@ fn main() -> Result<(), slint::PlatformError> {
     let weak = ui.as_weak();
     ui.on_toggle_double(move || {
         if let Some(ui) = weak.upgrade() {
-            ui.set_u(if ui.get_u() > 2.0 { 2.0 } else { 3.0 });
+            let next = if ui.get_u() > 2.0 { 2.0 } else { double_size(&ui) };
+            ui.set_u(next);
         }
     });
     let a = app.clone();
