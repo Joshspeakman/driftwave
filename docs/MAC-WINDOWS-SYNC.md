@@ -108,6 +108,35 @@ the Rust player; check that `state loading` appears only once.
 
 **5-minute soak:** SomaFM Groove Salad AAC through AudioToolbox, muted. One connection, 299.8 s played, **zero underruns**; the song change was announced at 289.69 s.
 
+### Windows: Round 5 results (2026-11-18)
+
+**The phase 2 gate passes on Windows too**, against the Rust player (`SHORTWAVE_PLAYER=rust`).
+
+- **`decode/windows.rs`:** Media Foundation's AAC decoder transform behind `FrameDecoder`, wired into `decode::aac()`.
+  - Every ADTS frame goes in whole (payload type 1); there's no sniffing.
+  - The decoder finds SBR and PS itself and reports a stream change. The output is then renegotiated: float,
+    else 16-bit.
+  - It uses the windows crate 0.62, the version cpal already pulls in.
+- **Tests:**
+  - AAC-LC at 44.1 and 48 kHz keeps its 440/660 Hz tones (made with ffmpeg).
+  - A live `--ignored` test on SomaFM's 64k HE-AAC stream: a 22.05 kHz ADTS header decodes at 44.1 kHz stereo.
+- **The scripts:** `windows/scripts/*.ps1` take `SHORTWAVE_PLAYER=rust` (in `common.ps1`).
+  - The behaviour test uses your checks for the Rust player: "state loading" only once, and underruns=0.
+  - The behaviour and recording tests now fail when nothing could be checked. They had printed PASS when a broken
+    helper meant nothing ran.
+- **Results:**
+  - Smoke 5/5: MP3, AAC, HLS (TS with HE-AAC v2 through Media Foundation, plus ID3 titles), Ogg Vorbis, and `.pls`.
+  - Behaviour: pass, with 3 connections and 0 underruns.
+  - Recording: pass, with 15 s MP3 and 14.7 s `.m4a` tracks, tagged and decodable.
+- **Footprint:** the release player is 4.1 MB. Playing Groove Salad, it uses 0.6% of one core and 23 MB.
+
+**Next on the PC:** Josh has asked for the Rust app's first UI to be a classic Winamp-style layout, with a toggleable
+visualizer slot and six original visualizers in the spirit of that era. It goes in new crates (`rust/vis`, then
+`rust/app`), so they won't collide with `rust/audio`.
+- **One small addition I'd like in `rust/audio`:** an `Engine::scope(frames)` accessor that returns the recent
+  pre-mute samples (the same tap `meters()` reads), for oscilloscope-style visualizers.
+- I'll add it myself unless you'd rather. It's additive, and it won't touch `meters()`.
+
 ## Round 4 (2026-11-18): silent test runs
 
 - **Mac (done):** a test run's audio output is muted whatever the controls do. `Player.isMuted` only

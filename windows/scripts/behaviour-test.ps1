@@ -5,6 +5,9 @@
 #     Windows difference: against this server (2 s head start, then real time) Media Foundation drains its buffer
 #     and reports Buffering now and then, with or without drops; a real stream doesn't. So instead of counting
 #     "state loading", this test watches the app's TCP connections: the audio connection must never be reopened.
+#     The Rust player (SHORTWAVE_PLAYER=rust) reads audio and titles over one connection, so the server's drop
+#     takes the audio down too. There the checks are the Mac's: "state loading" only once (the reconnect
+#     never shows as loading), and the output never ran dry (underruns=0).
 #  2. playlist probe: a local station whose link is a .pls with no file extension (served as
 #     audio/x-scpls) must be followed to the stream.
 # Usage: windows\scripts\behaviour-test.ps1
@@ -21,7 +24,9 @@ $server = Join-Path $RepoRoot 'scripts\icy-test-server.py'
 $serverArgs = @($python.Args) + @("`"$server`"", '--port', $port, '--interval', '15', '--drop-icy-after', '20', '--media', "`"$out\media`"")
 $srv = Start-Process -FilePath $python.Exe -ArgumentList $serverArgs -PassThru -WindowStyle Hidden
 $script:fail = 0
+$script:checks = 0
 function Test-Check([string]$Name, [bool]$Ok) {
+    $script:checks++
     if ($Ok) { Write-Output "PASS $Name" } else { Write-Output "FAIL $Name (logs in $out)"; $script:fail = 1 }
 }
 function Invoke-Run([string[]]$Arguments, [string]$Log, [int]$Seconds) {
@@ -31,7 +36,9 @@ function Invoke-Run([string[]]$Arguments, [string]$Log, [int]$Seconds) {
 try {
     Start-Sleep -Seconds 1
     $log = Join-Path $out 'reconnect.log'
-    $p = Start-Shortwave $app @('-muted', '-quitAfter', '52', '-playURL', "http://127.0.0.1:$port/mp3") $log
+    $rust = Test-RustPlayer
+    $runArgs = @('-muted', '-quitAfter', '52', '-playURL', "http://127.0.0.1:$port/mp3") + $(if ($rust) { @('-logLevels') } else { @() })
+    $p = Start-Shortwave $app $runArgs $log
     # When each of the app's connections to the server was first and last seen (seconds after launch).
     $t0 = Get-Date; $seen = @{}; $now = 0
     while (-not $p.HasExited) {
@@ -51,10 +58,18 @@ try {
     Test-Check 'reconnect: playback never stopped or failed' ($stops.Count -eq 0 -and $failed.Count -eq 0)
     # The audio connection opens in the first few seconds and stays open to the end. Every connection opened
     # later is a title reconnect (the first seconds also hold the local station's content-type probe).
-    $whole = @($seen.Values | Where-Object { $_.First -lt 5 -and $_.Last -gt 45 })
-    $later = @($seen.Values | Where-Object { $_.First -ge 5 })
-    Test-Check "reconnect: audio connection never reopened ($($whole.Count) open throughout, $($later.Count) opened later for $($connects - 1) title reconnects)" ($whole.Count -eq 1 -and $later.Count -eq $connects - 1)
-    Write-Output "info reconnect: Media Foundation reported loading $loading times (see the note at the top)"
+    if ($rust) {
+        Test-Check "reconnect: state loading only once ($loading)" ($loading -eq 1)
+        $last = @($lines | Where-Object { $_ -match 'underruns=(\d+)' } | Select-Object -Last 1)
+        $under = if ($last) { [int]([regex]::Match($last[0], 'underruns=(\d+)').Groups[1].Value) } else { -1 }
+        Test-Check "reconnect: output never ran dry (underruns=$under)" ($under -eq 0)
+    }
+    else {
+        $whole = @($seen.Values | Where-Object { $_.First -lt 5 -and $_.Last -gt 45 })
+        $later = @($seen.Values | Where-Object { $_.First -ge 5 })
+        Test-Check "reconnect: audio connection never reopened ($($whole.Count) open throughout, $($later.Count) opened later for $($connects - 1) title reconnects)" ($whole.Count -eq 1 -and $later.Count -eq $connects - 1)
+        Write-Output "info reconnect: Media Foundation reported loading $loading times (see the note at the top)"
+    }
     Test-Check 'reconnect: titles kept coming (Song 3 shown)' (@($lines | Where-Object { $_ -match 'now playing "Test Artist - Song 3"' }).Count -ge 1)
     $dups = @($lines | Where-Object { $_ -match 'now playing' } | ForEach-Object { ($_ -replace '^.*now playing ', '') } | Group-Object | Where-Object Count -gt 1)
     Test-Check 'reconnect: no song shown twice' ($dups.Count -eq 0)
@@ -67,5 +82,7 @@ try {
 finally {
     Stop-Process -Id $srv.Id -Force -ErrorAction SilentlyContinue
 }
+# A run where nothing could be checked (a broken helper, no server) is a failure, not a pass.
+if ($script:checks -lt 6) { Write-Output "FAIL only $($script:checks) checks ran"; $script:fail = 1 }
 if ($script:fail -eq 0) { Write-Output 'PASS behaviour test' }
 exit $script:fail

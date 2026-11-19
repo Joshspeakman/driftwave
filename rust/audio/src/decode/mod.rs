@@ -14,6 +14,8 @@ use std::fmt;
 
 #[cfg(target_os = "macos")]
 pub mod macos;
+#[cfg(windows)]
+pub mod windows;
 
 /// Decoded audio: interleaved samples, carrying its own rate and channel count (HE-AAC output is
 /// twice the ADTS header's rate, and PS turns mono into stereo).
@@ -64,7 +66,11 @@ pub fn aac() -> Box<dyn FrameDecoder> {
     {
         Box::new(macos::AudioToolboxAac::new())
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(windows)]
+    {
+        Box::new(self::windows::MediaFoundationAac::new())
+    }
+    #[cfg(not(any(target_os = "macos", windows)))]
     {
         Box::new(SymphoniaAac::new())
     }

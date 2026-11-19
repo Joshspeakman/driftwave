@@ -17,7 +17,7 @@ foreach ($s in $streams) {
     $p = Start-Shortwave $app @('-playURL', $s.Url, '-muted') $log
     Start-Sleep -Seconds $Seconds
     Stop-Shortwave $p
-    $text = if (Test-Path $log) { Get-Content -Raw $log } else { '' }
+    $text = if (Test-Path $log) { Get-Content -Raw -Encoding UTF8 $log } else { "" }
     $ok = $text -match 'state playing'
     if ($s.Expect -and $text -notmatch [regex]::Escape("icy connected $($s.Expect)")) { $ok = $false }
     if ($s.Name -ne 'hls' -and $s.Name -ne 'ogg-vorbis' -and $text -notmatch 'now playing') { $ok = $false }

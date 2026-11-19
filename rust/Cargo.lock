@@ -192,6 +192,7 @@ dependencies = [
  "ureq",
  "url",
  "uuid",
+ "windows",
 ]
 
 [[package]]
