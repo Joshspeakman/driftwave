@@ -104,6 +104,8 @@ pub struct Look {
     /// The Classic skin's painted size (px) and theme, and a size waiting to settle.
     skin_painted: Option<(u32, u32)>,
     skin_pending: Option<((u32, u32), Instant)>,
+    /// The theme's scene layers as written (for placing the eggs' clickable items).
+    layers: Vec<Map<String, Value>>,
     /// The last motion frames' cost, for DRIFTWAVE_LOG.
     motion_ms: f64,
     motion_frames: u32,
@@ -214,7 +216,7 @@ impl App {
             .unwrap_or_default();
         let texts: Vec<SceneText> = layers
             .iter()
-            .filter(|l| l.get("type").and_then(Value::as_str) == Some("text") && l.get("hidden").and_then(Value::as_bool) != Some(true))
+            .filter(|l| l.get("type").and_then(Value::as_str) == Some("text"))
             .map(|l| {
                 let (xf, x) = place(l.get("x"));
                 let (yf, y) = place(l.get("y"));
@@ -235,6 +237,8 @@ impl App {
                     glows: l.get("glow").is_some(),
                     glow: slint_colour(colour(l, "glow").unwrap_or(ink)),
                     reach: num(l, "glowRadius").map(|r| r * 3.0).unwrap_or(6.0) as f32,
+                    id: l.get("id").and_then(Value::as_str).unwrap_or("").into(),
+                    opacity: if l.get("hidden").and_then(Value::as_bool) == Some(true) { 0.0 } else { 1.0 },
                 }
             })
             .collect();
@@ -298,6 +302,8 @@ impl App {
         self.look.started.get_or_insert_with(Instant::now);
         self.look.valve = Valve::default();
         self.apply_decor(theme);
+        self.apply_eggs(theme, f.text, f.surface);
+        self.look.layers = layers;
         self.refresh_list();
         self.refresh_found();
         self.show_now_playing_cover();
@@ -383,6 +389,9 @@ impl App {
                 }
             }
             self.paint_backdrop(ui, &g, scale, still);
+            let layers = std::mem::take(&mut self.look.layers);
+            self.place_eggs(&layers, &g);
+            self.look.layers = layers;
             self.look.painted = Some(key);
             self.look.pending = None;
         }

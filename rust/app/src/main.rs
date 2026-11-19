@@ -19,6 +19,7 @@
 mod covers;
 mod decor;
 mod effects;
+mod eggs;
 mod finding;
 mod integration;
 mod look;
@@ -203,6 +204,7 @@ struct App {
     find: finding::Finding,
     look: look::Look,
     decor: decor::Decor,
+    eggs: eggs::Eggs,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -728,6 +730,7 @@ impl App {
                 && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
             self.tick_look(&ui, now, dt, focused);
             self.tick_decor(&ui, dt, focused);
+            self.tick_eggs(&ui);
         }
         if classic && !ui.window().is_minimized() {
             self.tick_classic_look(&ui, now);
@@ -1012,6 +1015,7 @@ fn main() -> Result<(), slint::PlatformError> {
         find: finding::Finding::default(),
         look: look::Look::default(),
         decor: decor::Decor::default(),
+        eggs: eggs::Eggs::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
@@ -1029,12 +1033,30 @@ fn main() -> Result<(), slint::PlatformError> {
         let w = app.clone();
         ui.global::<Scenery>().on_motion_chosen(move |on| w.borrow_mut().choose_motion(on));
         let w = app.clone();
+        let weak = ui.as_weak();
         ui.window().on_winit_window_event(move |window, event| {
             match event {
                 winit::event::WindowEvent::CursorMoved { position, .. } => {
                     let p = position.to_logical::<f32>(window.scale_factor() as f64);
                     if let Ok(mut a) = w.try_borrow_mut() {
                         a.look.pointer = Some((p.x, p.y));
+                        a.egg_input();
+                    }
+                }
+                // Easter eggs: keys anywhere, clicks on scene items (the UI still gets both).
+                winit::event::WindowEvent::KeyboardInput { event, .. } if event.state == winit::event::ElementState::Pressed && !event.repeat => {
+                    let full = weak.upgrade().is_some_and(|u| u.get_layout() == "full");
+                    let typing = weak.upgrade().is_some_and(|u| u.global::<Dir>().get_typing());
+                    if let (true, Ok(mut a)) = (full, w.try_borrow_mut()) {
+                        a.egg_key(&event.logical_key, typing);
+                    }
+                }
+                winit::event::WindowEvent::MouseInput { state: winit::event::ElementState::Pressed, button: winit::event::MouseButton::Left, .. } => {
+                    let full = weak.upgrade().is_some_and(|u| u.get_layout() == "full");
+                    if let (true, Ok(mut a)) = (full, w.try_borrow_mut()) {
+                        if let Some(at) = a.look.pointer {
+                            a.egg_click(at);
+                        }
                     }
                 }
                 winit::event::WindowEvent::CursorLeft { .. } => {
@@ -1392,6 +1414,12 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         });
         std::mem::forget(timer);
+    }
+    // Test runs: -egg <trigger> [-eggAt <s>] sets an easter egg off (konami, type:word, click:id, idle:s).
+    if let Some(trigger) = app.borrow().args.get("egg").map(String::from) {
+        let at = app.borrow().args.num("eggAt").unwrap_or(3.0);
+        let a = app.clone();
+        slint::Timer::single_shot(Duration::from_secs_f64(at), move || a.borrow_mut().egg_test(&trigger));
     }
     // Test runs: -swapAt <s> swaps the layout mid-run (with the engine playing), to check the swap.
     if let Some(at) = app.borrow().args.num("swapAt") {
