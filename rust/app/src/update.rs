@@ -246,17 +246,18 @@ impl App {
         false
     }
 
-    fn upd_show(&self, state: &str, message: &str) {
+    fn upd_show(&self, state: &str, title: &str, message: &str) {
         let Some(ui) = self.ui.upgrade() else { return };
         let u = ui.global::<Upd>();
         u.set_state(state.into());
+        u.set_title(title.into());
         u.set_message(message.into());
         u.set_can_install(self.can_install());
         u.set_auto(self.settings.get("checkForUpdates").and_then(Value::as_bool).unwrap_or(true));
     }
 
     pub(crate) fn show_updates(&self) {
-        self.upd_show("idle", &format!("Driftwave {} looks for newer versions on GitHub.", shown(current())));
+        self.upd_show("idle", &format!("Driftwave {}", shown(current())), "Looks for newer versions on GitHub.");
     }
 
     /// The launch check: at most once every 20 hours, unless turned off.
@@ -280,11 +281,11 @@ impl App {
             return;
         }
         let Some(feed) = self.upd_feed() else {
-            self.upd_show("failed", "Test runs don't check for updates (give them -updateFeed to try it).");
+            self.upd_show("failed", &format!("Driftwave {}", shown(current())), "Test runs don't check for updates (give them -updateFeed to try it).");
             return;
         };
         self.updates.busy = true;
-        self.upd_show("checking", "Checking for updates…");
+        self.upd_show("checking", &format!("Driftwave {}", shown(current())), "Checking for updates…");
         let test = self.args.test_run();
         let windows = cfg!(windows);
         finding::background(
@@ -303,9 +304,9 @@ impl App {
                         match &best {
                             Some(b) => {
                                 let name = if b.title.starts_with("Driftwave") { b.title.clone() } else { format!("Driftwave {}", shown(b.version)) };
-                                app.upd_show("available", &format!("{name} is available (you have {}).", shown(current())));
+                                app.upd_show("available", &format!("{name} is available"), &format!("You have {}.", shown(current())));
                             }
-                            None => app.upd_show("uptodate", &format!("You're up to date: Driftwave {}.", shown(current()))),
+                            None => app.upd_show("uptodate", &format!("Driftwave {}", shown(current())), &format!("Up to date · checked {}", crate::played::short_time())),
                         }
                         let found = best.is_some();
                         app.updates.latest = best;
@@ -316,7 +317,7 @@ impl App {
                     }
                     Err(e) => {
                         log(&format!("update check failed: {e}"));
-                        app.upd_show("failed", &format!("Couldn't check for updates: {e}"));
+                        app.upd_show("failed", &format!("Driftwave {}", shown(current())), &format!("Couldn't check for updates: {e}"));
                     }
                 }
             },
@@ -345,7 +346,7 @@ impl App {
     #[cfg(windows)]
     fn download_and_install(&mut self, release: Release) {
         let (Some(zip), Some(sha)) = (release.zip.clone(), release.sha.clone()) else {
-            self.upd_show("failed", "Couldn't update: the release has no checksum file.");
+            self.upd_show("failed", &format!("Driftwave {}", shown(current())), "Couldn't update: the release has no checksum file.");
             return;
         };
         let Ok(exe) = std::env::current_exe() else { return };
@@ -353,7 +354,10 @@ impl App {
         let dir = self.paths.updates();
         let registry = if self.args.test_run() { String::new() } else { format!(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{}", driftwave_platform::winapp::AUMID) };
         self.updates.busy = true;
-        self.upd_show("downloading", &format!("Downloading Driftwave {}…", shown(release.version)));
+        self.upd_show("downloading", &format!("Downloading Driftwave {}", shown(release.version)), "Starting…");
+        if let Some(ui) = self.ui.upgrade() {
+            ui.global::<Upd>().set_progress(0.0);
+        }
         let version = shown(release.version);
         let _ = std::thread::Builder::new().name("driftwave-update".into()).spawn(move || {
             let work = || -> Result<(), String> {
@@ -365,7 +369,8 @@ impl App {
                 if sha256(&file)? != expected {
                     return Err("the download is damaged (its checksum doesn't match). Try again.".into());
                 }
-                post(|app| app.upd_show("installing", "Installing…"));
+                let v = version.clone();
+                post(move |app| app.upd_show("installing", &format!("Installing Driftwave {v}"), "Driftwave starts again when it's done."));
                 let staged = dir.join("new");
                 std::fs::create_dir_all(&staged).map_err(|e| e.to_string())?;
                 // Windows' own tar unpacks zips.
@@ -413,7 +418,7 @@ impl App {
                 Err(e) => post(move |app| {
                     app.updates.busy = false;
                     log(&format!("update failed: {e}"));
-                    app.upd_show("failed", &format!("Couldn't update: {e}"));
+                    app.upd_show("failed", &format!("Driftwave {}", shown(current())), &format!("Couldn't update: {e}"));
                 }),
             }
         });
@@ -452,9 +457,12 @@ fn download(url: &str, to: &Path, expected: u64) -> Result<(), String> {
             let pc = done * 100 / total;
             if pc > shown_pc {
                 shown_pc = pc;
+                let mb = |b: u64| b as f64 / 1_048_576.0;
+                let text = format!("{pc}% ({:.1} of {:.1} MB)", mb(done), mb(total));
                 post(move |app| {
                     if let Some(ui) = app.ui.upgrade() {
                         ui.global::<Upd>().set_progress(pc as f32 / 100.0);
+                        ui.global::<Upd>().set_message(text.into());
                     }
                 });
             }

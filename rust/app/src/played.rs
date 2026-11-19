@@ -36,7 +36,7 @@ pub(crate) struct Tracks {
 }
 
 /// Now, as the system writes a time without seconds ("2:46 PM", "14:46").
-fn short_time() -> String {
+pub(crate) fn short_time() -> String {
     #[cfg(windows)]
     {
         use windows_sys::Win32::Globalization::{GetTimeFormatEx, TIME_NOSECONDS};
