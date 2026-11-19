@@ -11,5 +11,4 @@ Driftwave is free software, based on GNOME Shortwave by Felix Häcker and contri
 modify it under the terms of the GNU General Public License, version 3 or (at your option) any later version: see
 LICENSE.txt. It comes with NO WARRANTY.
 
-Source: https://github.com/Joshspeakman/shortwave-macos
-Releases: https://github.com/Joshspeakman/driftwave
+Source and releases: https://github.com/Joshspeakman/driftwave
