@@ -1639,6 +1639,13 @@ fn main() -> Result<(), slint::PlatformError> {
         let a = app.clone();
         slint::Timer::single_shot(Duration::from_secs(5), move || a.borrow_mut().check_updates_at_launch());
     }
+    // Test runs: -toastTest <app id> shows a new-song notification under that id (one Windows knows, such as
+    // PowerShell's), to check the notification without installing Driftwave.
+    #[cfg(windows)]
+    if let Some(id) = app.borrow().args.get("toastTest").map(String::from) {
+        let r = driftwave_platform::winapp::toast_as(&id, "Sitar Grooves", &["Liquidus Ambiento", "Driftwave notification test"], "track");
+        log(&format!("toast test: {r:?}"));
+    }
     // Test runs: -giphy opens the GIPHY search; -picker <n> opens Customize's colour picker on token n.
     if app.borrow().args.flag("giphy") {
         ui.global::<Bg>().set_search_open(true);
