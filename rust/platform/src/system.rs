@@ -1,6 +1,7 @@
 //! Small things only the system knows (macOS; elsewhere they return nothing and the app falls back):
 //! - [`short_time`]: the time now as the person's own settings write it (12 or 24 hours, their separators);
-//! - [`app_prefs`]: another app's saved settings, read only (the first launch brings the Swift Shortwave's across).
+//! - [`app_prefs`]: another app's saved settings, read only (the first launch brings the Swift Shortwave's across);
+//! - [`font_families`]: the installed font families (the theme editor's font pickers).
 
 /// A saved setting's value.
 #[derive(Debug, Clone, PartialEq)]
@@ -11,7 +12,12 @@ pub enum PrefValue {
 }
 
 #[cfg(target_os = "macos")]
-pub use mac::{app_prefs, short_time};
+pub use mac::{app_prefs, font_families, short_time};
+
+#[cfg(not(target_os = "macos"))]
+pub fn font_families() -> Vec<String> {
+    Vec::new()
+}
 
 #[cfg(not(target_os = "macos"))]
 pub fn short_time() -> Option<String> {
@@ -35,6 +41,34 @@ mod mac {
     extern "C" {
         fn CFGetTypeID(cf: *const c_void) -> usize;
         fn CFBooleanGetTypeID() -> usize;
+        fn CFArrayGetCount(array: *const c_void) -> isize;
+        fn CFArrayGetValueAtIndex(array: *const c_void, i: isize) -> *const c_void;
+        fn CFRelease(cf: *const c_void);
+    }
+
+    #[link(name = "CoreText", kind = "framework")]
+    extern "C" {
+        fn CTFontManagerCopyAvailableFontFamilyNames() -> *const c_void;
+    }
+
+    /// The installed font families, as Core Text names them, without the system's hidden ones (".SF NS"…).
+    pub fn font_families() -> Vec<String> {
+        let mut out = Vec::new();
+        // SAFETY: a CFArray of CFStrings that we own and release; CFString is toll-free bridged to NSString.
+        unsafe {
+            let names = CTFontManagerCopyAvailableFontFamilyNames();
+            if names.is_null() {
+                return out;
+            }
+            for i in 0..CFArrayGetCount(names) {
+                let s = CFArrayGetValueAtIndex(names, i) as *mut AnyObject;
+                if let Some(name) = (!s.is_null()).then(|| text(s)).flatten().filter(|n| !n.starts_with('.')) {
+                    out.push(name);
+                }
+            }
+            CFRelease(names);
+        }
+        out
     }
 
     fn class(name: &CStr) -> Option<&'static AnyClass> {
@@ -148,6 +182,13 @@ mod tests {
                 ("backgroundPlayback".to_string(), PrefValue::Bool(false)),
             ]
         );
+    }
+
+    #[test]
+    fn the_installed_fonts_are_listed() {
+        let f = font_families();
+        assert!(f.iter().any(|n| n == "Helvetica Neue" || n == "Helvetica"), "{} families", f.len());
+        assert!(f.iter().all(|n| !n.starts_with('.')));
     }
 
     #[test]
