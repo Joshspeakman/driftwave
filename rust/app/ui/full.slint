@@ -109,6 +109,8 @@ export global Scenery {
     // macOS: the backdrop and motion are Core Animation layers beneath the window (look.rs), so the Full
     // view is drawn see-through over them instead of drawing those two pictures itself.
     in property <bool> native;
+    // macOS: the front picture is a layer over the window too (unless a see-through frame must go over it).
+    in property <bool> front-native;
     in property <[SceneText]> texts;
     // What lies over everything (grain, vignette, scanlines): one still, mostly clear picture.
     in property <bool> front-on;
@@ -755,7 +757,7 @@ export component FullView inherits Rectangle {
     property <length> player-w: show-player ? 312px : 0px;
 
     // Synthwave's rows, rolling towards you over the floor (the sky, sun and floor are the backdrop's).
-    if Scenery.synth-on: Rectangle {
+    if Scenery.synth-on && !Scenery.native: Rectangle {
         property <length> horizon: root.height * 0.68;
         for i in 16: Rectangle {
             property <float> depth: i + 1 - Scenery.synth-phase;
@@ -1108,8 +1110,8 @@ export component FullView inherits Rectangle {
     }
 
     // ─────────── Over everything ───────────
-    if Scenery.on && Scenery.front-on: Image { x: 0; y: 0; width: root.width; height: root.height; source: Scenery.front; image-fit: fill; }
-    if Scenery.band-on: Rectangle {
+    if Scenery.on && Scenery.front-on && !Scenery.front-native: Image { x: 0; y: 0; width: root.width; height: root.height; source: Scenery.front; image-fit: fill; }
+    if Scenery.band-on && !Scenery.native: Rectangle {
         x: 0; y: Scenery.band-y; width: root.width; height: 140px;
         background: @linear-gradient(180deg, #FFFFFF00 0%, #FFFFFF09 50%, #FFFFFF00 100%);
     }

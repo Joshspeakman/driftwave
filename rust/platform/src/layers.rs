@@ -12,6 +12,14 @@
 //!
 //! Create on the main thread once the window exists; drop to take the layers away.
 //!
+//! Two more for the UI's moving strips, which otherwise redraw a full-width band of the window every tick:
+//! - **rows** (under the UI): synthwave's grid rows. Each row is one colour across the window, so the picture
+//!   is one pixel wide and the floor's height, stretched sideways by the GPU.
+//! - **band** (over the UI): the scanlines' slow bright band, a fixed gradient that only moves.
+//!
+//! And the still **front** picture over everything (grain, vignette, scanlines): as a layer, the UI's own
+//! redraws (meters, marquees) don't blend a full-window picture over themselves each time.
+//!
 //! Measured on a MacBook Pro (Retina, 2360×1520 px), Night Market, Full, playing, in front: 26.9% of a core
 //! drawn by the software renderer, 4.4% with these layers; WindowServer no busier.
 
@@ -29,6 +37,9 @@ impl SceneLayers {
     }
     pub fn set_backdrop(&mut self, _rgba: &[u8], _w: usize, _h: usize) {}
     pub fn set_motion(&mut self, _frame: Option<(&[u8], usize, usize)>) {}
+    pub fn set_rows(&mut self, _frame: Option<(&[u8], usize, usize)>, _rect: (f64, f64, f64, f64)) {}
+    pub fn set_band(&mut self, _rect: Option<(f64, f64, f64, f64)>) {}
+    pub fn set_front(&mut self, _frame: Option<(&[u8], usize, usize)>) {}
     pub fn set_visible(&mut self, _on: bool) {}
     pub fn ready(&self) -> bool {
         false
@@ -40,7 +51,8 @@ mod mac {
     use objc2::rc::Retained;
     use objc2::runtime::{AnyObject, NSObject};
     use objc2::msg_send;
-    use objc2_quartz_core::{CAAutoresizingMask, CALayer, CATransaction};
+    use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+    use objc2_quartz_core::{kCAFilterNearest, CAAutoresizingMask, CALayer, CATransaction};
     use std::ffi::c_void;
     use std::ptr;
 
@@ -52,7 +64,57 @@ mod mac {
         /// Motion frames rotate through a few surfaces, so one isn't written while the window server shows it.
         motion_surfaces: Vec<Surface>,
         motion_current: Option<usize>,
+        /// Synthwave's rows (under the UI) and the scanline band (over it), and whether each is wanted.
+        rows: Sheet,
+        rows_on: bool,
+        band: Sheet,
+        band_on: bool,
+        front: Sheet,
+        front_on: bool,
         visible: bool,
+    }
+
+    /// A layer whose picture changes: a few IOSurfaces in rotation, so one isn't written while shown.
+    struct Sheet {
+        layer: Retained<CALayer>,
+        surfaces: Vec<Surface>,
+        current: Option<usize>,
+    }
+
+    impl Sheet {
+        fn new() -> Sheet {
+            let layer = CALayer::new();
+            layer.setHidden(true);
+            Sheet { layer, surfaces: Vec::new(), current: None }
+        }
+
+        /// Writes the picture into a free surface and shows it. False if every surface is still on screen.
+        fn put(&mut self, rgba: &[u8], w: usize, h: usize) -> bool {
+            self.surfaces.retain(|s| s.w == w && s.h == h);
+            if self.current.is_some_and(|c| c >= self.surfaces.len()) {
+                self.current = None;
+            }
+            let current = self.current;
+            let free = self.surfaces.iter().enumerate().position(|(i, s)| Some(i) != current && !s.in_use());
+            let index = match free {
+                Some(i) => i,
+                None if self.surfaces.len() < 3 => {
+                    let Some(s) = Surface::new(w, h) else { return false };
+                    self.surfaces.push(s);
+                    self.surfaces.len() - 1
+                }
+                None => return false,
+            };
+            self.surfaces[index].write(rgba, w, h);
+            // SAFETY: an IOSurfaceRef is a valid object for `contents` (toll-free bridged to IOSurface).
+            unsafe {
+                let object = &*(self.surfaces[index].surface as *const AnyObject);
+                self.layer.setContents(Some(object));
+                let _: () = msg_send![&*self.layer, setContentsChanged];
+            }
+            self.current = Some(index);
+            true
+        }
     }
 
     impl SceneLayers {
@@ -84,8 +146,44 @@ mod mac {
                 root.insertSublayer_atIndex(l, i as u32);
             }
             back.setOpaque(true);
+            // The rows: right above the motion. Exact pixels (they're drawn at the screen's resolution).
+            let rows = Sheet::new();
+            rows.layer.setMagnificationFilter(unsafe { kCAFilterNearest });
+            rows.layer.setMinificationFilter(unsafe { kCAFilterNearest });
+            root.insertSublayer_atIndex(&rows.layer, 2);
+            // The front picture and the band: over everything (`raise` keeps them there if softbuffer's layer
+            // arrives later), the band over the front as in the UI.
+            let front = Sheet::new();
+            front.layer.setFrame(root.bounds());
+            front.layer.setAutoresizingMask(CAAutoresizingMask::LayerWidthSizable | CAAutoresizingMask::LayerHeightSizable);
+            root.addSublayer(&front.layer);
+            let mut band = Sheet::new();
+            root.addSublayer(&band.layer);
+            // White, see-through to 9/255 in the middle and clear at both ends, as the Slint band was.
+            let px: Vec<u8> = (0..140)
+                .flat_map(|y| {
+                    let t = (y as f32 + 0.5) / 140.0;
+                    let a = (9.0 * (1.0 - (t - 0.5).abs() * 2.0)).round() as u8;
+                    [a, a, a, a]
+                })
+                .collect();
+            band.put(&px, 1, 140);
             CATransaction::commit();
-            Some(SceneLayers { root, back, motion, back_surface: None, motion_surfaces: Vec::new(), motion_current: None, visible: false })
+            Some(SceneLayers {
+                root,
+                back,
+                motion,
+                back_surface: None,
+                motion_surfaces: Vec::new(),
+                motion_current: None,
+                rows,
+                rows_on: false,
+                band,
+                band_on: false,
+                front,
+                front_on: false,
+                visible: false,
+            })
         }
 
         /// The backdrop has arrived (until then the UI should stay opaque).
@@ -140,6 +238,75 @@ mod mac {
             }
         }
 
+        /// Synthwave's rows: premultiplied RGBA `w`×`h` px for the rectangle `rect` (x, y, width, height in
+        /// points from the window's top left), or `None` to hide them.
+        pub fn set_rows(&mut self, frame: Option<(&[u8], usize, usize)>, rect: (f64, f64, f64, f64)) {
+            CATransaction::begin();
+            CATransaction::setDisableActions(true);
+            self.rows_on = frame.is_some();
+            if let Some((rgba, w, h)) = frame {
+                self.place(&self.rows.layer, rect);
+                self.rows.put(rgba, w, h);
+            }
+            self.rows.layer.setHidden(!(self.visible && self.rows_on));
+            CATransaction::commit();
+        }
+
+        /// The scanline band at `rect` (points from the window's top left), or `None` to hide it.
+        pub fn set_band(&mut self, rect: Option<(f64, f64, f64, f64)>) {
+            CATransaction::begin();
+            CATransaction::setDisableActions(true);
+            self.band_on = rect.is_some();
+            if let Some(r) = rect {
+                self.place(&self.band.layer, r);
+                self.raise();
+            }
+            self.band.layer.setHidden(!(self.visible && self.band_on));
+            CATransaction::commit();
+        }
+
+        /// The still picture over everything, premultiplied RGBA at the window's size in pixels, or `None`.
+        pub fn set_front(&mut self, frame: Option<(&[u8], usize, usize)>) {
+            CATransaction::begin();
+            CATransaction::setDisableActions(true);
+            self.front_on = frame.is_some();
+            if let Some((rgba, w, h)) = frame {
+                let bounds = self.root.bounds();
+                if self.front.layer.frame() != bounds {
+                    self.front.layer.setFrame(bounds);
+                }
+                self.front.put(rgba, w, h);
+                self.raise();
+            }
+            self.front.layer.setHidden(!(self.visible && self.front_on));
+            CATransaction::commit();
+        }
+
+        /// Keeps the front picture and then the band on top, over softbuffer's layer even if that arrived
+        /// after ours.
+        fn raise(&self) {
+            let subs = unsafe { self.root.sublayers() };
+            let n = subs.as_ref().map_or(0, |s| s.count());
+            let at = |i: usize| subs.as_ref().filter(|_| n > i).map(|s| s.objectAtIndex(n - 1 - i));
+            let ok = at(0).as_deref() == Some(&*self.band.layer) && at(1).as_deref() == Some(&*self.front.layer);
+            if !ok {
+                self.front.layer.removeFromSuperlayer();
+                self.band.layer.removeFromSuperlayer();
+                self.root.addSublayer(&self.front.layer);
+                self.root.addSublayer(&self.band.layer);
+            }
+        }
+
+        /// A rectangle in points from the window's top left, in the root layer's own geometry.
+        fn place(&self, layer: &CALayer, (x, y, w, h): (f64, f64, f64, f64)) {
+            let bounds = self.root.bounds();
+            let y = if self.root.isGeometryFlipped() { y } else { bounds.size.height - y - h };
+            let frame = CGRect::new(CGPoint::new(x, y), CGSize::new(w, h));
+            if layer.frame() != frame {
+                layer.setFrame(frame);
+            }
+        }
+
         /// Shows or hides the scene (the Full layout with a scene theme, or not).
         pub fn set_visible(&mut self, on: bool) {
             if on == self.visible {
@@ -150,6 +317,9 @@ mod mac {
             CATransaction::setDisableActions(true);
             self.back.setHidden(!on);
             self.motion.setHidden(!on || self.motion_current.is_none());
+            self.rows.layer.setHidden(!(on && self.rows_on));
+            self.band.layer.setHidden(!(on && self.band_on));
+            self.front.layer.setHidden(!(on && self.front_on));
             CATransaction::commit();
         }
 
@@ -180,6 +350,9 @@ mod mac {
             CATransaction::setDisableActions(true);
             self.back.removeFromSuperlayer();
             self.motion.removeFromSuperlayer();
+            self.rows.layer.removeFromSuperlayer();
+            self.band.layer.removeFromSuperlayer();
+            self.front.layer.removeFromSuperlayer();
             CATransaction::commit();
         }
     }

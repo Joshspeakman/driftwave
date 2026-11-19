@@ -107,8 +107,8 @@ impl Picture {
     /// An opaque picture of one colour.
     pub fn filled(w: usize, h: usize, c: [u8; 3]) -> Picture {
         let mut p = Picture::new(w, h);
-        for px in p.px.chunks_exact_mut(4) {
-            px.copy_from_slice(&[c[0], c[1], c[2], 255]);
+        for px in p.px.as_chunks_mut::<4>().0 {
+            *px = [c[0], c[1], c[2], 255];
         }
         p
     }
@@ -143,6 +143,29 @@ impl Picture {
         p[3] = (a + div255(p[3] as u32 * inv)).min(255) as u8;
     }
 
+    /// `over_pre` along a run: the premultiplied RGBA8 pixels `src` laid over the pixels from `i` on, at extra
+    /// opacity `o` (0–256), skipping source pixels fainter than `least`. Same arithmetic, without a bounds check
+    /// or a wrap per pixel: the full-window image layers of the motion picture go through here.
+    #[inline]
+    pub fn over_pre_run(&mut self, i: usize, src: &[u8], o: u32, least: u8) {
+        let n = src.len() / 4;
+        let dst = &mut self.px[i * 4..(i + n) * 4];
+        for (d, s) in dst.as_chunks_mut::<4>().0.iter_mut().zip(src.as_chunks::<4>().0) {
+            if s[3] < least {
+                continue;
+            }
+            let a = (s[3] as u32 * o) >> 8;
+            if a == 0 {
+                continue;
+            }
+            let inv = 255 - a;
+            for (dv, &sv) in d[..3].iter_mut().zip(&s[..3]) {
+                *dv = (((sv as u32 * o) >> 8) + div255(*dv as u32 * inv)).min(255) as u8;
+            }
+            d[3] = (a + div255(d[3] as u32 * inv)).min(255) as u8;
+        }
+    }
+
     /// Fills `shape` in the box (px), anti-aliased, with `paint` at `alpha`.
     pub fn fill(&mut self, b: Rect, shape: Shape, paint: &Paint, alpha: f32) {
         if b.w <= 0.0 || b.h <= 0.0 || alpha <= 0.002 {
@@ -152,6 +175,32 @@ impl Picture {
         let (x1, y1) = (((b.x + b.w).ceil().max(0.0) as usize).min(self.w), ((b.y + b.h).ceil().max(0.0) as usize).min(self.h));
         let (hw, hh) = (b.w / 2.0, b.h / 2.0);
         let (cx, cy) = (b.x + hw, b.y + hh);
+        if let Shape::Radial = shape {
+            // Soft round lights (the aurora's blobs, passing lights) are big: only the part of each row inside the
+            // circle, and the colour from a table of the stops rather than sampled per pixel.
+            const STEPS: usize = 1024;
+            let table: Vec<Rgba> = (0..=STEPS).map(|i| paint.at(i as f32 / STEPS as f32, i as f32 / STEPS as f32)).collect();
+            for py in y0..y1 {
+                let ny = (py as f32 + 0.5 - cy) / hh;
+                let rest = 1.0 - ny * ny;
+                if rest < 0.0 {
+                    continue;
+                }
+                let half = hw * rest.sqrt();
+                let from = ((cx - half - 1.0).floor().max(x0 as f32)) as usize;
+                let to = ((cx + half + 1.0).ceil().max(0.0) as usize).min(x1);
+                for px in from..to {
+                    let nx = (px as f32 + 0.5 - cx) / hw;
+                    let k = (nx * nx + ny * ny).sqrt();
+                    if k > 1.0 {
+                        continue;
+                    }
+                    let c = table[(k * STEPS as f32 + 0.5) as usize];
+                    self.blend(py * self.w + px, [c[0], c[1], c[2]], c[3] * alpha);
+                }
+            }
+            return;
+        }
         for py in y0..y1 {
             let y = py as f32 + 0.5;
             for px in x0..x1 {
@@ -168,13 +217,7 @@ impl Picture {
                         let k = ((x - cx) / hw).hypot((y - cy) / hh);
                         (((1.0 - k) * hw.min(hh) + 0.5).clamp(0.0, 1.0), paint.at((x - b.x) / b.w, (y - b.y) / b.h))
                     }
-                    Shape::Radial => {
-                        let k = ((x - cx) / hw).hypot((y - cy) / hh);
-                        if k > 1.0 {
-                            continue;
-                        }
-                        (1.0, paint.at(k, k))
-                    }
+                    Shape::Radial => unreachable!("drawn above"),
                 };
                 if cov > 0.0 {
                     self.blend(py * self.w + px, [c[0], c[1], c[2]], c[3] * alpha * cov);
@@ -353,6 +396,64 @@ pub fn premultiply(img: &mut RgbaImage) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn radial_fill_matches_sampling_each_pixel() {
+        let paint = Paint::Stops(vec![(0.0, [0.9, 0.5, 0.2, 0.8]), (0.35, [0.9, 0.5, 0.2, 0.4]), (1.0, [0.9, 0.5, 0.2, 0.0])], b'v');
+        for b in [Rect { x: 3.3, y: -4.0, w: 61.0, h: 47.5 }, Rect { x: -20.0, y: 10.2, w: 140.0, h: 140.0 }] {
+            let mut fast = Picture::filled(90, 70, [20, 30, 40]);
+            fast.fill(b, Shape::Radial, &paint, 0.9);
+            // The old way: every pixel of the box, the stops sampled at its distance.
+            let mut slow = Picture::filled(90, 70, [20, 30, 40]);
+            let (hw, hh) = (b.w / 2.0, b.h / 2.0);
+            let (cx, cy) = (b.x + hw, b.y + hh);
+            for py in 0..70 {
+                for px in 0..90 {
+                    let k = ((px as f32 + 0.5 - cx) / hw).hypot((py as f32 + 0.5 - cy) / hh);
+                    if k <= 1.0 {
+                        let c = paint.at(k, k);
+                        slow.blend(py * 90 + px, [c[0], c[1], c[2]], c[3] * 0.9);
+                    }
+                }
+            }
+            let worst = fast.px.iter().zip(&slow.px).map(|(a, b)| a.abs_diff(*b)).max().unwrap();
+            assert!(worst <= 1, "differs by {worst}");
+        }
+    }
+
+    #[test]
+    fn over_pre_run_matches_over_pre() {
+        // Pseudo-random premultiplied pixels over a pseudo-random picture, at a few opacities and thresholds.
+        let mut seed = 0x1234_5678u32;
+        let mut next = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            seed
+        };
+        for (o, least) in [(256, 0u8), (180, 0), (77, 9), (256, 3)] {
+            let (w, h) = (37, 5);
+            let mut a = Picture::new(w, h);
+            for v in a.px.iter_mut() {
+                *v = next() as u8;
+            }
+            let mut b = Picture { w, h, px: a.px.clone() };
+            let src: Vec<u8> = (0..w * h)
+                .flat_map(|_| {
+                    let al = next() as u8;
+                    let c = |x: u32| ((x as u8 as u32 * al as u32) / 255) as u8;
+                    [c(next()), c(next()), c(next()), al]
+                })
+                .collect();
+            for i in 0..w * h {
+                if src[i * 4 + 3] >= least {
+                    a.over_pre(i, &src[i * 4..i * 4 + 4], o);
+                }
+            }
+            b.over_pre_run(0, &src, o, least);
+            assert_eq!(a.px, b.px, "o {o} least {least}");
+        }
+    }
+
     use super::*;
 
     #[test]
