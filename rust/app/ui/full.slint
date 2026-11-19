@@ -567,17 +567,23 @@ component Btn inherits Rectangle {
     in property <string> icon;
     in property <string> icon-fill;
     in property <bool> chevron;
+    in property <bool> enabled: true;
+    // Destructive (Delete): red, filled when primary.
+    in property <bool> danger;
+    property <color> red: Th.light-ui ? #C42B1C : #FF7B6B;
+    opacity: root.enabled ? 1 : 0.4;
     property <length> lead: (root.icon != "" || root.icon-fill != "") ? (root.text != "" ? 24px : 16px) : 0px;
     property <length> tail: root.chevron ? 18px : 0px;
     callback clicked();
     height: 32px;
     width: root.text == "" ? 32px : max(root.lead + root.tail > 0 ? 40px : 80px, label.preferred-width + root.lead + root.tail + 24px);
     border-radius: Th.bevel ? 0px : Th.radius-control;
-    background: Th.bevel ? Th.control : primary ? (ta.pressed ? Th.accent.darker(15%) : (ta.has-hover ? Th.accent.brighter(8%) : Th.accent))
+    background: Th.bevel ? Th.control : primary && danger ? (ta.pressed ? #A32315 : (ta.has-hover ? #D63A2A : #C42B1C))
+        : primary ? (ta.pressed ? Th.accent.darker(15%) : (ta.has-hover ? Th.accent.brighter(8%) : Th.accent))
         : (ta.pressed ? Th.control.darker(10%) : (ta.has-hover ? Th.control.brighter(6%) : Th.control));
     border-width: Th.bevel ? (primary ? 1px : 0px) : 1px;
-    border-color: Th.bevel ? #000000 : primary ? Th.accent.darker(10%) : Th.control-stroke;
-    ta := TouchArea { clicked => { root.clicked(); } }
+    border-color: Th.bevel ? #000000 : primary && danger ? #C42B1C : danger ? root.red : primary ? Th.accent.darker(10%) : Th.control-stroke;
+    ta := TouchArea { enabled: root.enabled; clicked => { root.clicked(); } }
     if Th.bevel: Bevel { x: primary ? 1px : 0px; y: self.x; width: parent.width - 2 * self.x; height: parent.height - 2 * self.y; sunken: ta.pressed; }
     property <length> content-w: root.lead + label.preferred-width + root.tail;
     property <length> start: (root.width - self.content-w) / 2;
@@ -592,7 +598,7 @@ component Btn inherits Rectangle {
         fill: primary && !Th.bevel ? Th.on-accent : Th.control-text; commands: root.icon-fill;
     }
     label := Text { x: root.start + root.lead + (Th.bevel && ta.pressed ? 1px : 0px); y: (parent.height - self.height) / 2 + (Th.bevel && ta.pressed ? 1px : 0px);
-        text: root.text; color: primary && !Th.bevel ? Th.on-accent : Th.control-text; font-size: 13px; }
+        text: root.text; color: primary && danger && !Th.bevel ? #FFFFFF : primary && !Th.bevel ? Th.on-accent : danger ? (Th.bevel ? #800000 : root.red) : Th.control-text; font-size: 13px; }
     if root.chevron: Path {
         x: root.start + root.lead + label.preferred-width + 8px; y: (parent.height - 6px) / 2 + 1px; width: 10px; height: 6px;
         viewbox-width: 10; viewbox-height: 6; fill: transparent; stroke-width: 1.2px;
@@ -830,6 +836,7 @@ export global Bg {
     callback search(string);
     callback pick(int);
     callback key-changed(string);
+    callback add-key();
 }
 
 // A horizontal slider, 0 to 1: its value follows the pointer; `released` says where it was let go.
@@ -837,11 +844,12 @@ component Slider01 inherits Rectangle {
     in-out property <float> value;
     callback released(float);
     height: 20px;
-    width: 180px;
+    preferred-width: 180px;
+    min-width: 100px;
     Rectangle { y: 8px; height: 4px; border-radius: 2px; background: Th.control-stroke; }
     Rectangle { x: 0; y: 8px; height: 4px; width: parent.width * root.value; border-radius: 2px; background: Th.accent; }
     Rectangle {
-        x: clamp(parent.width * root.value - 9px, -9px, parent.width - 9px); y: 1px; width: 18px; height: 18px;
+        x: clamp(parent.width * root.value - 9px, 0px, parent.width - 18px); y: 1px; width: 18px; height: 18px;
         border-radius: Th.radius-control <= 1px ? 1px : 9px; background: Th.control; border-width: 1px; border-color: Th.control-stroke;
         Rectangle { x: 5px; y: 5px; width: 8px; height: 8px; border-radius: Th.radius-control <= 1px ? 0px : 4px; background: Th.accent; }
     }
@@ -866,6 +874,9 @@ export struct EffectRow {
     key: string,
     label: string,
     on: bool,
+    // Its group (behind, over everything, titles, player and window) and its place in it.
+    group: int,
+    slot: int,
 }
 
 export global Ed {
@@ -883,6 +894,9 @@ export global Ed {
     in property <float> corners;
     in property <float> cover;
     in property <[EffectRow]> effects;
+    in property <[int]> effect-counts: [0, 0, 0, 0];
+    // Test runs (-picker n): opens token n's colour picker.
+    in-out property <int> open-picker: -1;
     in-out property <bool> confirm-delete;
     callback customize();
     callback import();
@@ -917,7 +931,7 @@ component Check inherits Rectangle {
         if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
         if root.checked: Path {
             x: 3px; y: 4px; width: 12px; height: 10px; viewbox-width: 12; viewbox-height: 10; fill: transparent; stroke-width: 2px;
-            stroke: Th.bevel ? #000000 : Th.on-accent; commands: "M 1 5 L 4.5 8.5 L 11 1.5";
+            stroke: Th.bevel ? #000000 : Th.on-accent; commands: Th.captions == "platinum" ? "M 2 0.5 L 10 9.5 M 10 0.5 L 2 9.5" : "M 1 5 L 4.5 8.5 L 11 1.5";
         }
     }
     Text { x: 28px; y: (parent.height - self.height) / 2; width: parent.width - 28px; text: root.text; color: Th.card-text; font-size: 13px; overflow: elide; }
@@ -933,13 +947,14 @@ component Switch inherits Rectangle {
     opacity: root.enabled ? 1 : 0.4;
     ta := TouchArea { enabled: root.enabled; clicked => { root.toggled(!root.on); } }
     if !Th.bevel: Rectangle {
-        border-radius: 10px;
+        property <bool> square: Th.radius-control <= 1px;
+        border-radius: self.square ? 0px : 10px;
         background: root.on ? (ta.has-hover ? Th.accent.mix(Th.card-text, 0.88) : Th.accent) : (ta.has-hover ? Th.subtle : transparent);
-        border-width: root.on ? 0px : 1px; border-color: Th.card-text2;
+        border-width: self.square ? 2px : root.on ? 0px : 1px; border-color: self.square ? Th.card-text : Th.card-text2;
         animate background { duration: 120ms; }
         Rectangle {
             property <length> d: ta.has-hover || ta.pressed ? 14px : 12px;
-            width: ta.pressed ? 17px : self.d; height: self.d; border-radius: self.d / 2;
+            width: ta.pressed && !parent.square ? 17px : self.d; height: self.d; border-radius: parent.square ? 0px : self.d / 2;
             x: root.on ? parent.width - self.width - (parent.height - self.d) / 2 : (parent.height - self.d) / 2;
             y: (parent.height - self.height) / 2;
             background: root.on ? Th.on-accent : Th.card-text2;
@@ -951,7 +966,7 @@ component Switch inherits Rectangle {
         Bevel { width: parent.width; height: parent.height; sunken: true; }
         if root.on: Path {
             x: 3px; y: 4px; width: 12px; height: 10px; viewbox-width: 12; viewbox-height: 10; fill: transparent; stroke-width: 2px;
-            stroke: #000000; commands: "M 1 5 L 4.5 8.5 L 11 1.5";
+            stroke: #000000; commands: Th.captions == "platinum" ? "M 2 0.5 L 10 9.5 M 10 0.5 L 2 9.5" : "M 1 5 L 4.5 8.5 L 11 1.5";
         }
     }
 }
@@ -968,6 +983,15 @@ component Stepper inherits Rectangle {
     border-radius: Th.bevel ? 0px : Th.radius-control;
     background: Th.control; border-width: Th.bevel ? 0px : 1px; border-color: Th.control-stroke;
     if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
+    if Th.bevel: RetroButton {
+        x: parent.width - 19px; y: 2px; width: 17px; height: 14px; glyph: "up";
+        clicked => { if (root.value < root.maximum) { root.changed(min(root.maximum, root.value + root.step)); } }
+    }
+    if Th.bevel: RetroButton {
+        x: parent.width - 19px; y: 16px; width: 17px; height: 14px; glyph: "down";
+        clicked => { if (root.value > root.minimum) { root.changed(max(root.minimum, root.value - root.step)); } }
+    }
+    if !Th.bevel: Rectangle {
     for k in 2: Rectangle {
         property <bool> up: k == 1;
         property <bool> can: self.up ? root.value < root.maximum : root.value > root.minimum;
@@ -984,9 +1008,34 @@ component Stepper inherits Rectangle {
             commands: parent.up ? "M 6 1.5 L 6 10.5 M 1.5 6 L 10.5 6" : "M 1.5 6 L 10.5 6";
         }
     }
+    }
     Text {
-        x: 32px; width: parent.width - 64px; height: parent.height; horizontal-alignment: center; vertical-alignment: center;
+        x: Th.bevel ? 8px : 32px; width: parent.width - (Th.bevel ? 30px : 64px); height: parent.height;
+        horizontal-alignment: Th.bevel ? left : center; vertical-alignment: center;
         text: root.text; color: Th.control-text; font-size: 13px; overflow: elide;
+    }
+}
+
+// A text field in the theme's colours.
+component Field inherits Rectangle {
+    in property <string> placeholder;
+    in-out property <string> text <=> input.text;
+    in property <string> family;
+    in property <bool> enabled: true;
+    callback accepted(string);
+    height: 32px;
+    opacity: root.enabled ? 1 : 0.4;
+    border-radius: Th.bevel ? 0px : Th.radius-control;
+    background: Th.bevel ? Th.bevel-light : Th.control;
+    border-width: Th.bevel ? 0px : 1px;
+    border-color: input.has-focus ? Th.accent : Th.control-stroke;
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
+    if input.text == "": Text { x: 10px; y: (parent.height - self.height) / 2; text: root.placeholder; color: Th.control-text.transparentize(45%); font-size: 13px; }
+    input := TextInput {
+        x: 10px; y: 0; width: parent.width - 20px; height: parent.height; vertical-alignment: center;
+        single-line: true; color: Th.control-text; font-size: 13px; font-family: root.family; read-only: !root.enabled;
+        accepted => { root.accepted(self.text); }
+        changed has-focus => { Dir.typing = self.has-focus; }
     }
 }
 
@@ -994,14 +1043,18 @@ component Stepper inherits Rectangle {
 // Its opacity stays as it was.
 component ColourPicker inherits Rectangle {
     in property <color> initial;
+    in property <string> hex;
     callback picked(color);
+    callback hex-entered(string);
     property <float> hue: root.initial.to-hsv().hue;
     property <float> sat: root.initial.to-hsv().saturation;
     property <float> val: root.initial.to-hsv().value;
-    property <color> now: hsv(root.hue, root.sat, root.val, root.initial.to-hsv().alpha);
-    border-radius: 8px; background: Th.dialog; border-width: 1px; border-color: Th.card-stroke;
-    drop-shadow-blur: 24px; drop-shadow-offset-y: 6px; drop-shadow-color: #00000066;
+    property <float> alpha: root.initial.to-hsv().alpha;
+    property <color> now: hsv(root.hue, root.sat, root.val, root.alpha);
+    border-radius: Th.bevel ? 0px : Th.radius-card; background: Th.dialog; border-width: Th.bevel ? 0px : 1px; border-color: Th.card-stroke;
+    drop-shadow-blur: Th.bevel ? 0px : 24px; drop-shadow-offset-y: Th.bevel ? 0px : 6px; drop-shadow-color: Th.bevel ? transparent : #00000066;
     TouchArea { }
+    if Th.bevel: Bevel { width: parent.width; height: parent.height; }
     // Saturation across, brightness down.
     Rectangle {
         x: 12px; y: 12px; width: parent.width - 24px; height: 140px; border-radius: 4px;
@@ -1031,16 +1084,25 @@ component ColourPicker inherits Rectangle {
             drop-shadow-blur: 3px; drop-shadow-color: #00000080;
         }
         TouchArea {
+            // A grey has no hue to change: choosing one gives it some colour.
             moved => { if (self.pressed) { root.hue = clamp(self.mouse-x / self.width, 0, 0.9999) * 360; } }
             pointer-event(e) => {
-                if (e.kind == PointerEventKind.down) { root.hue = clamp(self.mouse-x / self.width, 0, 0.9999) * 360; }
+                if (e.kind == PointerEventKind.down) {
+                    root.hue = clamp(self.mouse-x / self.width, 0, 0.9999) * 360;
+                    if (root.sat < 0.05) { root.sat = 0.6; }
+                    if (root.val < 0.05) { root.val = 0.8; }
+                }
                 if (e.kind == PointerEventKind.up) { root.picked(root.now); }
             }
         }
     }
-    // Before and after.
+    // Opacity.
+    Text { x: 12px; y: 186px; height: 20px; vertical-alignment: center; text: "Opacity"; color: Th.card-text2; font-size: 11px; }
+    Slider01 { x: 70px; y: 186px; width: parent.width - 82px; value: root.alpha; released(v) => { root.alpha = v; root.picked(root.now); } }
+    // The code, and before and after.
+    Field { x: 12px; y: 218px; width: 104px; height: 30px; text: root.hex; family: "Consolas"; accepted(t) => { root.hex-entered(t); } }
     HorizontalLayout {
-        x: 12px; y: 190px; width: parent.width - 24px; height: 28px; spacing: 0;
+        x: 124px; y: 219px; width: parent.width - 136px; height: 28px; spacing: 0;
         Rectangle { border-radius: 4px; background: root.initial; border-width: 1px; border-color: Th.card-stroke;
             Text { x: 8px; y: (parent.height - self.height) / 2; text: "Was"; font-size: 11px;
                 color: (root.initial.red * 0.299 + root.initial.green * 0.587 + root.initial.blue * 0.114) > 140 ? #000000 : #FFFFFF; } }
@@ -1048,6 +1110,32 @@ component ColourPicker inherits Rectangle {
         Rectangle { border-radius: 4px; background: root.now; border-width: 1px; border-color: Th.card-stroke;
             Text { x: 8px; y: (parent.height - self.height) / 2; text: "Now"; font-size: 11px;
                 color: (root.now.red * 0.299 + root.now.green * 0.587 + root.now.blue * 0.114) > 140 ? #000000 : #FFFFFF; } }
+    }
+}
+
+// A dialog's caption in its era's chrome: Windows 95, Windows 3.1, or Mac OS 8 (nothing in other themes).
+component EraCaption inherits Rectangle {
+    in property <string> title;
+    callback closed();
+    height: Th.captions == "win95" ? 18px : 20px;
+    visible: Th.bevel && (Th.captions == "win95" || Th.captions == "win31" || Th.captions == "platinum");
+    if Th.captions == "win95": Rectangle {
+        background: Th.selection.alpha > 0 ? Th.selection : #000080;
+        Text { x: 6px; y: (parent.height - self.height) / 2; text: root.title; color: #FFFFFF; font-size: 12px; font-weight: 700; }
+        RetroButton { x: parent.width - 18px; y: 2px; width: 16px; height: 14px; glyph: "close"; clicked => { root.closed(); } }
+    }
+    if Th.captions == "win31": Rectangle {
+        background: Th.selection.alpha > 0 ? Th.selection : #000080;
+        RetroButton { x: 0; y: 0; width: 20px; height: 20px; glyph: ""; clicked => { root.closed(); }
+            Rectangle { x: 3px; y: 8px; width: 13px; height: 3px; background: #FFFFFF; border-width: 1px; border-color: #000000; } }
+        Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.title; color: #FFFFFF; font-size: 12px; font-weight: 700; }
+    }
+    if Th.captions == "platinum": Rectangle {
+        background: #DDDDDD;
+        for k in 6: Rectangle { x: 26px; y: 4px + k * 2px; width: parent.width - 34px; height: 1px; background: #AAAAAA; }
+        Rectangle { x: (parent.width - plat-title.width) / 2 - 8px; y: 0; width: plat-title.width + 16px; height: parent.height; background: #DDDDDD; }
+        plat-title := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.title; color: #000000; font-size: 12px; font-weight: 700; }
+        RetroButton { x: 6px; y: 4px; width: 11px; height: 11px; glyph: "box"; clicked => { root.closed(); } }
     }
 }
 
@@ -1215,27 +1303,6 @@ component Picker inherits Rectangle {
                 }
             }
         }
-    }
-}
-
-// A text field in the theme's colours.
-component Field inherits Rectangle {
-    in property <string> placeholder;
-    in-out property <string> text <=> input.text;
-    in property <string> family;
-    callback accepted(string);
-    height: 32px;
-    border-radius: Th.bevel ? 0px : Th.radius-control;
-    background: Th.bevel ? Th.bevel-light : Th.control;
-    border-width: Th.bevel ? 0px : 1px;
-    border-color: input.has-focus ? Th.accent : Th.control-stroke;
-    if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
-    if input.text == "": Text { x: 10px; y: (parent.height - self.height) / 2; text: root.placeholder; color: Th.control-text.transparentize(45%); font-size: 13px; }
-    input := TextInput {
-        x: 10px; y: 0; width: parent.width - 20px; height: parent.height; vertical-alignment: center;
-        single-line: true; color: Th.control-text; font-size: 13px; font-family: root.family;
-        accepted => { root.accepted(self.text); }
-        changed has-focus => { Dir.typing = self.has-focus; }
     }
 }
 
@@ -1609,7 +1676,7 @@ export component FullView inherits Rectangle {
                 Rectangle { height: 8px; }
                 GroupHeading { text: "Recording"; }
                 SettingRow {
-                    label: "Recording";
+                    label: "Record songs";
                     note: Prefs.record-note + " MP3 and AAC streams record; HLS and Ogg streams only play.";
                     Segmented {
                         options: ["Off", "Save All", "Decide per Track"];
@@ -1666,7 +1733,8 @@ export component FullView inherits Rectangle {
                 // Customize: make the current theme yours (a copy), or change your own.
                 HorizontalLayout {
                     spacing: 8px; alignment: start;
-                    Btn { text: Ed.editable ? "Editing Your Theme" : "Customize Theme…"; primary: !Ed.editable; clicked => { Ed.customize(); } }
+                    if !Ed.editable: Btn { text: "Customize Theme…"; primary: true; clicked => { Ed.customize(); } }
+                    if Ed.editable: Text { vertical-alignment: center; text: "Editing: " + Ed.name; color: Th.text2; font-size: 13px; }
                     Btn { text: "Import Theme…"; clicked => { Ed.import(); } }
                     Btn { text: "Export Theme…"; clicked => { Ed.export(); } }
                 }
@@ -1700,10 +1768,12 @@ export component FullView inherits Rectangle {
                                     background: tk.color; border-width: tok-ta.has-hover ? 2px : 1px; border-color: tok-ta.has-hover ? Th.accent : Th.card-stroke;
                                     tok-ta := TouchArea { mouse-cursor: pointer; clicked => { picker.show(); } }
                                 }
+                                property <bool> want: Ed.open-picker == i;
+                                changed want => { if (self.want) { picker.show(); } }
                                 picker := PopupWindow {
-                                    x: 0; y: 34px; width: 236px; height: 232px;
+                                    x: 0; y: parent.absolute-position.y + 34px + 268px > root.height ? -270px : 34px; width: 236px; height: 266px;
                                     close-policy: PopupClosePolicy.close-on-click-outside;
-                                    ColourPicker { initial: tk.color; picked(c) => { Ed.set-token-colour(tk.key, c); } }
+                                    ColourPicker { initial: tk.color; hex: tk.hex; picked(c) => { Ed.set-token-colour(tk.key, c); } hex-entered(t) => { Ed.set-token(tk.key, t); } }
                                 }
                                 Text { x: 34px; y: (parent.height - self.height) / 2; width: parent.width - 34px - 112px; text: tk.label; color: Th.card-text; font-size: 13px; overflow: elide; }
                                 Field { x: parent.width - 104px; y: 1px; width: 104px; text: tk.hex; family: "Consolas"; accepted(t) => { Ed.set-token(tk.key, t); } }
@@ -1748,11 +1818,11 @@ export component FullView inherits Rectangle {
                         heading: "Shape";
                         note: "";
                         HorizontalLayout {
-                            spacing: 24px; alignment: start;
-                            VerticalLayout { spacing: 6px;
+                            spacing: 32px;
+                            VerticalLayout { spacing: 6px; horizontal-stretch: 1;
                                 Text { text: "Corner radius: " + Math.round(corner-slider.value * 20) + " px"; color: Th.card-text2; font-size: 12px; }
                                 corner-slider := Slider01 { value: Ed.corners; released(v) => { Ed.set-corners(v); } } }
-                            VerticalLayout { spacing: 6px;
+                            VerticalLayout { spacing: 6px; horizontal-stretch: 1;
                                 Text { text: "Cover roundness: " + Math.round(cover-slider.value * 50) + "%"; color: Th.card-text2; font-size: 12px; }
                                 cover-slider := Slider01 { value: Ed.cover; released(v) => { Ed.set-cover(v); } } }
                         }
@@ -1760,13 +1830,19 @@ export component FullView inherits Rectangle {
                     SettingsCard {
                         heading: "Effects";
                         note: "Each effect uses the theme's colours. Its own settings (colours, sizes) are in the theme file: export it, edit it, import it.";
-                        fx-grid := Rectangle {
-                            property <int> cols: self.width > 760px ? 3 : 2;
-                            property <length> cw: (self.width - (self.cols - 1) * 16px) / self.cols;
-                            height: Math.ceil(Ed.effects.length / self.cols) * 30px;
-                            for fx[i] in Ed.effects: Check {
-                                x: Math.mod(i, fx-grid.cols) * (fx-grid.cw + 16px); y: Math.floor(i / fx-grid.cols) * 30px; width: fx-grid.cw;
-                                text: fx.label; checked: fx.on; toggled(on) => { Ed.toggle-effect(fx.key, on); }
+                        for heading[g] in ["Behind the panels", "Over everything", "Titles", "Player and window"]: VerticalLayout {
+                            spacing: 4px;
+                            Text { text: heading; color: Th.card-text2; font-size: 12px; font-weight: 600; }
+                            fx-grid := Rectangle {
+                                property <int> cols: self.width > 760px ? 3 : 2;
+                                property <length> cw: (self.width - (self.cols - 1) * 16px) / self.cols;
+                                height: Math.ceil(Ed.effect-counts[g] / self.cols) * 30px;
+                                for fx[i] in Ed.effects: Check {
+                                    visible: fx.group == g;
+                                    x: Math.mod(fx.slot, fx-grid.cols) * (fx-grid.cw + 16px); y: Math.floor(fx.slot / fx-grid.cols) * 30px;
+                                    width: fx-grid.cw; height: fx.group == g ? 28px : 0px;
+                                    text: fx.label; checked: fx.on; toggled(on) => { Ed.toggle-effect(fx.key, on); }
+                                }
                             }
                         }
                     }
@@ -1775,9 +1851,9 @@ export component FullView inherits Rectangle {
                         note: Ed.confirm-delete ? "Delete \"" + Ed.name + "\"? This can't be undone." : "Removes your theme for good (exported copies stay).";
                         HorizontalLayout {
                             spacing: 8px;
-                            if !Ed.confirm-delete: Btn { text: "Delete Theme…"; clicked => { Ed.confirm-delete = true; } }
+                            if !Ed.confirm-delete: Btn { text: "Delete Theme…"; danger: true; clicked => { Ed.confirm-delete = true; } }
                             if Ed.confirm-delete: Btn { text: "Cancel"; clicked => { Ed.confirm-delete = false; } }
-                            if Ed.confirm-delete: Btn { text: "Delete"; primary: true; clicked => { Ed.delete(); } }
+                            if Ed.confirm-delete: Btn { text: "Delete"; primary: true; danger: true; clicked => { Ed.delete(); } }
                         }
                     }
                 }
@@ -1872,18 +1948,27 @@ export component FullView inherits Rectangle {
                                 : (Prefs.record-mode == "everything" ? "Ready to Record · Save All" : "Ready to Record · Decide per Track");
                             color: Th.control-text; font-size: 13px; font-weight: 600; }
                         Text { x: 42px; y: 28px; width: parent.width - 54px; overflow: elide; color: Th.control-text.transparentize(12%); font-size: 11px;
-                            text: !root.record-armed ? "Click to record each song as its own file." : Prefs.record-mode == "everything" ? "Every song is saved as it ends." : "Save the songs you like from Played Tracks."; }
+                            text: !root.record-armed ? "Click to record each song as its own file." : Prefs.record-mode == "everything" ? "Every song is saved as it ends." : "Save songs from Played Tracks."; }
                     }
                     // Played songs.
                     Text { x: 18px; y: parent.y-rec + 68px; text: "Played Tracks"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
-                    Flickable {
+                    if Th.bevel: Rectangle {
+                        x: 12px; y: parent.y-rec + 88px; width: parent.width - 24px; height: max(0px, parent.height - parent.y-rec - 96px);
+                        background: Th.bevel-light;
+                        Bevel { width: parent.width; height: parent.height; sunken: true; }
+                    }
+                    played-list := Flickable {
                         x: 12px; y: parent.y-rec + 90px; width: parent.width - 24px; height: max(0px, parent.height - parent.y-rec - 100px);
                         content-height: root.tracks.length * 40px;
                         for t[i] in root.tracks: Rectangle {
                             property <bool> mark: t.can-save || t.saved || t.recording;
-                            y: i * 40px; height: 38px; border-radius: Th.radius-control; background: Th.subtle;
-                            Text { x: 10px; y: 4px; width: parent.width - (parent.mark ? 46px : 20px); text: t.title; color: Th.card-text; font-size: 12px; overflow: elide; }
-                            Text { x: 10px; y: 21px; width: parent.width - (parent.mark ? 46px : 20px); text: t.note; color: Th.card-text2; font-size: 11px; overflow: elide; }
+                            property <bool> lit: Th.bevel && row-ta.has-hover;
+                            x: Th.bevel ? 2px : 0px; width: parent.width - (Th.bevel ? 4px : 0px);
+                            y: i * 40px; height: 38px; border-radius: Th.bevel ? 0px : Th.radius-control;
+                            background: Th.bevel ? (self.lit ? Th.selection : transparent) : Th.subtle;
+                            row-ta := TouchArea { }
+                            Text { x: 10px; y: 4px; width: parent.width - (parent.mark ? 46px : 20px); text: t.title; color: parent.lit ? Th.selection-text : Th.card-text; font-size: 12px; overflow: elide; }
+                            Text { x: 10px; y: 21px; width: parent.width - (parent.mark ? 46px : 20px); text: t.note; color: parent.lit ? Th.selection-text : Th.card-text2; font-size: 11px; overflow: elide; }
                             if t.saved: Path {
                                 x: parent.width - 27px; y: 11px; width: 16px; height: 16px; viewbox-width: 16; viewbox-height: 16;
                                 fill: transparent; stroke-width: 1.6px; stroke: Th.accent-text; commands: "M 3 8.5 L 6.5 12 L 13 4.5";
@@ -1899,9 +1984,13 @@ export component FullView inherits Rectangle {
                                     x: 6px; y: 6px; width: 16px; height: 16px; viewbox-width: 16; viewbox-height: 16; fill: transparent; stroke-width: 1.4px;
                                     stroke: t.queued ? Th.on-accent : Th.card-text; commands: "M 8 2 L 8 10.5 M 4.5 7 L 8 10.5 L 11.5 7 M 3 13.5 L 13 13.5";
                                 }
-                                if t.recording && !t.queued: Rectangle { x: parent.width - 7px; y: 1px; width: 6px; height: 6px; border-radius: 3px; background: #E0573A; }
+                                if t.recording && !t.queued: Rectangle { x: -4px; y: 11px; width: 6px; height: 6px; border-radius: 3px; background: #E0573A; }
                             }
                         }
+                    }
+                    if !Th.bevel && root.tracks.length * 40px > played-list.height: Rectangle {
+                        x: played-list.x; y: played-list.y + played-list.height - 24px; width: played-list.width; height: 24px;
+                        background: @linear-gradient(180deg, Th.card.transparentize(100%) 0%, Th.card 100%);
                     }
                 }
             }
@@ -2015,18 +2104,23 @@ export component FullView inherits Rectangle {
             border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.card-stroke;
             drop-shadow-blur: 32px; drop-shadow-offset-y: 8px; drop-shadow-color: #00000080;
             clip: true;
+            property <length> cap: Th.bevel && (Th.captions == "win95" || Th.captions == "win31" || Th.captions == "platinum") ? 20px : 0px;
+            property <bool> keyed: Bg.builtin-key || Bg.key != "";
             TouchArea { }
-            Text { x: 24px; y: 20px; text: "Search GIPHY"; color: Th.card-text; font-size: 20px; font-weight: 600; }
+            if Th.bevel: Bevel { width: parent.width; height: parent.height; }
+            EraCaption { x: 3px; y: 3px; width: parent.width - 6px; title: "Search GIPHY"; closed => { Bg.search-open = false; } }
+            Text { x: 24px; y: 20px + parent.cap; text: "Search GIPHY"; color: Th.card-text; font-size: 20px; font-weight: 600; }
             giphy-box := Field {
-                x: 24px; y: 60px; width: parent.width - 48px - 96px; placeholder: "Rain, city lights, waves…";
+                x: 24px; y: 60px + parent.cap; width: parent.width - 48px - 96px; placeholder: "Rain, city lights, waves…";
+                enabled: parent.keyed;
                 text <=> Bg.query;
                 accepted(t) => { Bg.search(t); }
             }
-            Btn { x: parent.width - 24px - 88px; y: 60px; width: 88px; text: "Search"; primary: true; clicked => { Bg.search(giphy-box.text); } }
-            if Bg.status != "": Text { x: 24px; y: 104px; width: parent.width - 48px; text: Bg.status; color: Th.card-text2; font-size: 13px; wrap: word-wrap; }
+            Btn { x: parent.width - 24px - 88px; y: 60px + parent.cap; width: 88px; text: "Search"; primary: true; enabled: parent.keyed; clicked => { Bg.search(giphy-box.text); } }
+            if Bg.status != "": Text { x: 24px; y: 104px + parent.cap; width: parent.width - 48px; text: Bg.status; color: Th.card-text2; font-size: 13px; wrap: word-wrap; }
             // Nothing yet: what it's for (or what it needs).
             if Bg.status == "" && Bg.results.length == 0: VerticalLayout {
-                x: 48px; y: 140px; width: parent.width - 96px; height: parent.height - 220px; alignment: center; spacing: 8px;
+                x: 48px; y: 140px + parent.cap; width: parent.width - 96px; height: parent.height - 220px - parent.cap; alignment: center; spacing: 8px;
                 HorizontalLayout { alignment: center;
                     Path {
                         width: 40px; height: 40px; viewbox-width: 16; viewbox-height: 16; fill: transparent; stroke-width: 1px; stroke: Th.card-text2;
@@ -2039,9 +2133,14 @@ export component FullView inherits Rectangle {
                     text: Bg.builtin-key || Bg.key != "" ? "Search for a GIF to play behind the window. GIFs rated G only; any that flash are refused."
                         : "Paste your own GIPHY key in Settings (it's free from developers.giphy.com), or choose a GIF or picture from a file.";
                 }
+                if !Bg.builtin-key && Bg.key == "": HorizontalLayout {
+                    alignment: center; spacing: 8px; padding-top: 8px;
+                    Btn { text: "Add a Key…"; primary: true; clicked => { Bg.add-key(); } }
+                    Btn { text: "Choose File…"; clicked => { Bg.search-open = false; Bg.choose-file(); } }
+                }
             }
             results := Flickable {
-                x: 24px; y: 128px; width: parent.width - 48px; height: parent.height - 128px - 64px;
+                x: 24px; y: 128px + parent.cap; width: parent.width - 48px; height: parent.height - 128px - 64px - parent.cap;
                 property <length> cw: (self.width - 3 * 8px) / 4;
                 content-height: Math.ceil(Bg.results.length / 4) * (self.cw * 0.75 + 30px);
                 for g[i] in Bg.results: Rectangle {
@@ -2077,24 +2176,7 @@ export component FullView inherits Rectangle {
             clip: true;
             TouchArea { }
             if Th.bevel: Bevel { width: parent.width; height: parent.height; }
-            if Th.bevel && Th.captions == "win95": Rectangle {
-                x: 3px; y: 3px; width: parent.width - 6px; height: 18px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
-                Text { x: 6px; y: (parent.height - self.height) / 2; text: "Station Details"; color: #FFFFFF; font-size: 12px; font-weight: 700; }
-                RetroButton { x: parent.width - 18px; y: 2px; width: 16px; height: 14px; glyph: "close"; clicked => { Dir.details-close(); } }
-            }
-            if Th.bevel && Th.captions == "win31": Rectangle {
-                x: 3px; y: 3px; width: parent.width - 6px; height: 20px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
-                RetroButton { x: 0; y: 0; width: 20px; height: 20px; glyph: ""; clicked => { Dir.details-close(); }
-                    Rectangle { x: 3px; y: 8px; width: 13px; height: 3px; background: #FFFFFF; border-width: 1px; border-color: #000000; } }
-                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: "Station Details"; color: #FFFFFF; font-size: 12px; font-weight: 700; }
-            }
-            if Th.bevel && Th.captions == "platinum": Rectangle {
-                x: 3px; y: 3px; width: parent.width - 6px; height: 20px; background: #DDDDDD;
-                for k in 6: Rectangle { x: 26px; y: 4px + k * 2px; width: parent.width - 34px; height: 1px; background: #AAAAAA; }
-                Rectangle { x: (parent.width - plat-title.width) / 2 - 8px; y: 0; width: plat-title.width + 16px; height: parent.height; background: #DDDDDD; }
-                plat-title := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: "Station Details"; color: #000000; font-size: 12px; font-weight: 700; }
-                RetroButton { x: 6px; y: 4px; width: 11px; height: 11px; glyph: "box"; clicked => { Dir.details-close(); } }
-            }
+            EraCaption { x: 3px; y: 3px; width: parent.width - 6px; title: "Station Details"; closed => { Dir.details-close(); } }
             Rectangle { y: parent.height - 64px; height: 64px; background: #0000001A;
                 Rectangle { y: 0; height: 1px; background: Th.divider; } }
             Cover { x: 24px; y: 24px + parent.cap; width: 132px; height: 132px; source: Dir.details.cover; has-source: Dir.details.has-cover;

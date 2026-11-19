@@ -920,8 +920,31 @@ fn main() -> Result<(), slint::PlatformError> {
     if std::env::var_os("SLINT_BACKEND").is_none() {
         let _ = slint::BackendSelector::new().backend_name("winit".into()).renderer_name("software".into()).select();
     }
+    // Install.ps1 and uninstall.ps1: make the Start-menu shortcut (with the app id), or forget the app.
+    #[cfg(windows)]
+    {
+        let raw: Vec<String> = std::env::args().collect();
+        if let Some(i) = raw.iter().position(|a| a == "--create-shortcut") {
+            let (Some(lnk), Ok(exe)) = (raw.get(i + 1), std::env::current_exe()) else { std::process::exit(2) };
+            let icon = exe.parent().map(|d| d.join("driftwave.ico")).filter(|p| p.exists());
+            match driftwave_platform::winapp::create_shortcut(Path::new(lnk), &exe, icon.as_deref()) {
+                Ok(()) => std::process::exit(0),
+                Err(e) => {
+                    eprintln!("couldn't make the shortcut: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        if raw.iter().any(|a| a == "--unregister") {
+            std::process::exit(0);
+        }
+    }
     let args = Args::parse();
     let test = args.test_run();
+    #[cfg(windows)]
+    if !test && driftwave_platform::winapp::installed() {
+        driftwave_platform::winapp::set_app_id();
+    }
     let folder = if test { "DriftwaveRustTestRun" } else { "DriftwaveRust" };
     // One copy per data folder: opening Driftwave again (or `driftwave --quit`) is handed to the copy that's
     // running. Test runs skip this so they can run side by side.
@@ -1537,9 +1560,28 @@ fn main() -> Result<(), slint::PlatformError> {
         });
         std::mem::forget(timer);
     }
-    // Test runs: -giphy opens the GIPHY search.
+    // Test runs: -giphy opens the GIPHY search; -picker <n> opens Customize's colour picker on token n.
     if app.borrow().args.flag("giphy") {
         ui.global::<Bg>().set_search_open(true);
+    }
+    if let Some(n) = app.borrow().args.num("picker") {
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(Duration::from_millis(1500), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.global::<Ed>().set_open_picker(n as i32);
+            }
+        });
+    }
+    {
+        // GIPHY without a key: to the key's row in Settings.
+        let weak = ui.as_weak();
+        ui.global::<Bg>().on_add_key(move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.global::<Bg>().set_search_open(false);
+                ui.set_page("settings".into());
+                ui.global::<Dir>().set_settings_scroll(-180.0);
+            }
+        });
     }
     // Test runs: -customize opens the theme editor (a copy of the theme), -scroll <px> scrolls Settings.
     if app.borrow().args.flag("customize") {
