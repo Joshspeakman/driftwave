@@ -380,13 +380,15 @@ export component ClassicWindow inherits Window {
         if !shaded: Rectangle {
             // The buffer gauge: how much of the stream is waiting to play (live radio has no position to seek).
             x: 16 * u; y: 70 * u; width: 250 * u; height: 7 * u;
-            Bevel { width: parent.width; height: parent.height; sunken: true; fill: Pal.groove; edge: max(1px, 0.5 * u); }
+            property <length> gauge: self.width - 22 * u;
+            Bevel { width: gauge; height: parent.height; sunken: true; fill: Pal.groove; edge: max(1px, 0.5 * u); }
             Rectangle {
-                x: 1 * u; y: 1 * u; height: parent.height - 2 * u; width: (parent.width - 2 * u) * root.buffer;
+                x: 1 * u; y: 1 * u; height: parent.height - 2 * u; width: (gauge - 2 * u) * root.buffer;
                 // Eased in the app: an animation restarting every tick would redraw at the display's rate.
                 background: @linear-gradient(90deg, Pal.fill-low.transparentize(50%) 0%, Pal.fill-low 100%);
             }
-            Text { x: parent.width - self.width - 3 * u; y: 0.5 * u; text: root.playing ? "LIVE" : ""; color: Pal.glyph; font-size: 5 * u; font-weight: 700; }
+            Text { x: gauge + 3 * u; y: 0.5 * u; text: "LIVE"; font-size: 5 * u; font-weight: 700;
+                color: root.playing ? Pal.glyph-on : Pal.glyph.transparentize(78%); }
         }
         if !shaded: Rectangle {
             // Transport.
