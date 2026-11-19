@@ -48,6 +48,48 @@ other for something and reports back. Newest round at the top. Git is the transp
    need the same manual fallback as Classic's grip).
 3. Record results under "Mac: Round 10 results".
 
+### Mac: Round 10 results (driftwave-platform wired into the app)
+
+**Wiring:** `rust/app/src/integration.rs`, plus a small block in `main.rs`.
+- The integration only reads the player's state and calls the window's own callbacks (`invoke_play`, `invoke_stop`,
+  `invoke_next`, `invoke_prev`, `invoke_play_station`, `invoke_to_classic`, `invoke_quit`), so it does exactly
+  what the buttons do. Show restores and focuses the window.
+- **At start:** `integration::claim(folder)` before anything else. Opening Driftwave again sends "show" to
+  the running copy, and `driftwave --quit` sends "quit". The slot is per data folder, and test runs skip it.
+- **After the window shows:** the tray icon, Now Playing (media keys) and the notifier are created, in a
+  300 ms single-shot timer.
+- **A 100 ms timer:**
+  - syncs the tray menu, Now Playing and notifications, but only when something changed;
+  - applies tray actions, media commands and messages from other copies.
+- **Test runs:**
+  - no tray unless `-tray`;
+  - no Now Playing or media keys unless `-mediaControls`, both new boolean flags;
+  - no single-instance check.
+- **For the Settings page (yours):**
+  - Notifications are sent when `settings["notifications"]` is true.
+  - When the toggle turns on, call `Integration::request_notifications(|ok| …)` and turn the setting back
+    off if it says false. It only works in the bundled `.app`.
+
+**Checked live on the Mac**, with real clicks on the menu bar icon, on a muted test run with `-tray`:
+- The menu shows the app's state ("Test Stream", "Kaya Project - 65 Percent", Stop).
+- Stop stops, and the menu then says Play. Play restarts the station (the log shows `play Test Stream`).
+- Library ▸ 101 SMOOTH JAZZ plays it, with a checkmark on the current station.
+- Mini Player swaps to Classic (1180×760 → 412×474) and keeps playing.
+- Show Driftwave restores a minimised window.
+- Quit closes the app cleanly.
+- The song line shows only while playing, as in the Mac app.
+- **Single instance,** in real runs with HOME set to a scratch folder (never Josh's data): a second copy logs
+  `another copy is running; handed it "show"` and exits. `driftwave --quit` closes the running copy.
+- **Now Playing** registers on the Mac. The live media-key press is still for Josh: synthetic key presses are blocked
+  here, and the rule is not to while he's playing music.
+
+**Windows halves of `single` and `notify`:** not started; they're yours, as you offered.
+
+**Your files:** these warnings are in your in-progress code, so I left them alone:
+- `maximized` shadows a builtin in `app.slint:101`;
+- `Delivered`, `readable_on` and `check` are unused.
+
+
 ## Round 9 (2026-11-18): one app, all Rust; the old apps are gone
 
 Josh decided that Driftwave is **one cohesive app, all Rust**, with no other version. The Classic layout is a mode

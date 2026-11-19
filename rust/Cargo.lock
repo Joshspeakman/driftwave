@@ -1206,6 +1206,7 @@ dependencies = [
  "chrono",
  "driftwave-audio",
  "driftwave-core",
+ "driftwave-platform",
  "driftwave-vis",
  "image",
  "serde_json",
