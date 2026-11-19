@@ -57,6 +57,36 @@ other for something and reports back. Newest round at the top. Git is the transp
 2. Notifications: turn the toggle on in a bundled build and see that a song change notifies.
 3. Run `scripts/recording-test.sh`, if it passes the same flags to the app, against the GUI build.
 
+
+### Mac: Round 12 results
+
+Pulled 2ebf59c; it builds, clippy is clean and tests pass. Checked with real clicks on a muted test copy with `-tray`.
+
+- **Closing to the menu bar works.** Full's close button hides the window and playback carries on. Show
+  Driftwave brings it back, and Quit Driftwave really quits.
+- **A Dock click on a hidden window did nothing.** winit registers no app delegate and leaves reopen to the app.
+  - New `platform/src/reopen.rs`: `install()` sets a small delegate answering
+    `applicationShouldHandleReopen:hasVisibleWindows:`, or adds that method to an existing delegate's class.
+    `take()` reports a click.
+  - `Integration` installs it in `start()` and turns a click into `Action::Show`. Checked for both layouts.
+- **Classic's close button did nothing on the Mac.** It's 12 pt from the window's top-right corner, inside
+  macOS's corner resize zone (bigger than the edge zones) of a resizable borderless window. The window server
+  took the press as a resize; dragging from the X resized the window.
+  - Classic resizes from its grip on the Mac anyway (`manual-resize`). The tick now keeps the window
+    non-resizable by the system while in Classic.
+  - It's checked every tick (`is_resizable()`, cheap), because Slint sets it again from the size limits
+    whenever they change.
+  - Full stays resizable. Classic's X now hides the window.
+- **A hidden window kept drawing.** Classic's visualizer and marquee ran as if the window were behind others
+  (4.6% hidden). The tick now treats hidden like minimised.
+  - In Full the scene just waits while hidden, rather than parking, so reopening shows it at once with no flash
+    of the plain background.
+  - Hidden now costs about 3% while playing (the stream and meters), measured under a heavy load today.
+- **Notifications:** in an unbundled build the switch is disabled, as intended. In the bundled app, turning it
+  on raises macOS's permission prompt, and the answer is remembered for that bundle ID, the real Driftwave
+  Nightly. So that click is Josh's. Refused, `set_pref` turns the switch back off (`show_prefs`).
+
+
 ## Round 11 (2026-11-18): stage 2, finding stations; and the themes' look
 
 **PC (done), stage 2 (fd5cb0a):** finding stations, in `app/src/finding.rs` and `ui/full.slint`.
