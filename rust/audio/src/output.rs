@@ -223,6 +223,8 @@ mod tests {
         assert!(out.iter().all(|&v| v == 0.0), "a silent run must never reach the device");
         assert_eq!(s.played_frames(), 128, "but it still plays (time moves on)");
         assert_eq!(s.tap(128).len(), 256, "and the meters see the music");
+        assert!(s.tap(128).iter().all(|&v| v == 0.5), "the tap holds the samples, not the silence");
+        assert_eq!(s.tap(10_000).len(), 256, "asking for more than there is returns what there is");
     }
 
     #[test]
