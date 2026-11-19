@@ -118,6 +118,7 @@ export component MainWindow inherits Window {
     callback cycle-sort();
     callback choose-appearance(string);
 
+    out property <length> title-end: full.title-end;
     full := FullView {
         visible: root.layout == "full";
         width: parent.width;

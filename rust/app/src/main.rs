@@ -17,9 +17,11 @@
 //! -screenshotDelay <s>, -quitAfter <s>.
 
 mod covers;
+mod effects;
 mod finding;
 mod integration;
 mod look;
+mod paint;
 mod scene;
 mod fullpal;
 mod palette;
@@ -722,7 +724,7 @@ impl App {
         if !classic && !ui.window().is_minimized() {
             let focused = !self.args.flag("inactive")
                 && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
-            self.tick_look(&ui, now, focused);
+            self.tick_look(&ui, now, dt, focused);
         }
         // Minimised, shaded or in the Full layout: nothing else moves but the clock.
         if ui.window().is_minimized() || ui.get_shaded() || !classic {
@@ -1019,6 +1021,24 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.global::<Scenery>().set_motion_on(!still);
         let w = app.clone();
         ui.global::<Scenery>().on_motion_chosen(move |on| w.borrow_mut().choose_motion(on));
+        let w = app.clone();
+        ui.window().on_winit_window_event(move |window, event| {
+            match event {
+                winit::event::WindowEvent::CursorMoved { position, .. } => {
+                    let p = position.to_logical::<f32>(window.scale_factor() as f64);
+                    if let Ok(mut a) = w.try_borrow_mut() {
+                        a.look.pointer = Some((p.x, p.y));
+                    }
+                }
+                winit::event::WindowEvent::CursorLeft { .. } => {
+                    if let Ok(mut a) = w.try_borrow_mut() {
+                        a.look.pointer = None;
+                    }
+                }
+                _ => {}
+            }
+            slint::winit_030::EventResult::Propagate
+        });
     }
     APP.with(|a| *a.borrow_mut() = Some(Rc::downgrade(&app)));
     ui.set_cards(ModelRc::from(app.borrow().cards.clone()));
