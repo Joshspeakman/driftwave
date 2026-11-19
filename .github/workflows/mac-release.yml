@@ -1,0 +1,54 @@
+# Builds Driftwave.app for macOS (a universal binary: Apple silicon and Intel) from a release tag with
+# scripts/package-mac.sh, and attaches Driftwave-<version>-mac-universal.zip and its .sha256 to that release.
+# Ad-hoc signed, not notarized: macOS asks before the first open (right-click > Open, or System Settings >
+# Privacy & Security > Open Anyway).
+name: Mac release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and attach to
+        required: true
+        default: v1.0.0-alpha.1
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    env:
+      TAG: ${{ inputs.tag || 'v1.0.0-alpha.1' }}
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target-mac
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || 'v1.0.0-alpha.1' }}
+      - name: Rust targets
+        run: rustup update stable && rustup default stable && rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Build Driftwave.app (this runner's arch)
+        run: scripts/package-mac.sh
+      - name: Add the Intel build and make it universal
+        run: |
+          set -euo pipefail
+          APP="$HOME/ProjectBuilds/shortwave-macos/app/Driftwave.app"
+          (cd rust && cargo build --release -p driftwave-app --target x86_64-apple-darwin)
+          lipo -create "$APP/Contents/MacOS/Driftwave" "$CARGO_TARGET_DIR/x86_64-apple-darwin/release/driftwave" \
+            -output "$RUNNER_TEMP/Driftwave"
+          mv "$RUNNER_TEMP/Driftwave" "$APP/Contents/MacOS/Driftwave"
+          lipo -info "$APP/Contents/MacOS/Driftwave"
+          codesign --force --sign - --timestamp=none "$APP"
+          codesign --verify --deep --strict "$APP"
+      - name: Zip
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          NAME="Driftwave-$VERSION-mac-universal.zip"
+          mkdir -p dist
+          ditto -c -k --keepParent "$HOME/ProjectBuilds/shortwave-macos/app/Driftwave.app" "dist/$NAME"
+          (cd dist && shasum -a 256 "$NAME" > "$NAME.sha256" && cat "$NAME.sha256" && ls -la)
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/*.zip dist/*.sha256 --clobber --repo "$GITHUB_REPOSITORY"
