@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   mac:
-    runs-on: macos-14
+    runs-on: macos-latest
     env:
       TAG: ${{ inputs.tag || 'v1.0.0-alpha.1' }}
       CARGO_TARGET_DIR: ${{ github.workspace }}/target-mac
