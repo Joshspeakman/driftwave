@@ -32,6 +32,35 @@ pub fn set_app_id() {
     }
 }
 
+/// Menus (the right-click and tray menus) follow Windows' dark mode, as Windows' own apps' do. Uses uxtheme's
+/// app-mode calls (by ordinal: undocumented, but what Windows Terminal and others use); where they're missing, the
+/// menus simply stay light.
+pub fn dark_menus(hwnd: isize) {
+    use windows::core::{s, PCSTR};
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryA};
+    // SAFETY: the functions are looked up and called with the signatures uxtheme has had since Windows 10 1903.
+    unsafe {
+        let Ok(ux) = LoadLibraryA(s!("uxtheme.dll")) else { return };
+        let ord = |n: usize| GetProcAddress(ux, PCSTR(n as *const u8));
+        if let Some(f) = ord(135) {
+            // SetPreferredAppMode(AllowDark)
+            let set: extern "system" fn(i32) -> i32 = std::mem::transmute(f);
+            set(1);
+        }
+        if let Some(f) = ord(133) {
+            // AllowDarkModeForWindow
+            let allow: extern "system" fn(HWND, i32) -> i32 = std::mem::transmute(f);
+            allow(HWND(hwnd as *mut _), 1);
+        }
+        if let Some(f) = ord(136) {
+            // FlushMenuThemes
+            let flush: extern "system" fn() = std::mem::transmute(f);
+            flush();
+        }
+    }
+}
+
 /// A shortcut at `lnk` to `exe`, carrying the app id (and `icon`'s picture, if given).
 pub fn create_shortcut(lnk: &Path, exe: &Path, icon: Option<&Path>) -> Result<(), String> {
     use std::mem::ManuallyDrop;

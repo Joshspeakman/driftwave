@@ -39,6 +39,12 @@ export global Pal {
     in-out property <image> skin-front;
     in-out property <bool> edge-on;
     in-out property <color> edge: #FF3D88;
+    // Text sizes chosen from the right-click menu (1 is the standard size): the song title, the display's readouts,
+    // the station list, and the title bars.
+    in-out property <float> text-marquee: 1;
+    in-out property <float> text-display: 1;
+    in-out property <float> text-list: 1;
+    in-out property <float> text-titles: 1;
 }
 
 export struct StationRow {
@@ -216,7 +222,7 @@ component TitleBar inherits Rectangle {
     }
     tt := Emboss {
         x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
-        text: root.title; ink: Pal.title-text; size: max(9px, 6 * u); family: Pal.body-font; spacing: 1.2 * u;
+        text: root.title; ink: Pal.title-text; size: min(8.6 * u, max(9px, 6 * u) * Pal.text-titles); family: Pal.body-font; spacing: 1.2 * u;
     }
     @children
 }
@@ -378,7 +384,7 @@ export component ClassicView inherits Rectangle {
     out property <length> fixed-h: main-h + vis-h;
     out property <length> min-list-h: 62 * u;
     property <length> list-h: show-list ? max(0px, root.height - fixed-h) : 0;
-    property <length> list-row: 8.5 * u;
+    property <length> list-row: 8.5 * u * Pal.text-list;
 
     callback drag();
     callback resize();
@@ -403,6 +409,11 @@ export component ClassicView inherits Rectangle {
     callback toggle-double();
     callback panels-changed();
     callback to-full();
+    // The right-click menu, from its buttons (the app opens the native menu).
+    callback open-menu();
+    // Where there is no native menu: the app asks for the in-window options instead.
+    in-out property <bool> options-open;
+    changed options-open => { if (self.options-open) { options.show(); self.options-open = false; } }
 
     // The theme's picture, under everything.
     if Pal.skin-on: Image { x: 0; y: 0; width: root.width; height: root.height; source: Pal.skin; image-fit: fill; }
@@ -414,16 +425,16 @@ export component ClassicView inherits Rectangle {
             x: 2 * u; y: 2 * u; width: parent.width - 4 * u; height: 10 * u; u: u; active: root.active;
             title: shaded ? "" : "DRIFTWAVE";
             drag => { root.drag(); }
-            TitleButton { x: 1 * u; y: 1 * u; u: u; glyph: "menu"; clicked => { options.show(); } }
+            TitleButton { x: 1 * u; y: 1 * u; u: u; glyph: "menu"; clicked => { root.open-menu(); } }
             TitleButton { x: parent.width - 28 * u; y: 1 * u; u: u; glyph: "min"; clicked => { root.minimize(); } }
             TitleButton { x: parent.width - 19 * u; y: 1 * u; u: u; glyph: "shade"; clicked => { root.shaded = !root.shaded; root.panels-changed(); } }
             TitleButton { x: parent.width - 10 * u; y: 1 * u; u: u; glyph: "close"; clicked => { root.quit(); } }
             if shaded: Text {
-                x: 12 * u; y: (parent.height - self.height) / 2; text: root.marquee; color: Pal.title-text; font-family: Pal.lcd-font; font-size: max(8.5px, 5.6 * u);
+                x: 12 * u; y: (parent.height - self.height) / 2; text: root.marquee; color: Pal.title-text; font-family: Pal.lcd-font; font-size: min(8.4 * u, max(8.5px, 5.6 * u) * Pal.text-marquee);
                 width: parent.width - 76 * u; overflow: elide;
             }
             if shaded: Text {
-                x: parent.width - 56 * u; y: (parent.height - self.height) / 2; color: Pal.title-text; font-family: Pal.lcd-font; font-size: max(8.5px, 5.6 * u); font-weight: 700;
+                x: parent.width - 56 * u; y: (parent.height - self.height) / 2; color: Pal.title-text; font-family: Pal.lcd-font; font-size: min(8.4 * u, max(8.5px, 5.6 * u) * Pal.text-marquee); font-weight: 700;
                 text: (root.minutes < 10 ? "0" : "") + root.minutes + ":" + (root.seconds < 10 ? "0" : "") + root.seconds;
             }
         }
@@ -432,7 +443,7 @@ export component ClassicView inherits Rectangle {
             x: 3 * u; y: 16 * u; width: 7 * u; height: 46 * u; fill: Pal.lcd-back;
             VerticalLayout {
                 padding-top: 2 * u; spacing: 0.5 * u;
-                Letter { u: u; letter: "O"; clicked => { options.show(); } }
+                Letter { u: u; letter: "O"; clicked => { root.open-menu(); } }
                 Letter { u: u; letter: "A"; on: root.on-top; clicked => { root.toggle-on-top(); } }
                 Letter { u: u; letter: "I"; on: root.show-list; clicked => { root.show-list = !root.show-list; root.panels-changed(); } }
                 Letter { u: u; letter: "D"; on: root.u > 1.75px; clicked => { root.toggle-double(); } }
@@ -455,7 +466,7 @@ export component ClassicView inherits Rectangle {
             Rectangle { x: 42.3 * u; y: 13 * u; width: 1.7 * u; height: 1.7 * u; border-radius: 0.85 * u; background: root.playing ? Pal.lcd-lit : Pal.lcd-lit.transparentize(55%); }
             Digit { x: 46.5 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: root.seconds / 10; dim: !root.playing; }
             Digit { x: 57.5 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: mod(root.seconds, 10); dim: !root.playing; }
-            Text { x: 69 * u; y: 4 * u; text: root.clock-mode ? "CLK" : "ELAP"; color: Pal.lcd-lit.transparentize(45%); font-size: max(7.5px, 4.6 * u); font-family: Pal.lcd-small-font; font-weight: 700; }
+            Text { x: 69 * u; y: 4 * u; text: root.clock-mode ? "CLK" : "ELAP"; color: Pal.lcd-lit.transparentize(45%); font-size: max(7.5px, 4.6 * u) * Pal.text-display; font-family: Pal.lcd-small-font; font-weight: 700; }
             TouchArea { x: 18 * u; y: 2 * u; width: 52 * u; height: 19 * u; clicked => { root.toggle-clock(); } }
             // Glass: a reflection across the digits only (never over the moving spectrum, so it costs nothing per frame).
             Rectangle { x: 1px; y: 1px; width: parent.width - 2px; height: 11 * u; border-radius: 1px;
@@ -473,23 +484,26 @@ export component ClassicView inherits Rectangle {
             x: 101 * u; y: 16 * u; width: 171 * u; height: 13 * u; fill: Pal.lcd-back; clip: true;
             mq := Text {
                 x: 3 * u - root.marquee-offset; y: (parent.height - self.height) / 2;
-                text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: max(9.5px, 6.6 * u);
+                text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: min(11.5 * u, max(9.5px, 6.6 * u) * Pal.text-marquee);
             }
-            Text { x: mq.x + mq.width + 24 * u; y: mq.y; text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: max(9.5px, 6.6 * u); }
+            Text { x: mq.x + mq.width + 24 * u; y: mq.y; text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: mq.font-size; }
         }
         if !shaded: Rectangle {
             // Bitrate, sample rate, and mono / stereo LEDs. Blank ("--") until the stream says.
             x: 101 * u; y: 32 * u; width: 171 * u; height: 9 * u;
-            Well { x: 0; width: 18 * u; height: parent.height; fill: Pal.lcd-back; shade: 3px;
-                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.kbps > 0 ? root.kbps : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.6 * u); font-weight: 700; } }
-            Text { x: 20 * u; y: (parent.height - self.height) / 2; text: "kbps"; color: Pal.glyph.transparentize(35%); font-size: max(8.5px, 5.2 * u); }
-            Well { x: 37 * u; width: 14 * u; height: parent.height; fill: Pal.lcd-back; shade: 3px;
-                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.khz > 0 ? root.khz : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.6 * u); font-weight: 700; } }
-            Text { x: 53 * u; y: (parent.height - self.height) / 2; text: "kHz"; color: Pal.glyph.transparentize(35%); font-size: max(8.5px, 5.2 * u); }
-            Led { x: 104 * u; y: 3 * u; width: 5 * u; height: 3 * u; lit: root.playing && root.mono; }
-            Text { x: 111 * u; y: (parent.height - self.height) / 2; text: "MONO"; font-size: max(8px, 5 * u); font-weight: 700; color: Pal.glyph.transparentize(root.mono && root.playing ? 0% : 55%); }
-            Led { x: 134 * u; y: 3 * u; width: 5 * u; height: 3 * u; lit: root.playing && root.stereo; }
-            Text { x: 141 * u; y: (parent.height - self.height) / 2; text: "STEREO"; font-size: max(8px, 5 * u); font-weight: 700; color: Pal.glyph.transparentize(root.stereo && root.playing ? 0% : 55%); }
+            // Each readout's window grows with its text, and each label keeps its distance from the one before (the
+            // display's text size can be raised).
+            kbps-well := Well { x: 0; width: max(18 * u, kbps-text.preferred-width + 5 * u); height: parent.height; fill: Pal.lcd-back; shade: 3px;
+                kbps-text := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.kbps > 0 ? root.kbps : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.6 * u) * Pal.text-display; font-weight: 700; } }
+            kbps-label := Text { x: kbps-well.width + 2 * u; y: (parent.height - self.height) / 2; text: "kbps"; color: Pal.glyph.transparentize(35%); font-size: max(8.5px, 5.2 * u) * Pal.text-display; }
+            khz-well := Well { x: max(37 * u, kbps-label.x + kbps-label.width + 3 * u); width: max(14 * u, khz-text.preferred-width + 5 * u); height: parent.height; fill: Pal.lcd-back; shade: 3px;
+                khz-text := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.khz > 0 ? root.khz : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.6 * u) * Pal.text-display; font-weight: 700; } }
+            khz-label := Text { x: khz-well.x + khz-well.width + 2 * u; y: (parent.height - self.height) / 2; text: "kHz"; color: Pal.glyph.transparentize(35%); font-size: max(8.5px, 5.2 * u) * Pal.text-display; }
+            mono-led := Led { x: max(104 * u, khz-label.x + khz-label.width + 6 * u); y: 3 * u; width: 5 * u; height: 3 * u; lit: root.playing && root.mono; }
+            mono-text := Text { x: mono-led.x + 7 * u; y: (parent.height - self.height) / 2; text: "MONO"; font-size: max(8px, 5 * u) * min(Pal.text-display, 1.2); font-weight: 700; color: Pal.glyph.transparentize(root.mono && root.playing ? 0% : 55%); }
+            // STEREO keeps to the panel: against its right edge when there's no room after MONO.
+            stereo-led := Led { x: stereo-text.x - 7 * u; y: 3 * u; width: 5 * u; height: 3 * u; lit: root.playing && root.stereo; }
+            stereo-text := Text { x: min(max(141 * u, mono-text.x + mono-text.width + 12 * u), parent.width - self.width); y: (parent.height - self.height) / 2; text: "STEREO"; font-size: max(8px, 5 * u) * min(Pal.text-display, 1.2); font-weight: 700; color: Pal.glyph.transparentize(root.stereo && root.playing ? 0% : 55%); }
         }
         if !shaded: Path {
             // A speaker, for the volume.
@@ -502,11 +516,11 @@ export component ClassicView inherits Rectangle {
         }
         if !shaded: Text {
             x: 196 * u; y: 46 * u; text: Math.round(root.volume * 100) + "%"; color: Pal.glyph.transparentize(25%);
-            font-family: Pal.lcd-font; font-size: max(8.5px, 5.2 * u); font-weight: 700;
+            font-family: Pal.lcd-font; font-size: max(8.5px, 5.2 * u) * Pal.text-display; font-weight: 700;
         }
         if !shaded: Text {
             x: 214 * u; y: 46 * u; width: 58 * u; horizontal-alignment: right; overflow: elide;
-            text: root.status; color: Pal.glyph.transparentize(15%); font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.2 * u); font-weight: 700;
+            text: root.status; color: Pal.glyph.transparentize(15%); font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.2 * u) * Pal.text-display; font-weight: 700;
         }
         if !shaded: Rectangle {
             // The buffer gauge: how much of the stream is waiting to play (live radio has nothing to seek).
@@ -520,7 +534,7 @@ export component ClassicView inherits Rectangle {
                 Rectangle { y: 0; height: parent.height / 2; border-radius: parent.border-radius; background: #FFFFFF26; }
             }
             Led { x: gauge + 4 * u; y: 1.5 * u; width: 5 * u; height: 3 * u; lit: root.playing; }
-            live := Text { x: gauge + 12.5 * u; y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u); font-weight: 800;
+            live := Text { x: gauge + 12.5 * u; y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u) * Pal.text-display; font-weight: 800;
                 color: Pal.glyph.transparentize(root.playing ? 0% : 55%); }
         }
         if !shaded: Rectangle {
@@ -596,13 +610,13 @@ export component ClassicView inherits Rectangle {
                     }
                     Text {
                         x: 6.5 * u; y: (parent.height - self.height) / 2; width: parent.width - 80 * u; overflow: elide;
-                        text: (i + 1) + ". " + s.name; font-size: max(8.5px, 5.2 * u);
+                        text: (i + 1) + ". " + s.name; font-size: max(8.5px, 5.2 * u) * Pal.text-list;
                         color: i == root.selected ? Pal.list-selected-text : (s.playing ? Pal.list-playing : Pal.list-text);
                         font-weight: s.playing ? 700 : 400;
                     }
                     Text {
                         x: parent.width - self.width - 3 * u; y: (parent.height - self.height) / 2; width: 70 * u; horizontal-alignment: right; overflow: elide;
-                        text: s.detail; font-size: max(8px, 5 * u); font-family: Pal.lcd-small-font;
+                        text: s.detail; font-size: max(8px, 5 * u) * Pal.text-list; font-family: Pal.lcd-small-font;
                         color: i == root.selected ? Pal.list-selected-text : Pal.list-text.transparentize(40%);
                     }
                 }
@@ -623,7 +637,7 @@ export component ClassicView inherits Rectangle {
             Transport { x: 0; width: 20 * u; height: parent.height; u: u; glyph: "play"; clicked => { if (root.selected >= 0) { root.play-station(root.selected); } } }
             Well {
                 x: 23 * u; width: 110 * u; height: parent.height; fill: Pal.lcd-back; shade: 3px;
-                Text { x: 3 * u; y: (parent.height - self.height) / 2; text: root.list-summary; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: max(8.5px, 5.2 * u); font-weight: 700; }
+                Text { x: 3 * u; y: (parent.height - self.height) / 2; text: root.list-summary; color: Pal.lcd-lit; font-family: Pal.lcd-small-font; font-size: min(8.5 * u, max(8.5px, 5.2 * u) * Pal.text-display); font-weight: 700; }
             }
             Text {
                 x: parent.width - self.width - 12 * u; y: (parent.height - self.height) / 2;

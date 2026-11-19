@@ -95,6 +95,8 @@ export component MainWindow inherits Window {
     callback toggle-double();
     callback panels-changed();
     callback to-full();
+    callback open-menu();
+    in-out property <bool> options-open <=> classic.options-open;
 
     // ───── Full ─────
     in property <[StationCard]> cards;
@@ -211,5 +213,6 @@ export component MainWindow inherits Window {
         toggle-double => { root.toggle-double(); }
         panels-changed => { root.panels-changed(); }
         to-full => { root.to-full(); }
+        open-menu => { root.open-menu(); }
     }
 }

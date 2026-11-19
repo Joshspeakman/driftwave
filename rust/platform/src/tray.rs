@@ -3,7 +3,7 @@
 //! Quit. Built on tray-icon; create it on the main thread once the event loop runs.
 
 use std::collections::HashMap;
-use tray_icon::menu::{CheckMenuItem, Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu};
+use tray_icon::menu::{CheckMenuItem, Menu, MenuId, MenuItem, PredefinedMenuItem, Submenu};
 use tray_icon::{Icon, TrayIcon, TrayIconBuilder};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -111,7 +111,11 @@ impl Tray {
 
     /// Menu choices since the last call.
     pub fn actions(&self) -> Vec<TrayAction> {
-        MenuEvent::receiver().try_iter().filter_map(|e| self.actions.get(&e.id).copied()).collect()
+        // Through the shared reader: a context menu's choices are left for it.
+        crate::context_menu::take(|id| self.actions.contains_key(&MenuId::new(id)))
+            .into_iter()
+            .filter_map(|id| self.actions.get(&MenuId::new(&id)).copied())
+            .collect()
     }
 }
 
