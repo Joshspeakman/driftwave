@@ -17,6 +17,7 @@
 //! -screenshotDelay <s>, -quitAfter <s>.
 
 mod covers;
+mod integration;
 mod fullpal;
 mod palette;
 
@@ -47,7 +48,7 @@ thread_local! {
 /// The Full layout's window size by default.
 const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
-const FLAGS: [&str; 10] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive"];
+const FLAGS: [&str; 12] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
 const DEFAULT_WIDTH: f32 = 412.0;
 const DEFAULT_LIST_UNITS: f32 = 110.0;
@@ -837,6 +838,18 @@ fn large_width(ui: &MainWindow, fixed_units: f32) -> f32 {
     }
 }
 
+/// The colour logo, small, for tray icons that aren't templates (Windows, Linux).
+fn tray_icon() -> (Vec<u8>, u32, u32) {
+    let png = include_bytes!("../../../assets/icons/driftwave.png");
+    match image::load_from_memory(png) {
+        Ok(img) => {
+            let img = image::imageops::resize(&img.to_rgba8(), 32, 32, image::imageops::FilterType::Triangle);
+            (img.into_raw(), 32, 32)
+        }
+        Err(_) => (vec![255; 32 * 32 * 4], 32, 32),
+    }
+}
+
 fn save_bmp(path: &str, buf: &SharedPixelBuffer<slint::Rgba8Pixel>) -> std::io::Result<()> {
     let (w, h) = (buf.width() as usize, buf.height() as usize);
     let mut out = Vec::with_capacity(54 + w * h * 4);
@@ -864,7 +877,21 @@ fn main() -> Result<(), slint::PlatformError> {
     }
     let args = Args::parse();
     let test = args.test_run();
-    let paths = AppPaths::for_app(if test { "DriftwaveRustTestRun" } else { "DriftwaveRust" });
+    let folder = if test { "DriftwaveRustTestRun" } else { "DriftwaveRust" };
+    // One copy per data folder: opening Driftwave again (or `driftwave --quit`) is handed to the copy that's
+    // running. Test runs skip this so they can run side by side.
+    let listener = if test {
+        None
+    } else {
+        match integration::claim(folder) {
+            Some(l) => Some(l),
+            None => {
+                log(&format!("another copy is running; handed it \"{}\"", integration::message_from_args()));
+                return Ok(());
+            }
+        }
+    };
+    let paths = AppPaths::for_app(folder);
     let _ = std::fs::create_dir_all(&paths.support);
     log(&format!("launch testRun={test} folder={}", paths.support.display()));
     let settings: Value = if test {
@@ -1224,7 +1251,59 @@ fn main() -> Result<(), slint::PlatformError> {
             let _ = slint::quit_event_loop();
         });
     }
+    // The menu bar / tray icon, Now Playing and media keys, notifications, and messages from other copies.
+    let with_tray = !test || app.borrow().args.flag("tray");
+    let with_media = !test || app.borrow().args.flag("mediaControls");
+    let integ = Rc::new(RefCell::new(integration::Integration::new(listener)));
+    {
+        let integ = integ.clone();
+        slint::Timer::single_shot(Duration::from_millis(300), move || integ.borrow_mut().start(with_tray, with_media, tray_icon()));
+    }
+    let integration_timer = slint::Timer::default();
+    {
+        let (a, weak) = (app.clone(), ui.as_weak());
+        integration_timer.start(slint::TimerMode::Repeated, Duration::from_millis(100), move || {
+            let view = {
+                let app = a.borrow();
+                let station = app.player.station.and_then(|i| app.stations.get(i));
+                integration::View {
+                    stations: app.stations.iter().map(|s| s.name.clone()).collect(),
+                    current: app.player.station,
+                    station_name: station.map(|s| s.name.clone()),
+                    title: app.player.title.clone(),
+                    playing: app.player.playing || app.player.loading,
+                    cover_url: station.and_then(|s| s.favicon_url.clone()),
+                    notifications: app.settings.get("notifications").and_then(Value::as_bool).unwrap_or(false),
+                }
+            };
+            let actions = {
+                let mut i = integ.borrow_mut();
+                i.sync(&view);
+                i.actions()
+            };
+            let Some(ui) = weak.upgrade() else { return };
+            for action in actions {
+                match action {
+                    integration::Action::Play => ui.invoke_play(),
+                    integration::Action::Stop => ui.invoke_stop(),
+                    integration::Action::TogglePlay if view.playing => ui.invoke_stop(),
+                    integration::Action::TogglePlay => ui.invoke_play(),
+                    integration::Action::Next => ui.invoke_next(),
+                    integration::Action::Prev => ui.invoke_prev(),
+                    integration::Action::Station(i) => ui.invoke_play_station(i as i32),
+                    integration::Action::Show => {
+                        let _ = ui.show();
+                        ui.window().set_minimized(false);
+                        ui.window().with_winit_window(|w: &winit::window::Window| w.focus_window());
+                    }
+                    integration::Action::MiniPlayer => ui.invoke_to_classic(),
+                    integration::Action::Quit => ui.invoke_quit(),
+                }
+            }
+        });
+    }
     ui.run()?;
+    drop(integration_timer);
     app.borrow().save_settings();
     app.borrow_mut().stop();
     Ok(())
