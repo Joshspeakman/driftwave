@@ -9,6 +9,9 @@ under the [GPL-3.0](LICENSE), and based on GNOME's [Shortwave](https://gitlab.gn
 
 **Download:** the latest alpha is on [Releases](https://github.com/Joshspeakman/driftwave/releases). It's an alpha:
 expect rough edges, and tell us about them.
+- **Windows:** a zip with an installer, on Releases.
+- **macOS:** the Mac version runs today. Until a Mac download is on Releases, build `Driftwave.app` yourself: see
+  [A Mac app](#a-mac-app).
 
 ## One window, two looks
 
@@ -121,6 +124,14 @@ notification-area icon and the system media controls) and fails on a panic. Run 
 
 The first launch of the installed app brings an earlier Driftwave's settings, themes and background across, and only
 reads them.
+
+### A Mac app
+
+`scripts/package-mac.sh` builds `Driftwave.app` (Apple silicon or Intel, whichever Mac builds it) into
+`~/ProjectBuilds/shortwave-macos/app`, ad-hoc signed, with its icon, bundle id `io.github.joshspeakman.Driftwave`
+(which notifications need), the themes and their art. Drag it to Applications. `--nightly` builds
+`Driftwave Nightly.app` alongside it, with its own bundle id. It needs Rust and the Xcode command line
+tools.
 
 ## Layout of the repository
 
