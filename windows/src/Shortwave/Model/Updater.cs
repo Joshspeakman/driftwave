@@ -89,8 +89,8 @@ public sealed class Updater : Observable
         Message = "Checking for updates…";
         try
         {
-            string json = IsUrl(feed) ? await http.GetStringAsync(feed) : await File.ReadAllTextAsync(feed);
-            var best = Parse(json).Where(r => r.Version > CurrentVersion).OrderByDescending(r => r.Version).FirstOrDefault();
+            var releases = await Releases(feed);
+            var best = releases.Where(r => r.Version > CurrentVersion).OrderByDescending(r => r.Version).FirstOrDefault();
             settings.LastUpdateCheck = DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture);
             Latest = best;
             if (best is null)
@@ -104,7 +104,7 @@ public sealed class Updater : Observable
                 string name = best.Title.StartsWith("Driftwave", StringComparison.Ordinal) ? best.Title : $"{Diagnostics.AppName} {best.Version}";
                 Message = $"{name} is available (you have {CurrentVersion}).";
             }
-            Diagnostics.Log($"update check: current {CurrentVersion}, latest {(best?.Version.ToString() ?? "none newer")}");
+            Diagnostics.Log($"update check: {releases.Count} releases on this channel, current {CurrentVersion}, latest {(best?.Version.ToString() ?? "none newer")}");
         }
         catch (Exception e)
         {
@@ -114,8 +114,55 @@ public sealed class Updater : Observable
         }
     }
 
+    /// <summary>
+    /// The releases, from GitHub's API. GitHub allows 60 unsigned API requests an hour per internet address, shared by
+    /// everyone behind it; when that's used up (403 or 429), the releases Atom feed on github.com, which isn't limited
+    /// that way, gives the tags and titles, and the zip and checksum are at their usual release-download addresses.
+    /// </summary>
+    async Task<List<UpdateRelease>> Releases(string feed)
+    {
+        if (feed.EndsWith(".atom", StringComparison.OrdinalIgnoreCase)) return ParseAtom(await ReadText(feed)).ToList();   // test runs
+        if (!IsUrl(feed)) return Parse(await File.ReadAllTextAsync(feed)).ToList();
+        try { return Parse(await http.GetStringAsync(feed)).ToList(); }
+        catch (HttpRequestException e) when (!Diagnostics.IsTestRun && e.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.TooManyRequests)
+        {
+            Diagnostics.Log($"update check: API answered {(int)e.StatusCode!}, using the releases feed");
+            return ParseAtom(await http.GetStringAsync($"https://github.com/{Repo}/releases.atom")).ToList();
+        }
+    }
+
+    /// <summary>Releases from github.com's Atom feed (the latest ten): tag and title; assets follow the release naming.</summary>
+    IEnumerable<UpdateRelease> ParseAtom(string xml)
+    {
+        var doc = System.Xml.Linq.XDocument.Parse(xml);
+        System.Xml.Linq.XNamespace atom = "http://www.w3.org/2005/Atom";
+        string flavor = Diagnostics.IsNightly ? "Nightly-" : "";
+        foreach (var entry in doc.Root?.Elements(atom + "entry") ?? [])
+        {
+            string id = entry.Element(atom + "id")?.Value ?? "";
+            string tag = id[(id.LastIndexOf('/') + 1)..];
+            if (!tag.StartsWith(TagPrefix, StringComparison.Ordinal)) continue;
+            string versionText = tag[TagPrefix.Length..];
+            int dash = versionText.IndexOf('-');
+            if (dash >= 0) versionText = versionText[..dash];
+            if (!Version.TryParse(versionText, out var version)) continue;
+            string zip = $"https://github.com/{Repo}/releases/download/{tag}/Driftwave-{flavor}{versionText}-win-x64.zip";
+            DateTimeOffset.TryParse(entry.Element(atom + "updated")?.Value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var published);
+            string page = entry.Elements(atom + "link").FirstOrDefault(l => (string?)l.Attribute("rel") == "alternate")?.Attribute("href")?.Value ?? RepoPage;
+            yield return new UpdateRelease(tag, version, entry.Element(atom + "title")?.Value ?? tag, "", published, zip, 0, zip + ".sha256",
+                page.StartsWith($"https://github.com/{Repo}/releases/tag/", StringComparison.Ordinal) ? page : RepoPage);
+        }
+    }
+
     static bool IsUrl(string s) => s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
-    static string Short(Exception e) => e is HttpRequestException h && h.StatusCode is { } code ? $"GitHub answered {(int)code}." : e.Message;
+    static string Short(Exception e) => e switch
+    {
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.TooManyRequests } =>
+            "GitHub is limiting requests from your network right now. Try again in an hour.",
+        HttpRequestException { StatusCode: { } code } => $"GitHub answered {(int)code}.",
+        HttpRequestException or TaskCanceledException => "GitHub couldn’t be reached. Check your internet connection.",
+        _ => e.Message,
+    };
 
     /// <summary>The releases for this app's channel, from GitHub's releases JSON.</summary>
     IEnumerable<UpdateRelease> Parse(string json)
