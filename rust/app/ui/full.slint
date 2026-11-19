@@ -910,6 +910,10 @@ export global Ed {
     in property <float> cover;
     in property <[EffectRow]> effects;
     in property <[int]> effect-counts: [0, 0, 0, 0];
+    // Driftwave's own fonts, then the installed ones.
+    in property <[string]> fonts;
+    // Test runs (-fonts): opens the text font's list.
+    in-out property <bool> open-fonts;
     // Test runs (-picker n): opens token n's colour picker.
     in-out property <int> open-picker: -1;
     in-out property <bool> confirm-delete;
@@ -1051,6 +1055,41 @@ component Field inherits Rectangle {
         single-line: true; color: Th.control-text; font-size: 13px; font-family: root.family; read-only: !root.enabled;
         accepted => { root.accepted(self.text); }
         changed has-focus => { Dir.typing = self.has-focus; }
+    }
+}
+
+// A font's name, typed or picked from a list of the fonts there are, each shown in itself.
+component FontField inherits Rectangle {
+    in property <string> value;
+    in property <string> placeholder;
+    in property <bool> want-open;
+    changed want-open => { if (self.want-open) { list.show(); } }
+    callback chosen(string);
+    width: 232px; height: 32px;
+    Field { width: parent.width - 36px; text: root.value; placeholder: root.placeholder; accepted(t) => { root.chosen(t); } }
+    Btn { x: parent.width - 32px; width: 32px; chevron: true; clicked => { list.show(); } }
+    list := PopupWindow {
+        x: 0; y: 34px; width: 260px; height: 300px;
+        close-policy: PopupClosePolicy.close-on-click-outside;
+        Rectangle {
+            border-radius: Th.bevel ? 0px : Th.radius-card; background: Th.dialog; border-width: Th.bevel ? 0px : 1px; border-color: Th.card-stroke;
+            drop-shadow-blur: Th.bevel ? 0px : 20px; drop-shadow-offset-y: 4px; drop-shadow-color: Th.bevel ? transparent : #00000059;
+            clip: true;
+            if Th.bevel: Bevel { width: parent.width; height: parent.height; }
+            Flickable {
+                x: 4px; y: 4px; width: parent.width - 8px; height: parent.height - 8px;
+                content-height: Ed.fonts.length * 30px;
+                for f[i] in Ed.fonts: Rectangle {
+                    y: i * 30px; height: 30px; border-radius: Th.bevel ? 0px : Th.radius-control;
+                    background: font-ta.has-hover ? (Th.bevel ? Th.selection : Th.subtle) : transparent;
+                    font-ta := TouchArea { clicked => { root.chosen(f); list.close(); } }
+                    Text {
+                        x: 10px; width: parent.width - 20px; height: parent.height; vertical-alignment: center; overflow: elide;
+                        text: f; font-family: f; font-size: 14px; color: font-ta.has-hover && Th.bevel ? Th.selection-text : Th.card-text;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1825,10 +1864,10 @@ export component FullView inherits Rectangle {
                             spacing: 16px;
                             VerticalLayout { spacing: 4px;
                                 Text { text: "Text font"; color: Th.card-text2; font-size: 12px; }
-                                Field { width: 200px; text: Ed.body-font; placeholder: "Segoe UI"; accepted(t) => { Ed.set-font("body", t); } } }
+                                FontField { value: Ed.body-font; placeholder: "Segoe UI"; want-open: Ed.open-fonts; chosen(t) => { Ed.set-font("body", t); } } }
                             VerticalLayout { spacing: 4px;
                                 Text { text: "Title font"; color: Th.card-text2; font-size: 12px; }
-                                Field { width: 200px; text: Ed.title-font; placeholder: "Same as text"; accepted(t) => { Ed.set-font("title", t); } } }
+                                FontField { value: Ed.title-font; placeholder: "Same as text"; chosen(t) => { Ed.set-font("title", t); } } }
                             Rectangle { horizontal-stretch: 1; }
                         }
                         HorizontalLayout {
