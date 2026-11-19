@@ -10,9 +10,16 @@ function Get-ShortwaveName([string]$Flavor) {
 # Where scripts\build.ps1 puts a build.
 function Get-BuildDir([string]$Flavor) { Join-Path $WindowsRoot "out\$Flavor" }
 
-# The app the test scripts run: $env:SHORTWAVE_APP, else the Nightly build.
+# The app the test scripts run: $env:SHORTWAVE_APP; with SHORTWAVE_PLAYER=rust, the Rust headless player
+# (rust\target\release\driftwave-player.exe: same flags and log lines); else the Nightly build.
+function Test-RustPlayer { $env:SHORTWAVE_PLAYER -eq 'rust' }
 function Get-TestApp {
     if ($env:SHORTWAVE_APP) { return $env:SHORTWAVE_APP }
+    if (Test-RustPlayer) {
+        $exe = Join-Path $RepoRoot 'rust\target\release\driftwave-player.exe'
+        if (-not (Test-Path $exe)) { throw "No Rust player at $exe. Run: rust\cargo.ps1 build --release -p driftwave-audio --bin driftwave-player" }
+        return $exe
+    }
     $exe = Join-Path (Get-BuildDir 'Nightly') 'Driftwave.exe'
     if (-not (Test-Path $exe)) { throw "No build at $exe. Run windows\scripts\build.ps1 first, or set SHORTWAVE_APP." }
     return $exe

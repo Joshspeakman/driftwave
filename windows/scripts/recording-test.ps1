@@ -17,6 +17,7 @@ $server = if ($StatusLine -eq 'icy') { Join-Path $PSScriptRoot 'icy-v1-test-serv
 $serverArgs = @($python.Args) + @("`"$server`"", '--port', $port, '--interval', $interval, '--media', "`"$out\media`"")
 $srv = Start-Process -FilePath $python.Exe -ArgumentList $serverArgs -PassThru -WindowStyle Hidden
 $fail = 0
+$checked = 0
 try {
     Start-Sleep -Seconds 1
     foreach ($fmt in 'mp3', 'aac') {
@@ -31,6 +32,7 @@ try {
         Write-Output "--- ${fmt}: $($files.Count) saved"
         $files | ForEach-Object { Write-Output ("  {0,8} {1}" -f $_.Length, $_.Name) }
         if ($files.Count -lt 1) { Write-Output "FAIL ${fmt}: nothing saved (log $log)"; $fail = 1; continue }
+        $checked++
         foreach ($f in $files) {
             $dur = Get-Duration $f.FullName
             $probe = (& ffprobe -v error -show_entries 'stream=codec_name:format_tags=title,artist,album' -of default=nw=1 $f.FullName 2>&1) -join ' '
@@ -54,5 +56,7 @@ try {
 finally {
     Stop-Process -Id $srv.Id -Force -ErrorAction SilentlyContinue
 }
+# A run where nothing could be checked (a broken helper, no server) is a failure, not a pass.
+if ($checked -lt 2) { Write-Output "FAIL only $checked of 2 formats checked"; $fail = 1 }
 if ($fail -eq 0) { Write-Output 'PASS recording test' } else { Write-Output "logs in $out" }
 exit $fail

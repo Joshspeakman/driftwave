@@ -21,3 +21,7 @@ uuid.workspace = true
 symphonia = { version = "0.6", default-features = false, features = ["mp3", "aac", "ogg", "vorbis"] }
 cpal = "0.18"
 rustfft = "6"
+
+[target.'cfg(windows)'.dependencies]
+# Media Foundation's AAC decoder (HE-AAC included); the same windows crate version cpal uses.
+windows = { version = "0.62", features = ["Win32_Media_MediaFoundation", "Win32_System_Com"] }
