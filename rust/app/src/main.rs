@@ -12,11 +12,12 @@
 //! has settled, nothing draws at all. Visualizers draw within a pixel budget and the UI scales them smoothly.
 //!
 //! Flags: -layout full|classic, -page <page>, -playURL <url>, -muted, -audible, -theme <id>, -vis <id>, -library <file>,
-//! -swapAt <s>, -double, -shade, -noVis,
+//! -swapAt <s>, -search <text>, -details <n>, -double, -shade, -noVis,
 //! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
 //! -screenshotDelay <s>, -quitAfter <s>.
 
 mod covers;
+mod finding;
 mod integration;
 mod fullpal;
 mod palette;
@@ -119,6 +120,9 @@ fn built_in_themes() -> Vec<Theme> {
 
 struct Player {
     engine: Option<(Engine, Receiver<Event>)>,
+    /// The station playing (or last played), from the library, Discover or Search.
+    current: Option<Station>,
+    /// Its place in the library, if it's there.
     station: Option<usize>,
     started: Option<Instant>,
     stopped: Option<Instant>,
@@ -191,6 +195,7 @@ struct App {
     ticks: u32,
     frame: u64,
     covers: covers::Covers,
+    find: finding::Finding,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -237,7 +242,7 @@ impl App {
             s["visualizer"] = json!(self.big.host.id());
             s["showVisualizer"] = json!(ui.get_show_vis());
             s["showList"] = json!(ui.get_show_list());
-            let full = if classic || ui.get_maximized() { self.full_size } else { (size.width, size.height) };
+            let full = if classic || ui.get_is_maximized() { self.full_size } else { (size.width, size.height) };
             s["fullWidth"] = json!(full.0);
             s["fullHeight"] = json!(full.1);
             s["showPlayer"] = json!(ui.get_show_player());
@@ -359,7 +364,7 @@ impl App {
             .stations
             .iter()
             .enumerate()
-            .map(|(i, s)| StationRow {
+            .map(|(_, s)| StationRow {
                 name: s.name.clone().into(),
                 detail: {
                     let codec = s.codec.to_uppercase();
@@ -371,7 +376,7 @@ impl App {
                     }
                 }
                 .into(),
-                playing: self.player.station == Some(i) && self.player.engine.is_some(),
+                playing: self.player.engine.is_some() && self.player.current.as_ref().is_some_and(|c| c.id == s.id),
             })
             .collect();
         ui.set_list_summary(format!("{} STATION{}", self.stations.len(), if self.stations.len() == 1 { "" } else { "S" }).into());
@@ -381,25 +386,14 @@ impl App {
         ui.set_sort_name(self.sorting.title().into());
     }
 
-    fn card(&self, i: usize, s: &Station) -> StationCard {
-        let (c1, c2) = covers::tile_colours(&s.name);
-        let cover = self.covers.get(&s.id);
-        StationCard {
-            name: s.name.clone().into(),
-            detail: s.subtitle().into(),
-            playing: self.player.station == Some(i) && self.player.engine.is_some(),
-            has_cover: cover.is_some(),
-            small: cover.as_ref().is_some_and(covers::is_small),
-            cover: cover.unwrap_or_default(),
-            c1,
-            c2,
-        }
+    fn card(&self, _i: usize, s: &Station) -> StationCard {
+        self.card_for(s)
     }
 
     /// Asks for every station's cover (each once).
     fn want_covers(&mut self) {
         for s in self.stations.clone() {
-            self.covers.want(&s.id, s.custom_cover.as_deref().or(s.favicon_url.as_deref()));
+            self.want_cover(&s);
         }
     }
 
@@ -412,12 +406,18 @@ impl App {
                 self.cards.set_row_data(i, self.card(i, s));
             }
         }
+        if self.find.discover.iter().chain(self.find.results.iter()).any(|s| s.id == key) {
+            self.refresh_found();
+        }
+        if self.find.details.as_ref().is_some_and(|d| d.id == key) {
+            self.show_details();
+        }
         self.show_now_playing_cover();
     }
 
     fn show_now_playing_cover(&self) {
         let Some(ui) = self.ui.upgrade() else { return };
-        let Some(s) = self.player.station.and_then(|i| self.stations.get(i)) else { return };
+        let Some(s) = self.player.current.as_ref() else { return };
         let (c1, c2) = covers::tile_colours(&s.name);
         ui.set_cover_c1(c1);
         ui.set_cover_c2(c2);
@@ -441,7 +441,7 @@ impl App {
     }
 
     fn resort(&mut self) {
-        let playing = self.player.station.and_then(|i| self.stations.get(i)).map(|s| s.id.clone());
+        let playing = self.player.current.as_ref().map(|s| s.id.clone());
         let selected = self.ui.upgrade().and_then(|u| usize::try_from(u.get_selected()).ok()).and_then(|i| self.stations.get(i)).map(|s| s.id.clone());
         self.stations = sorted_by(&self.stations, self.sorting, true);
         self.player.station = playing.and_then(|id| self.stations.iter().position(|s| s.id == id));
@@ -459,7 +459,7 @@ impl App {
         }
         let scale = ui.window().scale_factor();
         if layout == "classic" {
-            if !ui.get_maximized() {
+            if !ui.get_is_maximized() {
                 let size = ui.window().size().to_logical(scale);
                 self.full_size = (size.width, size.height);
             }
@@ -476,8 +476,15 @@ impl App {
         self.save_settings();
     }
 
+    /// Plays the library's station at `index`.
     fn play(&mut self, index: usize) {
         let Some(station) = self.stations.get(index).cloned() else { return };
+        self.play_station(station);
+    }
+
+    /// Plays any station: from the library, Discover or Search.
+    fn play_station(&mut self, station: Station) {
+        let index = self.stations.iter().position(|s| s.id == station.id);
         self.stop();
         let silent = self.args.test_run() && !self.args.flag("audible");
         let config = EngineConfig {
@@ -504,11 +511,14 @@ impl App {
             ui.set_stereo(false);
             ui.set_mono(false);
             ui.set_station(station.name.clone().into());
-            ui.set_selected(index as i32);
+            if let Some(i) = index {
+                ui.set_selected(i as i32);
+            }
         }
         engine.set_muted(self.args.flag("muted"));
         self.player.engine = Some((engine, events));
-        self.player.station = Some(index);
+        self.player.station = index;
+        self.player.current = Some(station.clone());
         self.player.started = None;
         self.player.stopped = None;
         self.player.title.clear();
@@ -522,9 +532,11 @@ impl App {
             ui.set_song("".into());
             ui.set_artist("".into());
         }
+        self.want_cover(&station);
         self.show_now_playing_cover();
         self.update_marquee();
         self.refresh_list();
+        self.refresh_found();
     }
 
     fn stop(&mut self) {
@@ -541,10 +553,11 @@ impl App {
         self.player.state = "STOPPED".into();
         self.update_marquee();
         self.refresh_list();
+        self.refresh_found();
     }
 
     fn update_marquee(&mut self) {
-        let station = self.player.station.and_then(|i| self.stations.get(i)).map(|s| s.name.clone());
+        let station = self.player.current.as_ref().map(|s| s.name.clone());
         self.marquee = match (station, self.player.title.is_empty()) {
             (Some(s), false) => format!("{}  ***  {}", self.player.title, s),
             (Some(s), true) => format!("{s}  ***  {}", self.player.state),
@@ -614,7 +627,7 @@ impl App {
                     }
                 }
             }
-            ui.set_maximized(ui.window().with_winit_window(|w: &winit::window::Window| w.is_maximized()).unwrap_or(false));
+            ui.set_is_maximized(ui.window().with_winit_window(|w: &winit::window::Window| w.is_maximized()).unwrap_or(false));
         }
         // Engine events.
         let mut events = Vec::new();
@@ -944,6 +957,7 @@ fn main() -> Result<(), slint::PlatformError> {
         themes,
         player: Player {
             engine: None,
+            current: None,
             station: None,
             started: None,
             stopped: None,
@@ -976,6 +990,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 });
             });
         }),
+        find: finding::Finding::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
@@ -1087,11 +1102,13 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_play(move || {
         let mut app = a.borrow_mut();
-        let pick = app.ui.upgrade().map(|u| u.get_selected()).filter(|&i| i >= 0).map(|i| i as usize).or(app.player.station).or(if app.stations.is_empty() { None } else { Some(0) });
-        if let Some(i) = pick {
-            if !(app.player.station == Some(i) && app.player.engine.is_some()) {
-                app.play(i);
-            }
+        if app.player.engine.is_some() {
+            return;
+        }
+        let selected = app.ui.upgrade().map(|u| u.get_selected()).and_then(|i| usize::try_from(i).ok()).and_then(|i| app.stations.get(i).cloned());
+        let pick = selected.or_else(|| app.player.current.clone()).or_else(|| app.stations.first().cloned());
+        if let Some(s) = pick {
+            app.play_station(s);
         }
     });
     let a = app.clone();
@@ -1129,8 +1146,8 @@ fn main() -> Result<(), slint::PlatformError> {
         let mut app = a.borrow_mut();
         app.player.armed = !app.player.armed;
         // Recording applies from the start of a stream: restart the station that's playing.
-        if let Some(i) = app.player.station.filter(|_| app.player.engine.is_some()) {
-            app.play(i);
+        if let Some(s) = app.player.current.clone().filter(|_| app.player.engine.is_some()) {
+            app.play_station(s);
         }
     });
     let weak = ui.as_weak();
@@ -1163,6 +1180,80 @@ fn main() -> Result<(), slint::PlatformError> {
             app.fit_window(&ui, true);
         }
     });
+    {
+        let dir = ui.global::<Dir>();
+        let a = app.clone();
+        dir.on_discover_mode_chosen(move |m| {
+            let mut app = a.borrow_mut();
+            app.find.mode = m.to_string();
+            if let Some(ui) = app.ui.upgrade() {
+                ui.global::<Dir>().set_discover_mode(m);
+            }
+            app.discover();
+        });
+        let a = app.clone();
+        dir.on_country_chosen(move |i| a.borrow_mut().country_chosen(i));
+        let a = app.clone();
+        dir.on_discover_refresh(move || a.borrow_mut().discover());
+        let a = app.clone();
+        dir.on_search(move |t| a.borrow_mut().search(&t));
+        let a = app.clone();
+        dir.on_filter_chosen(move |kind, i| a.borrow_mut().filter_chosen(&kind, i));
+        let a = app.clone();
+        dir.on_open(move |source, i| a.borrow_mut().open_details(&source, i));
+        let a = app.clone();
+        dir.on_play_now(move |source, i| {
+            let mut app = a.borrow_mut();
+            let list = if source == "discover" { &app.find.discover } else { &app.find.results };
+            if let Some(s) = usize::try_from(i).ok().and_then(|i| list.get(i)).cloned() {
+                let playing = app.player.engine.is_some() && app.player.current.as_ref().is_some_and(|c| c.id == s.id);
+                if playing {
+                    app.stop();
+                } else {
+                    app.play_station(s);
+                }
+            }
+        });
+        let a = app.clone();
+        dir.on_details_play(move || a.borrow_mut().details_play());
+        let a = app.clone();
+        dir.on_details_library(move || a.borrow_mut().details_library());
+        let a = app.clone();
+        dir.on_details_homepage(move || {
+            if let Some(h) = a.borrow().find.details.as_ref().and_then(|d| d.homepage.clone()) {
+                finding::open_url(&h);
+            }
+        });
+        let a = app.clone();
+        dir.on_details_close(move || {
+            let mut app = a.borrow_mut();
+            app.find.details = None;
+            app.show_details();
+        });
+        let a = app.clone();
+        dir.on_add_local(move |name, url| a.borrow_mut().add_local(&name, &url));
+        let a = app.clone();
+        dir.on_choose_cover(move || a.borrow_mut().choose_cover());
+        let a = app.clone();
+        dir.on_import_stations(move || a.borrow_mut().import_stations());
+        let a = app.clone();
+        dir.on_export_stations(move || a.borrow_mut().export_stations());
+        let a = app.clone();
+        dir.on_dismiss(move || a.borrow().message(""));
+    }
+    app.borrow_mut().start_finding();
+    // Test runs: -search <text> runs a search on the Search page; -details <n> opens a library station's details.
+    let (search, details) = {
+        let a = app.borrow();
+        (a.args.get("search").map(String::from), a.args.num("details"))
+    };
+    if let Some(q) = search {
+        ui.set_page("search".into());
+        app.borrow_mut().search(&q);
+    }
+    if let Some(n) = details {
+        app.borrow_mut().open_details("library", n as i32);
+    }
     let a = app.clone();
     ui.on_to_classic(move || a.borrow_mut().set_layout("classic"));
     let a = app.clone();
@@ -1175,7 +1266,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 w.set_maximized(m);
                 m
             });
-            ui.set_maximized(now.unwrap_or(false));
+            ui.set_is_maximized(now.unwrap_or(false));
         }
     });
     let weak = ui.as_weak();
@@ -1265,7 +1356,7 @@ fn main() -> Result<(), slint::PlatformError> {
         integration_timer.start(slint::TimerMode::Repeated, Duration::from_millis(100), move || {
             let view = {
                 let app = a.borrow();
-                let station = app.player.station.and_then(|i| app.stations.get(i));
+                let station = app.player.current.as_ref();
                 integration::View {
                     stations: app.stations.iter().map(|s| s.name.clone()).collect(),
                     current: app.player.station,

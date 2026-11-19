@@ -88,20 +88,6 @@ pub fn default(dark: bool) -> FullPalette {
     }
 }
 
-/// `fg`, adjusted until it reads at `min` on every one of `backs`.
-fn readable_on(fg: Color, backs: &[Color], min: f64) -> Color {
-    let mut c = fg;
-    for _ in 0..4 {
-        for &b in backs {
-            c = readable(c, b, min);
-        }
-        if backs.iter().all(|&b| contrast(c, b) >= min) {
-            break;
-        }
-    }
-    c
-}
-
 /// Composites a translucent token over an opaque colour.
 fn over(top: Color, under: Color) -> Color {
     let a = top.a as f64 / 255.0;
@@ -161,6 +147,7 @@ pub fn full(theme: Option<&Theme>, dark: bool) -> FullPalette {
 }
 
 /// Whether a palette reads well: text on its cards and surfaces, and the accent's own text.
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn check(p: &FullPalette) -> Vec<String> {
     let mut problems = Vec::new();
     for (part, fg, bg, min) in [

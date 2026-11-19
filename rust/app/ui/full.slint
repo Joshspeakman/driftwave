@@ -166,6 +166,171 @@ component SettingsCard inherits Rectangle {
     }
 }
 
+// A station's details, for the dialog.
+export struct Details {
+    name: string,
+    subtitle: string,
+    tags: string,
+    location: string,
+    language: string,
+    codec: string,
+    votes: string,
+    homepage: string,
+    stream: string,
+    in-library: bool,
+    local: bool,
+    orphaned: bool,
+    playing: bool,
+    cover: image,
+    has-cover: bool,
+    small: bool,
+    c1: color,
+    c2: color,
+}
+
+// Finding stations (Discover, Search), a station's details, adding your own, importing and exporting.
+// Rust talks to this directly (ui.global::<Dir>()).
+export global Dir {
+    in property <[StationCard]> discover;
+    in property <[StationCard]> results;
+    in property <string> discover-mode: "popular"; // popular, trending, random
+    in property <[string]> countries;
+    in property <int> country: -1;
+    in property <int> search-country: -1;
+    in property <[string]> languages;
+    in property <int> language: -1;
+    in property <[string]> tags;
+    in property <int> tag: -1;
+    in property <[string]> orders: ["Most Voted", "Most Played", "Name", "Bitrate", "Random"];
+    in property <int> order: 0;
+    in property <string> discover-status;
+    in property <string> search-status;
+    in property <bool> details-open;
+    in property <Details> details;
+    in-out property <bool> add-open;
+    in property <string> add-error;
+    in property <string> add-cover;
+    in property <string> message;
+    callback discover-mode-chosen(string);
+    callback country-chosen(int);
+    callback discover-refresh();
+    callback search(string);
+    callback filter-chosen(string, int);
+    callback open(string, int);      // "library", "discover" or "search", and the card
+    callback play-now(string, int);
+    callback details-play();
+    callback details-library();
+    callback details-homepage();
+    callback details-close();
+    callback add-local(string, string);
+    callback choose-cover();
+    callback import-stations();
+    callback export-stations();
+    callback dismiss();
+}
+
+// A grid of station cards: click for details, double-click (or the round button) to play.
+component StationGrid inherits Flickable {
+    in property <[StationCard]> cards;
+    in property <int> selected: -1;
+    callback open(int);
+    callback play(int);
+    property <length> cw: 164px;
+    property <length> ch: 214px;
+    property <length> gap: 8px;
+    property <int> cols: max(1, Math.floor((self.width + gap) / (cw + gap)));
+    content-height: Math.ceil(root.cards.length / cols) * (ch + gap);
+    for s[i] in root.cards: Rectangle {
+        x: Math.mod(i, root.cols) * (root.cw + root.gap);
+        y: Math.floor(i / root.cols) * (root.ch + root.gap);
+        width: root.cw; height: root.ch;
+        border-radius: Th.radius-card;
+        background: i == root.selected ? Th.subtle : (card-ta.has-hover ? Th.subtle.transparentize(40%) : transparent);
+        card-ta := TouchArea {
+            clicked => { root.open(i); }
+            double-clicked => { root.play(i); }
+        }
+        Cover { x: 8px; y: 8px; width: 148px; height: 148px; source: s.cover; has-source: s.has-cover; small: s.small; c1: s.c1; c2: s.c2; }
+        if s.playing || card-ta.has-hover: Rectangle {
+            x: 122px; y: 122px; width: 30px; height: 30px; border-radius: 15px;
+            background: play-ta.has-hover ? Th.accent.brighter(10%) : Th.accent;
+            play-ta := TouchArea { clicked => { root.play(i); } }
+            Path { x: 10px; y: 8px; width: 12px; height: 14px; viewbox-width: 12; viewbox-height: 14; stroke: transparent; fill: Th.on-accent;
+                commands: s.playing ? "M 1 1 L 4.5 1 L 4.5 13 L 1 13 Z M 7.5 1 L 11 1 L 11 13 L 7.5 13 Z" : "M 1 0 L 12 7 L 1 14 Z"; }
+        }
+        Text { x: 10px; y: 164px; width: parent.width - 20px; text: s.name; color: Th.text; font-size: 13px; font-weight: 600; overflow: elide; }
+        Text { x: 10px; y: 184px; width: parent.width - 20px; text: s.detail; color: Th.text2; font-size: 11px; overflow: elide; }
+    }
+}
+
+// A dropdown: the current choice, and a list to pick from.
+component Picker inherits Rectangle {
+    in property <[string]> options;
+    in property <int> current: -1;
+    in property <string> placeholder: "Any";
+    callback chosen(int);
+    height: 32px;
+    width: max(130px, value.preferred-width + 44px);
+    border-radius: Th.radius-control;
+    background: ta.has-hover ? Th.control.brighter(6%) : Th.control;
+    border-width: 1px;
+    border-color: Th.control-stroke;
+    ta := TouchArea { clicked => { pop.show(); } }
+    value := Text { x: 12px; y: (parent.height - self.height) / 2; color: Th.control-text; font-size: 13px;
+        text: root.current >= 0 && root.current < root.options.length ? root.options[root.current] : root.placeholder; }
+    Path { x: parent.width - 22px; y: 13px; width: 10px; height: 6px; viewbox-width: 10; viewbox-height: 6; fill: transparent;
+        stroke: Th.control-text; stroke-width: 1.3px; commands: "M 1 1 L 5 5 L 9 1"; }
+    pop := PopupWindow {
+        x: 0; y: root.height + 4px; width: max(240px, root.width); height: min(360px, (root.options.length + 1) * 30px + 8px);
+        Rectangle {
+            background: Th.dialog; border-radius: Th.radius-control; border-width: 1px; border-color: Th.card-stroke;
+            Flickable {
+                x: 4px; y: 4px; width: parent.width - 8px; height: parent.height - 8px;
+                content-height: (root.options.length + 1) * 30px;
+                Rectangle {
+                    y: 0; height: 30px; border-radius: Th.radius-control; background: any-ta.has-hover ? Th.subtle : transparent;
+                    any-ta := TouchArea { clicked => { root.chosen(-1); } }
+                    Text { x: 10px; y: (parent.height - self.height) / 2; text: root.placeholder; color: Th.card-text2; font-size: 13px; }
+                }
+                for o[i] in root.options: Rectangle {
+                    y: (i + 1) * 30px; height: 30px; border-radius: Th.radius-control; background: opt-ta.has-hover ? Th.subtle : transparent;
+                    opt-ta := TouchArea { clicked => { root.chosen(i); } }
+                    Text { x: 10px; y: (parent.height - self.height) / 2; width: parent.width - 20px; text: o; overflow: elide;
+                        color: i == root.current ? Th.accent-text : Th.card-text; font-size: 13px; }
+                }
+            }
+        }
+    }
+}
+
+// A text field in the theme's colours.
+component Field inherits Rectangle {
+    in property <string> placeholder;
+    in-out property <string> text <=> input.text;
+    callback accepted(string);
+    height: 32px;
+    border-radius: Th.radius-control;
+    background: Th.control;
+    border-width: 1px;
+    border-color: input.has-focus ? Th.accent : Th.control-stroke;
+    if input.text == "": Text { x: 10px; y: (parent.height - self.height) / 2; text: root.placeholder; color: Th.control-text.transparentize(45%); font-size: 13px; }
+    input := TextInput {
+        x: 10px; y: (parent.height - self.height) / 2; width: parent.width - 20px;
+        single-line: true; color: Th.control-text; font-size: 13px;
+        accepted => { root.accepted(self.text); }
+    }
+}
+
+// A row of the details dialog: a label and its value.
+component InfoRow inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    height: value == "" ? 0px : 22px;
+    visible: value != "";
+    Text { x: 0; width: 96px; text: root.label; color: Th.card-text2; font-size: 12px; }
+    Text { x: 100px; width: parent.width - 100px; text: root.value; color: Th.card-text; font-size: 12px; overflow: elide; }
+}
+
 export component FullView inherits Rectangle {
     // Now playing and the library (shared with Classic through the window).
     in property <[StationCard]> stations;
@@ -269,46 +434,92 @@ export component FullView inherits Rectangle {
         if root.page == "library": Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
             Text { x: 28px; y: 22px; text: "Library"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
-            Btn { x: parent.width - self.width - 24px; y: 26px; text: "↕  " + root.sort-name; clicked => { root.cycle-sort(); } }
+            Btn { x: parent.width - self.width - 64px; y: 26px; text: "↕  " + root.sort-name; clicked => { root.cycle-sort(); } }
+            Btn {
+                x: parent.width - 56px; y: 26px; width: 32px; text: "···";
+                clicked => { library-menu.show(); }
+                library-menu := PopupWindow {
+                    x: -180px; y: 36px; width: 212px; height: 3 * 32px + 8px;
+                    Rectangle {
+                        background: Th.dialog; border-radius: Th.radius-control; border-width: 1px; border-color: Th.card-stroke;
+                        VerticalLayout {
+                            padding: 4px;
+                            for item[i] in ["Add Local Station…", "Import Stations…", "Export Stations…"]: Rectangle {
+                                height: 32px; border-radius: Th.radius-control; background: menu-ta.has-hover ? Th.subtle : transparent;
+                                menu-ta := TouchArea {
+                                    clicked => {
+                                        if (i == 0) { Dir.add-open = true; }
+                                        if (i == 1) { Dir.import-stations(); }
+                                        if (i == 2) { Dir.export-stations(); }
+                                    }
+                                }
+                                Text { x: 12px; y: (parent.height - self.height) / 2; text: item; color: Th.card-text; font-size: 13px; }
+                            }
+                        }
+                    }
+                }
+            }
             if root.stations.length == 0: VerticalLayout {
                 x: 0; y: 120px; width: parent.width; height: 200px; spacing: 10px; alignment: center;
                 Text { text: "Your Library Is Empty"; color: Th.text; font-size: 20px; font-weight: 600; horizontal-alignment: center; }
                 Text { text: "Discover stations and add the ones you like."; color: Th.text2; font-size: 13px; horizontal-alignment: center; }
             }
-            grid := Flickable {
+            StationGrid {
                 x: 20px; y: 80px; width: parent.width - 40px; height: parent.height - 92px;
-                property <length> cw: 164px;
-                property <length> ch: 214px;
-                property <length> gap: 8px;
-                property <int> cols: max(1, Math.floor((self.width + gap) / (cw + gap)));
-                content-height: Math.ceil(root.stations.length / cols) * (ch + gap);
-                for s[i] in root.stations: Rectangle {
-                    x: Math.mod(i, grid.cols) * (grid.cw + grid.gap);
-                    y: Math.floor(i / grid.cols) * (grid.ch + grid.gap);
-                    width: grid.cw; height: grid.ch;
-                    border-radius: Th.radius-card;
-                    background: i == root.selected ? Th.subtle : (card-ta.has-hover ? Th.subtle.transparentize(40%) : transparent);
-                    card-ta := TouchArea {
-                        clicked => { root.selected = i; }
-                        double-clicked => { root.selected = i; root.play-station(i); }
-                    }
-                    Cover { x: 8px; y: 8px; width: 148px; height: 148px; source: s.cover; has-source: s.has-cover; small: s.small; c1: s.c1; c2: s.c2; }
-                    if s.playing: Rectangle {
-                        x: 128px; y: 128px; width: 24px; height: 24px; border-radius: 12px; background: Th.accent;
-                        Path { x: 7px; y: 6px; width: 11px; height: 12px; viewbox-width: 11; viewbox-height: 12; stroke: transparent; fill: Th.on-accent;
-                            commands: "M 1 0 L 11 6 L 1 12 Z"; }
-                    }
-                    Text { x: 10px; y: 164px; width: parent.width - 20px; text: s.name; color: Th.text; font-size: 13px; font-weight: 600; overflow: elide; }
-                    Text { x: 10px; y: 184px; width: parent.width - 20px; text: s.detail; color: Th.text2; font-size: 11px; overflow: elide; }
-                }
+                cards: root.stations; selected: root.selected;
+                open(i) => { root.selected = i; Dir.open("library", i); }
+                play(i) => { root.selected = i; root.play-station(i); }
             }
         }
 
-        // Discover and Search arrive in stage 2 of the rebuild.
-        if root.page == "discover" || root.page == "search": Rectangle {
+        // Discover: popular stations where you are, trending worldwide, or a random handful.
+        if root.page == "discover": Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
-            Text { x: 28px; y: 22px; text: root.page == "discover" ? "Discover" : "Search"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
-            Text { x: 28px; y: 80px; text: "Being rebuilt in Rust: next up."; color: Th.text2; font-size: 13px; }
+            Text { x: 28px; y: 22px; text: "Discover"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            HorizontalLayout {
+                x: 28px; y: 76px; height: 32px; spacing: 8px; alignment: start;
+                Btn { text: "Popular"; primary: Dir.discover-mode == "popular"; clicked => { Dir.discover-mode-chosen("popular"); } }
+                Btn { text: "Trending"; primary: Dir.discover-mode == "trending"; clicked => { Dir.discover-mode-chosen("trending"); } }
+                Btn { text: "Random"; primary: Dir.discover-mode == "random"; clicked => { Dir.discover-mode-chosen("random"); } }
+                if Dir.discover-mode != "trending": Picker {
+                    options: Dir.countries; current: Dir.country; placeholder: "Any country";
+                    chosen(i) => { Dir.country-chosen(i); }
+                }
+                Btn { text: "Refresh"; clicked => { Dir.discover-refresh(); } }
+            }
+            if Dir.discover-status != "": Text { x: 28px; y: 124px; text: Dir.discover-status; color: Th.text2; font-size: 13px; }
+            StationGrid {
+                x: 20px; y: 124px; width: parent.width - 40px; height: parent.height - 136px;
+                cards: Dir.discover;
+                open(i) => { Dir.open("discover", i); }
+                play(i) => { Dir.play-now("discover", i); }
+            }
+        }
+
+        // Search: by name, filtered by country, language and tag, sorted.
+        if root.page == "search": Rectangle {
+            x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
+            Text { x: 28px; y: 22px; text: "Search"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            search-box := Field {
+                x: 28px; y: 76px; width: min(420px, parent.width - 56px); placeholder: "Station name";
+                accepted(t) => { Dir.search(t); }
+            }
+            search-go := Btn { x: search-box.x + search-box.width + 8px; y: 76px; text: "Search"; primary: true; clicked => { Dir.search(search-box.text); } }
+            Picker { x: search-go.x + search-go.width + 8px; y: 76px; options: Dir.orders; current: Dir.order; placeholder: "Most Voted";
+                chosen(i) => { Dir.filter-chosen("order", i); } }
+            HorizontalLayout {
+                x: 28px; y: 116px; height: 32px; spacing: 8px; alignment: start;
+                Picker { options: Dir.countries; current: Dir.search-country; placeholder: "Any country"; chosen(i) => { Dir.filter-chosen("country", i); } }
+                Picker { options: Dir.languages; current: Dir.language; placeholder: "Any language"; chosen(i) => { Dir.filter-chosen("language", i); } }
+                Picker { options: Dir.tags; current: Dir.tag; placeholder: "Any tag"; chosen(i) => { Dir.filter-chosen("tag", i); } }
+            }
+            if Dir.search-status != "": Text { x: 28px; y: 164px; text: Dir.search-status; color: Th.text2; font-size: 13px; }
+            StationGrid {
+                x: 20px; y: 164px; width: parent.width - 40px; height: parent.height - 176px;
+                cards: Dir.results;
+                open(i) => { Dir.open("search", i); }
+                play(i) => { Dir.play-now("search", i); }
+            }
         }
 
         // Settings.
@@ -427,6 +638,75 @@ export component FullView inherits Rectangle {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // A message (import results and the like), dismissed with its button.
+    if Dir.message != "": Rectangle {
+        x: root.pane-w + 24px; y: root.height - 60px; width: min(560px, root.width - root.pane-w - 48px); height: 44px;
+        border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.accent;
+        Text { x: 14px; y: (parent.height - self.height) / 2; width: parent.width - 56px; text: Dir.message; color: Th.card-text; font-size: 13px; overflow: elide; }
+        Caption { x: parent.width - 42px; y: 6px; width: 36px; glyph: "close"; clicked => { Dir.dismiss(); } }
+    }
+
+    // A station's details.
+    if Dir.details-open: Rectangle {
+        background: #00000099;
+        TouchArea { clicked => { Dir.details-close(); } }
+        Rectangle {
+            x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; width: 560px; height: 420px;
+            border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.card-stroke;
+            TouchArea { }
+            Cover { x: 24px; y: 24px; width: 132px; height: 132px; source: Dir.details.cover; has-source: Dir.details.has-cover;
+                small: Dir.details.small; c1: Dir.details.c1; c2: Dir.details.c2; }
+            Text { x: 172px; y: 28px; width: parent.width - 196px; text: Dir.details.name; color: Th.card-text; font-size: 20px; font-weight: 600; wrap: word-wrap; max-height: 56px; overflow: elide; }
+            Text { x: 172px; y: 88px; width: parent.width - 196px; text: Dir.details.subtitle; color: Th.card-text2; font-size: 13px; overflow: elide; }
+            if Dir.details.local || Dir.details.orphaned: Rectangle {
+                x: 172px; y: 114px; height: 22px; width: tag-text.preferred-width + 16px; border-radius: 11px; background: Th.subtle;
+                tag-text := Text { x: 8px; y: (parent.height - self.height) / 2; color: Th.card-text2; font-size: 11px;
+                    text: Dir.details.local ? "Local station" : "No longer in the directory"; }
+            }
+            VerticalLayout {
+                x: 24px; y: 176px; width: parent.width - 48px; spacing: 2px; alignment: start;
+                InfoRow { label: "Tags"; value: Dir.details.tags; }
+                InfoRow { label: "Location"; value: Dir.details.location; }
+                InfoRow { label: "Language"; value: Dir.details.language; }
+                InfoRow { label: "Audio"; value: Dir.details.codec; }
+                InfoRow { label: "Votes"; value: Dir.details.votes; }
+                InfoRow { label: "Homepage"; value: Dir.details.homepage; }
+                InfoRow { label: "Stream"; value: Dir.details.stream; }
+            }
+            HorizontalLayout {
+                x: 24px; y: parent.height - 56px; height: 32px; width: parent.width - 48px; spacing: 8px; alignment: start;
+                Btn { text: Dir.details.playing ? "Stop" : "Play"; primary: true; clicked => { Dir.details-play(); } }
+                Btn { text: Dir.details.in-library ? "Remove from Library" : "Add to Library"; clicked => { Dir.details-library(); } }
+                if Dir.details.homepage != "": Btn { text: "Homepage"; clicked => { Dir.details-homepage(); } }
+                Rectangle { }
+                Btn { text: "Close"; clicked => { Dir.details-close(); } }
+            }
+        }
+    }
+
+    // Adding a station of your own.
+    if Dir.add-open: Rectangle {
+        background: #00000099;
+        TouchArea { clicked => { Dir.add-open = false; } }
+        Rectangle {
+            x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; width: 480px; height: 300px;
+            border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.card-stroke;
+            TouchArea { }
+            Text { x: 24px; y: 22px; text: "Add Local Station"; color: Th.card-text; font-size: 20px; font-weight: 600; }
+            Text { x: 24px; y: 60px; width: parent.width - 48px; wrap: word-wrap; color: Th.card-text2; font-size: 12px;
+                text: "Any stream address works, and .pls and .m3u playlist links are followed."; }
+            add-name := Field { x: 24px; y: 96px; width: parent.width - 48px; placeholder: "Name"; }
+            add-url := Field { x: 24px; y: 138px; width: parent.width - 48px; placeholder: "Stream address (https://…)"; }
+            Btn { x: 24px; y: 180px; text: Dir.add-cover == "" ? "Choose Cover…" : "Cover: " + Dir.add-cover; clicked => { Dir.choose-cover(); } }
+            if Dir.add-error != "": Text { x: 24px; y: 222px; width: parent.width - 48px; text: Dir.add-error; color: #E0573A; font-size: 12px; }
+            HorizontalLayout {
+                x: 24px; y: parent.height - 52px; height: 32px; width: parent.width - 48px; spacing: 8px; alignment: end;
+                Btn { text: "Cancel"; clicked => { Dir.add-open = false; } }
+                Btn { text: "Add Station"; primary: true; clicked => { Dir.add-local(add-name.text, add-url.text); } }
             }
         }
     }
