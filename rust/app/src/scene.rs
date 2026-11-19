@@ -343,9 +343,7 @@ impl Scene {
     fn draw_user(&mut self, p: &mut Picture) {
         let Some((_, dim)) = self.user.clone() else { return };
         if let Some(img) = self.scaled("\0user", p.w as u32, p.h as u32, true) {
-            for (i, s) in img.as_raw().chunks_exact(4).enumerate() {
-                p.over_pre(i, s, 256);
-            }
+            p.over_pre_run(0, img.as_raw(), 256, 0);
         }
         if dim > 0.0 {
             for i in 0..p.w * p.h {
@@ -646,17 +644,13 @@ impl Scene {
             let (x1, y1) = ((((region.x + region.w) * scale) as usize).min(p.w), (((region.y + region.h) * scale) as usize).min(p.h));
             for y in y0..y1 {
                 let row = &raw[((y + tile - oy) % tile) * tile * 4..][..tile * 4];
-                let mut tx = (x0 + ox) % tile;
-                let base = y * p.w;
-                for x in x0..x1 {
-                    let s = &row[tx * 4..tx * 4 + 4];
-                    if s[3] >= least {
-                        p.over_pre(base + x, s, o);
-                    }
-                    tx += 1;
-                    if tx == tile {
-                        tx = 0;
-                    }
+                // Runs up to the tile's edge, then from its start again.
+                let (mut x, mut tx) = (x0, (x0 + ox) % tile);
+                while x < x1 {
+                    let n = (tile - tx).min(x1 - x);
+                    p.over_pre_run(y * p.w + x, &row[tx * 4..(tx + n) * 4], o, least);
+                    x += n;
+                    tx = 0;
                 }
             }
             return;
@@ -668,19 +662,14 @@ impl Scene {
         let Some(img) = self.scaled(&src, iw, ih, str_of(l, "fit") != Some("fill")) else { return };
         let raw = img.as_raw();
         let (x0, y0) = ((x * scale).round() as i64, (y * scale).round() as i64);
-        for yy in 0..ih as i64 {
-            let py = y0 + yy;
-            if py < 0 || py >= p.h as i64 {
-                continue;
-            }
-            for xx in 0..iw as i64 {
-                let px = x0 + xx;
-                if px < 0 || px >= p.w as i64 {
-                    continue;
-                }
-                let si = ((yy as u32 * iw + xx as u32) * 4) as usize;
-                p.over_pre(py as usize * p.w + px as usize, &raw[si..si + 4], o);
-            }
+        // The part of the picture inside the window, a row at a time.
+        let (xs, xe) = ((-x0).clamp(0, iw as i64) as usize, (p.w as i64 - x0).clamp(0, iw as i64) as usize);
+        if xs >= xe {
+            return;
+        }
+        for yy in (-y0).max(0)..(p.h as i64 - y0).min(ih as i64) {
+            let si = yy as usize * iw as usize;
+            p.over_pre_run((y0 + yy) as usize * p.w + (x0 + xs as i64) as usize, &raw[(si + xs) * 4..(si + xe) * 4], o, 0);
         }
     }
 
@@ -908,6 +897,29 @@ mod tests {
         load_folder(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../themes"), true)
     }
 
+    /// The motion picture's cost for every moving theme, at a Retina window's size (1180×760 points at 2×, motion at
+    /// the scene's own share). Timing, so ignored by default:
+    /// `cargo test --release -p driftwave-app motion_cost -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn motion_cost() {
+        let g = Geometry { width: 1180.0, height: 760.0, title: 48.0, pane: 220.0, player: 312.0, title_end: 110.0 };
+        for t in themes() {
+            let Some(mut scene) = Scene::for_theme(Some(&t)) else { continue };
+            if !scene.has_motion {
+                continue;
+            }
+            let scale = (2.0 * scene.motion_scale).min(0.6);
+            let _ = scene.motion(&g, scale, 0.0, 0.0);
+            let n = 120;
+            let t0 = std::time::Instant::now();
+            for f in 0..n {
+                let _ = scene.motion(&g, scale, f as f64 / 12.0, 1.0 / 12.0);
+            }
+            println!("{:16} {:.2} ms a frame", t.id, t0.elapsed().as_secs_f64() * 1000.0 / n as f64);
+        }
+    }
+
     /// Every moving scene, watched for 24 s as the window shows it (backdrop and motion together), judged over the
     /// whole window and over regions about WCAG's small-area size: no flashing, anywhere.
     #[test]
@@ -956,8 +968,8 @@ mod tests {
         let mut bright = Picture::new(64, 64);
         bright.px.fill(235);
         let mut dark = Picture::new(64, 64);
-        for p in dark.px.chunks_exact_mut(4) {
-            p.copy_from_slice(&[10, 10, 20, 255]);
+        for p in dark.px.as_chunks_mut::<4>().0 {
+            *p = [10, 10, 20, 255];
         }
         let all = Rect { x: 0.0, y: 0.0, w: 64.0, h: 64.0 };
         let thick = readable_alpha(&bright, all, panel, white, 4.5);

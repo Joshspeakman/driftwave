@@ -118,9 +118,44 @@ pub struct Look {
     layers_settled: bool,
     native_on: bool,
     hide_layers: bool,
+    /// What the rows and band layers last showed (phase and size; the band's top), to skip repeats.
+    native_rows: Option<(u32, u32, u32)>,
+    native_band: Option<i32>,
 }
 
 type Key = (u32, u32, bool, bool, i32);
+
+/// Synthwave's 16 rows as the Slint ones draw them (full.slint, "Synthwave's rows"), for the native rows
+/// layer: one pixel wide (each row is one colour across the window), from the horizon down at `scale` px a
+/// point. Returns the premultiplied pixels, their height, and the strip's top and height in points.
+fn synth_rows(lh: f32, scale: f32, phase: f32, grid: slint::Color) -> (Vec<u8>, usize, f32, f32) {
+    let horizon = lh * 0.68;
+    let y0 = horizon.floor();
+    let hpt = (lh - y0).max(1.0);
+    let h = (hpt * scale).ceil() as usize;
+    let mut px = vec![0f32; h * 4];
+    let (r, g, b, ca) = (grid.red() as f32 / 255.0, grid.green() as f32 / 255.0, grid.blue() as f32 / 255.0, grid.alpha() as f32 / 255.0);
+    for i in 0..16 {
+        let depth = i as f32 + 1.0 - phase;
+        let at = horizon + (lh - horizon) / (1.0 + 0.55 * depth);
+        let a = ((at - horizon) / (lh - horizon) * 3.0).clamp(0.0, 1.0) * ((16.0 - depth) / 2.0).clamp(0.0, 1.0) * 0.7;
+        let top = at.floor();
+        let frac = at - top;
+        // Split across two point rows by its fraction, so it glides.
+        for (row, alpha) in [(top, a * (1.0 - frac * 0.5)), (top + 1.0, a * (0.5 + frac * 0.5))] {
+            let src = ca * alpha;
+            let from = (((row - y0) * scale).round().max(0.0) as usize).min(h);
+            let to = (((row + 1.0 - y0) * scale).round().max(0.0) as usize).min(h);
+            for p in px[from * 4..to * 4].as_chunks_mut::<4>().0 {
+                p[0] = r * src + p[0] * (1.0 - src);
+                p[1] = g * src + p[1] * (1.0 - src);
+                p[2] = b * src + p[2] * (1.0 - src);
+                p[3] = src + p[3] * (1.0 - src);
+            }
+        }
+    }
+    (px.iter().map(|v| (v * 255.0).round() as u8).collect(), h, y0, hpt)
+}
 
 fn slint_colour(c: Color) -> slint::Color {
     slint::Color::from_argb_u8(c.a, c.r, c.g, c.b)
@@ -402,6 +437,8 @@ impl App {
             return;
         }
         self.look.native_on = on;
+        self.look.native_rows = None;
+        self.look.native_band = None;
         ui.global::<Scenery>().set_native(on);
         #[cfg(target_os = "macos")]
         softbuffer::set_see_through(on);
@@ -458,6 +495,31 @@ impl App {
                 scenery.set_band_y(y);
             }
         }
+        // macOS with the scene's layers: the rows and the band are layers too, so the UI isn't redrawn under
+        // them every tick (full.slint hides its own while Scenery.native).
+        if self.look.native_on {
+            let phase = scenery.get_synth_phase();
+            let grid = scenery.get_synth_grid();
+            let band_y = scenery.get_band_y();
+            let (synth, band) = (self.look.synth, self.look.band);
+            let key = (phase.to_bits(), size.width, size.height);
+            if let Some(layers) = self.look.native_layers.as_mut() {
+                if !synth {
+                    if self.look.native_rows.take().is_some() {
+                        layers.set_rows(None, (0.0, 0.0, 0.0, 0.0));
+                    }
+                } else if self.look.native_rows != Some(key) {
+                    let (px, h, y0, hpt) = synth_rows(lh, scale, phase, grid);
+                    layers.set_rows(Some((&px, 1, h)), (0.0, y0 as f64, lw as f64, hpt as f64));
+                    self.look.native_rows = Some(key);
+                }
+                let at = band.then(|| (band_y * 4.0).round() as i32);
+                if at != self.look.native_band || (band && self.look.native_band.is_none()) {
+                    layers.set_band(band.then_some((0.0, band_y as f64, lw as f64, 140.0)));
+                    self.look.native_band = at;
+                }
+            }
+        }
         if self.look.spot {
             let target = self.look.pointer.unwrap_or((lw * 0.42, lh * 0.35));
             let fresh = self.look.spot_at == (0.0, 0.0);
@@ -501,6 +563,8 @@ impl App {
                 }
             }
             self.paint_backdrop(ui, &g, scale, still);
+            // The valve's next reading starts after the painting (it isn't what moving costs).
+            self.look.valve.since = None;
             let layers = std::mem::take(&mut self.look.layers);
             self.place_eggs(&layers, &g);
             self.look.layers = layers;
@@ -587,7 +651,7 @@ impl App {
         match scene.skin(w, h, scale) {
             Some(p) => {
                 let mut buf = SharedPixelBuffer::<Rgb8Pixel>::new(p.w as u32, p.h as u32);
-                for (d, s) in buf.make_mut_bytes().chunks_exact_mut(3).zip(p.px.chunks_exact(4)) {
+                for (d, s) in buf.make_mut_bytes().as_chunks_mut::<3>().0.iter_mut().zip(p.px.as_chunks::<4>().0) {
                     d.copy_from_slice(&s[..3]);
                 }
                 pal.set_skin(Image::from_rgb8(buf));
@@ -611,7 +675,7 @@ impl App {
         let Some(scene) = self.look.scene.as_mut() else { return };
         let t0 = Instant::now();
         let mut back = scene.backdrop(g, scale, still);
-        let front = scene.front(g, scale);
+        let mut front = scene.front(g, scale);
         // Glass: under the panels (everything below the title bar), the picture is frosted. Painted once.
         if scene.glass() {
             let r = (15.0 * scale).round() as usize;
@@ -662,7 +726,7 @@ impl App {
         } else {
             // Opaque, so it goes to the UI as RGB: drawn by copying, not blending.
             let mut buf = SharedPixelBuffer::<Rgb8Pixel>::new(back.w as u32, back.h as u32);
-            for (d, s) in buf.make_mut_bytes().chunks_exact_mut(3).zip(back.px.chunks_exact(4)) {
+            for (d, s) in buf.make_mut_bytes().as_chunks_mut::<3>().0.iter_mut().zip(back.px.as_chunks::<4>().0) {
                 d.copy_from_slice(&s[..3]);
             }
             ui.global::<Scenery>().set_back(Image::from_rgb8(buf));
@@ -672,11 +736,36 @@ impl App {
             self.set_native(ui, true);
         }
         let scenery = ui.global::<Scenery>();
+        // macOS with the layers: the front picture is a layer over the UI (full.slint skips its own then). The UI
+        // draws the window frame over the front picture: an opaque frame hides it, so it's cleared there; under
+        // a see-through frame it stays in the UI.
+        let th = ui.global::<Th>();
+        let frame = th.get_frame_on().then(|| ((th.get_frame_thickness() * scale).round().max(0.0) as usize, th.get_frame_color().alpha()));
+        let front_native = native && frame.is_none_or(|(_, alpha)| alpha == 255);
+        ui.global::<Scenery>().set_front_native(front_native);
+        if front_native {
+            if let (Some(f), Some((t, _))) = (front.as_mut(), frame) {
+                for y in 0..f.h {
+                    let edge = y < t || y + t >= f.h;
+                    for x in 0..f.w {
+                        if edge || x < t || x + t >= f.w {
+                            f.px[(y * f.w + x) * 4..][..4].fill(0);
+                        }
+                    }
+                }
+            }
+        }
+        if native {
+            if let Some(layers) = self.look.native_layers.as_mut() {
+                layers.set_front(front.as_ref().filter(|_| front_native).map(|f| (&f.px[..], f.w, f.h)));
+            }
+        }
         match front {
-            Some(f) => {
+            Some(f) if !front_native => {
                 scenery.set_front(Image::from_rgba8_premultiplied(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&f.px, f.w as u32, f.h as u32)));
                 scenery.set_front_on(true);
             }
+            Some(_) => scenery.set_front_on(true),
             None => scenery.set_front_on(false),
         }
         if still {
