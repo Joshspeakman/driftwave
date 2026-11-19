@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core", "audio"]
+members = ["core", "audio", "vis"]
 
 [workspace.package]
 version = "1.0.0"
@@ -21,4 +21,10 @@ unicode-segmentation = "1"
 lto = true
 codegen-units = 1
 strip = true
+opt-level = 3
+
+# The visualizers do per-pixel work every frame: optimise them even in debug builds and tests.
+[profile.dev.package.driftwave-vis]
+opt-level = 3
+[profile.dev.package.rustfft]
 opt-level = 3
