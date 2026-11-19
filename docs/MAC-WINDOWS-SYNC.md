@@ -8,6 +8,50 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 13 (2026-11-19): stage 5 (updates, package, install, migration); Windows notifications
+
+**PC (done):** 990ad32, 09727a6, 4207ff8, 9c8a46b.
+- **`platform/src/winapp.rs` (Windows only):**
+  - the app id `Joshspeakman.Driftwave`, set by an installed copy at launch (its folder has `uninstall.ps1`);
+  - `create_shortcut`, for `Driftwave.exe --create-shortcut <lnk>` (Install.ps1 runs it);
+  - `toast`, for notifications. It uses the `windows` 0.62 crate souvlaki already pulls in, so nothing new is
+    fetched.
+  - `notify.rs` shows silent toasts on Windows when installed and the shortcut exists.
+- **`app/src/update.rs`:**
+  - Settings > Updates checks github.com/Joshspeakman/driftwave releases (`v1.0.N`; the Atom feed when
+    rate-limited), at launch at most every 20 h, with `checkForUpdates` and `lastUpdateCheck`.
+  - An installed Windows copy downloads `Driftwave-<v>-win-x64.zip`, checks its `.sha256` (certutil), unpacks it
+    (tar), and hands over to an apply script with a backup and restore, then relaunches.
+  - Elsewhere, including the Mac, a newer release is offered as its page. On Windows, only releases with a win zip
+    count; on the Mac, any newer `v` tag does.
+  - **Mac:** if you want in-app installs, add a Mac asset suffix and install path there.
+  - Test runs read only `-updateFeed`. `-installUpdate` goes straight on to install.
+- **`scripts/package-windows.ps1` and `scripts/windows/`:**
+  - Install.ps1, uninstall.ps1 and a README; the zip and `.sha256` go to `dist/` (now git-ignored).
+  - `app/build.rs` compiles the exe's icon and version with the Windows SDK's rc.exe. It does nothing on the Mac.
+- **`app/src/migrate.rs`:** a first launch with no settings reads the C# app's `%APPDATA%\Driftwave` settings
+  (`settings.json` or `settings-nightly.json`, whichever is newer), user themes and background. It never writes
+  there.
+- **`visTint` effect (core `EFFECT_KINDS` is now 23):** Classic's visualizer frames go through a two-colour lookup
+  table as they're handed over. It's set for brick-phone, dos-prompt and stealth.
+- **Visualizer budget:** no cuts in the first 5 s, and it recovers when `big_ms * 1.25 < 1.0`. Before, it only
+  recovered below 0.45 ms, so Liquid Feedback could stay at a quarter of its pixels.
+- **`SongText`:** the player's song and artist fade in on change, a 320 ms state transition.
+- **Review passes 3 and 4:**
+  - `EraCaption` for era dialogs;
+  - the GIPHY dialog's no-key state, with Add a Key and Choose File;
+  - the bevel list box for Played Tracks; the system short time (`GetTimeFormatEx` on Windows, `%H:%M` elsewhere);
+  - the Switch, square in square themes; the Win95 spinner Stepper;
+  - the ColourPicker, with hex and opacity, opening upward near the bottom;
+  - grouped effects; `Btn` gains `enabled` and `danger`; `Field` gains `enabled` and `family`.
+
+**Asks for the Mac:**
+1. Merge, then run clippy and the tests. `migrate.rs` and `update.rs` build everywhere; the Windows-only parts are
+   `cfg`'d.
+2. `short_time()` in `played.rs` uses `%H:%M` on the Mac. If you'd rather follow the user's 12/24-hour setting, an
+   `NSDateFormatter` with `timeStyle = .short` would do it.
+3. Optional: a Mac in-app install in `update.rs` (it now just opens the release page).
+
 ## Round 12 (2026-11-19): recording settings, closing to the tray, the theme editor
 
 **PC (done), recording and Settings (aa85ed2, merged with your eb3a6e8 in 6a1d78d):** new `app/src/played.rs`.
