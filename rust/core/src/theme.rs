@@ -141,7 +141,7 @@ pub const TOKENS: [(&str, &str); 16] = [
 ];
 
 /// The decorative effects, with the label the editor shows. None of them may flash (docs/THEMES.md).
-pub const EFFECT_KINDS: [(&str, &str); 17] = [
+pub const EFFECT_KINDS: [(&str, &str); 18] = [
     ("synthwave", "Synthwave sun and grid"),
     ("rain", "Neon rain"),
     ("aurora", "Drifting colour behind glass"),
@@ -159,6 +159,7 @@ pub const EFFECT_KINDS: [(&str, &str); 17] = [
     ("dial", "Tuning dial"),
     ("vu", "VU meter"),
     ("scene", "Theme scene and easter eggs"),
+    ("windowTitle", "Window title style"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -374,7 +375,10 @@ mod tests {
     fn every_built_in_theme_loads() {
         let themes = load_folder(&built_in_dir(), true);
         let ids: Vec<&str> = themes.iter().map(|t| t.id.as_str()).collect();
-        assert_eq!(themes.len(), 9, "{ids:?}");
+        let files = std::fs::read_dir(built_in_dir()).unwrap()
+            .filter(|e| e.as_ref().unwrap().path().extension().is_some_and(|x| x == "json")).count();
+        assert!(files >= 26, "expected at least 26 built-in theme files, found {files}");
+        assert_eq!(themes.len(), files, "every theme file loads: {ids:?}");
         let token_keys: Vec<&str> = TOKENS.iter().map(|t| t.0).collect();
         let effect_keys: Vec<&str> = EFFECT_KINDS.iter().map(|t| t.0).collect();
         for t in &themes {
