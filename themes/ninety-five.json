@@ -40,15 +40,15 @@
     "tiles": {
       "colors": [
         "#000080",
-        "#008080",
+        "#800000",
         "#800080",
         "#808000"
       ],
       "flat": true
     },
     "windowTitle": {
-      "font": "Microsoft Sans Serif",
-      "size": 13,
+      "font": "Tahoma",
+      "size": 11,
       "weight": "bold",
       "color": "#FFFFFF"
     },

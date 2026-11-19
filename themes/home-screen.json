@@ -67,15 +67,16 @@
         },
         {
           "type": "rect",
-          "in": "titlebar",
-          "x": "40%",
+          "in": "titlebar-full",
+          "x": "50%",
           "y": 9,
           "w": 120,
           "h": 30,
           "fill": "#000000",
           "radius": 15,
           "id": "island",
-          "clickable": true
+          "clickable": true,
+          "dx": -60
         },
         {
           "type": "text",

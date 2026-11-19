@@ -179,8 +179,10 @@ component Emboss inherits Rectangle {
     in property <string> family: Pal.body-font;
     in property <int> weight: 700;
     in property <length> spacing;
+    // The embossed shadow only where it's big enough to read as relief (small, it smears the letters).
+    in property <bool> relief: root.size >= 10px;
     width: tx.preferred-width; height: tx.preferred-height;
-    Text { x: 0; y: 1px; text: root.text; color: #00000080; font-size: root.size; font-family: root.family; font-weight: root.weight; letter-spacing: root.spacing; }
+    if root.relief: Text { x: 0; y: 1px; text: root.text; color: #00000080; font-size: root.size; font-family: root.family; font-weight: root.weight; letter-spacing: root.spacing; }
     tx := Text { x: 0; y: 0; text: root.text; color: root.ink; font-size: root.size; font-family: root.family; font-weight: root.weight; letter-spacing: root.spacing; }
 }
 
@@ -214,7 +216,7 @@ component TitleBar inherits Rectangle {
     }
     tt := Emboss {
         x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
-        text: root.title; ink: Pal.title-text; size: 6 * u; family: Pal.lcd-font; spacing: 1.2 * u;
+        text: root.title; ink: Pal.title-text; size: max(9px, 6 * u); family: Pal.body-font; spacing: 1.2 * u;
     }
     @children
 }
@@ -517,7 +519,7 @@ export component ClassicView inherits Rectangle {
                 Rectangle { y: 0; height: parent.height / 2; border-radius: parent.border-radius; background: #FFFFFF26; }
             }
             Led { x: gauge + 4 * u; y: 1.5 * u; width: 5 * u; height: 3 * u; lit: root.playing; }
-            Text { x: gauge + 10.5 * u; y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u); font-weight: 800;
+            Text { x: min(gauge + 10.5 * u, parent.width - self.width - 3 * u); y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u); font-weight: 800;
                 color: Pal.glyph.transparentize(root.playing ? 0% : 55%); }
         }
         if !shaded: Rectangle {
