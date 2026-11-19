@@ -20,6 +20,8 @@ has it. Don't propose bridges, hybrids or a second program.
 | `rust/audio` (driftwave-audio) | The engine: HTTP/ICY/HLS, decoders (Media Foundation and AudioToolbox for AAC), output, recording, meters, scope tap; `driftwave-player` (headless, for tests) |
 | `rust/vis` (driftwave-vis) | Visualizers: analysis, six originals, the flash guard at the output stage |
 | `rust/app` (driftwave) | The app: Slint UI (software renderer), layouts, palettes |
+| `rust/platform` (driftwave-platform) | OS integration: Now Playing and media keys (souvlaki), notifications, single instance, the menu bar / tray icon |
+| `rust/vendor/softbuffer` | softbuffer 0.4.8 with a faster macOS backend (persistent canvas + sRGB IOSurfaces), via `[patch.crates-io]` |
 
 - **Plan and progress:** `docs/RUST-SCOPE.md`. The rebuild order is: Full layout and the Classic swap; finding
   stations; settings and themes with their effects; OS integration (tray, media keys, notifications, single
@@ -65,7 +67,8 @@ has it. Don't propose bridges, hybrids or a second program.
 - Never test media keys, Now Playing or the system media overlay while Josh is playing music. Ask him first.
 - Never touch the real app's library, settings or track folder from a test.
 - **Playback tests:**
-  - On the Mac: `scripts/*.sh`.
+  - On the Mac: `scripts/*.sh`. `scripts/package-mac.sh [--nightly]` builds `Driftwave.app` (ad-hoc signed) in
+    `~/ProjectBuilds/shortwave-macos/app`.
   - On the PC: `scripts/*.ps1` (smoke, behaviour, recording).
   - Both drive `driftwave-player`. Build it with
     `cargo build --release -p driftwave-audio --bin driftwave-player`.
