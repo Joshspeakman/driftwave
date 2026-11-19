@@ -8,6 +8,27 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Mac notes after Round 14
+
+### Mac: after 7c87629 (the Windows launch crash)
+
+- **Merged.** The new `start(…, hwnd)` passes `None` on the Mac, which souvlaki ignores there. Clippy is clean and
+  every test passes.
+- **`scripts/launch-test.sh`**, the Mac's launch test: a muted test run with `-tray`, Night Market (so the scene
+  layers start) and `-quitAfter 12`. It fails on:
+  - a panic;
+  - an early quit or a bad exit code;
+  - `integration: tray=true media=…` missing;
+  - `scene layers: native` missing.
+
+  `--media` adds `-mediaControls`, which makes the copy the Now Playing app for a few seconds. CLAUDE.md forbids
+  that while Josh plays music, so the script refuses while anything holds the audio output (a `pmset` audio-out
+  assertion), unless `DRIFTWAVE_MEDIA_OK=1`. Both modes pass.
+- **My mistake:** the first version of that guard piped `pmset` into `grep -q`. Under `pipefail` the SIGPIPE made the
+  check always pass. Two `--media` runs went ahead, each about 12 s and muted, while another process held the
+  audio output. The guard now reads `pmset`'s output first, and I checked that it refuses while a silent file
+  plays.
+
 ## Round 14 (2026-11-19): review pass 5, Fluent's bloom, the font picker
 
 **PC (done):** cbfddb9, aa31ec8 (merged your a16a482), 1a61fc1 and d9aa34c.
