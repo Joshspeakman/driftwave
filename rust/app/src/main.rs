@@ -25,6 +25,7 @@
 static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod bg;
+mod classic_menu;
 mod covers;
 mod decor;
 mod editor;
@@ -1200,6 +1201,14 @@ fn main() -> Result<(), slint::PlatformError> {
                         a.egg_key(&event.logical_key, typing);
                     }
                 }
+                // Classic: right-click anywhere for its menu (opened just after this event: it runs its own loop).
+                winit::event::WindowEvent::MouseInput { state: winit::event::ElementState::Pressed, button: winit::event::MouseButton::Right, .. } => {
+                    if weak.upgrade().is_some_and(|u| u.get_layout() == "classic") {
+                        let at = w.try_borrow().ok().and_then(|a| a.look.pointer);
+                        let app = w.clone();
+                        slint::Timer::single_shot(Duration::from_millis(1), move || classic_menu::open(&app, at));
+                    }
+                }
                 winit::event::WindowEvent::MouseInput { state: winit::event::ElementState::Pressed, button: winit::event::MouseButton::Left, .. } => {
                     let full = weak.upgrade().is_some_and(|u| u.get_layout() == "full");
                     if let (true, Ok(mut a)) = (full, w.try_borrow_mut()) {
@@ -1238,6 +1247,7 @@ fn main() -> Result<(), slint::PlatformError> {
         a.player.armed = a.record_armed_setting();
         a.show_prefs();
         a.show_updates();
+        a.show_classic_text();
         let width = if let Some(w) = a.args.num("width") {
             w as f32
         } else if a.args.flag("double") {
@@ -1505,6 +1515,28 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_to_classic(move || a.borrow_mut().set_layout("classic"));
     let a = app.clone();
     ui.on_to_full(move || a.borrow_mut().set_layout("full"));
+    // Classic's menu buttons open its right-click menu.
+    let a = app.clone();
+    ui.on_open_menu(move || {
+        let a = a.clone();
+        slint::Timer::single_shot(Duration::from_millis(1), move || classic_menu::open(&a, None));
+    });
+    // Test runs: -classicMenu x,y opens Classic's menu as a right-click there would; -classicAction id;id carries out
+    // menu choices (as their ids).
+    if let Some(at) = app.borrow().args.get("classicMenu").and_then(|v| v.split_once(',')).and_then(|(x, y)| Some((x.trim().parse::<f32>().ok()?, y.trim().parse::<f32>().ok()?))) {
+        let a = app.clone();
+        slint::Timer::single_shot(Duration::from_millis(2500), move || classic_menu::open(&a, Some(at)));
+    }
+    if let Some(ids) = app.borrow().args.get("classicAction").map(String::from) {
+        let (a, weak) = (app.clone(), ui.as_weak());
+        slint::Timer::single_shot(Duration::from_millis(2000), move || {
+            if let Some(ui) = weak.upgrade() {
+                for id in ids.split(';').filter(|s| !s.is_empty()) {
+                    classic_menu::run(&a, &ui, id);
+                }
+            }
+        });
+    }
     let weak = ui.as_weak();
     ui.on_toggle_maximize(move || {
         if let Some(ui) = weak.upgrade() {

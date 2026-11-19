@@ -29,7 +29,7 @@ objc2-core-foundation = { version = "0.3", default-features = false, features = 
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Pipes"] }
 # The app id, its Start-menu shortcut and notifications (winapp.rs). The same version souvlaki uses for the media
 # overlay, so nothing new is fetched.
-windows = { version = "0.62", features = ["Win32_UI_Shell", "Win32_UI_Shell_PropertiesSystem", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_Storage_EnhancedStorage", "Data_Xml_Dom", "UI_Notifications"] }
+windows = { version = "0.62", features = ["Win32_UI_Shell", "Win32_UI_Shell_PropertiesSystem", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Variant", "Win32_Storage_EnhancedStorage", "Data_Xml_Dom", "UI_Notifications", "Win32_System_LibraryLoader"] }
 
 [dev-dependencies]
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software"] }

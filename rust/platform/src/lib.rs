@@ -1,5 +1,6 @@
 //! Driftwave's system integration (stage 4 of the rebuild), kept out of `rust/app` so the app only
 //! wires it up:
+//! - [`context_menu`]: native right-click menus (Classic's), and the one reader of native menu choices;
 //! - [`layers`]: a theme's scene as Core Animation layers beneath the UI (macOS);
 //! - [`media`]: Now Playing and media keys (all three platforms, through souvlaki);
 //! - [`notify`]: new-track notifications (macOS, and an installed copy on Windows);
@@ -9,6 +10,7 @@
 //! - [`tray`]: the menu bar / notification-area icon and its menu;
 //! - [`winapp`]: Windows' app id and the Start-menu shortcut that carries it.
 
+pub mod context_menu;
 pub mod layers;
 pub mod media;
 pub mod notify;
