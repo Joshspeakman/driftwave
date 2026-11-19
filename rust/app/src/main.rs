@@ -225,10 +225,37 @@ struct App {
     sorting: StationSorting,
     /// The Full layout's window size, kept while Classic is showing.
     full_size: (f32, f32),
+    /// The theme's one-colour screen for Classic's visualizers (visTint): brightness to colour, 256 entries.
+    vis_tint: Option<Vec<[u8; 3]>>,
     /// Light or dark for Default: "system", "light" or "dark"; and the theme chosen (None: Default).
     appearance: String,
     theme_id: Option<String>,
     system_dark: bool,
+}
+
+/// From a visualizer's brightness to a one-colour screen's: dark to bright, lifted a little so faint trails show.
+fn tint_table(back: Color, ink: Color) -> Vec<[u8; 3]> {
+    (0..256)
+        .map(|i| {
+            let t = (i as f32 / 255.0).powf(0.8);
+            let m = |a: u8, b: u8| (a as f32 + (b as f32 - a as f32) * t).round() as u8;
+            [m(back.r, ink.r), m(back.g, ink.g), m(back.b, ink.b)]
+        })
+        .collect()
+}
+
+/// A visualizer frame for the UI, through the theme's tint if it has one.
+fn vis_image(px: &[u8], w: usize, h: usize, tint: Option<&[[u8; 3]]>) -> slint::Image {
+    let mut buf = SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(px, w as u32, h as u32);
+    if let Some(table) = tint {
+        for p in buf.make_mut_bytes().chunks_exact_mut(4) {
+            // Rec. 709 brightness, in integers.
+            let l = ((p[0] as u32 * 54 + p[1] as u32 * 183 + p[2] as u32 * 19) >> 8) as usize;
+            let c = table[l.min(255)];
+            p[..3].copy_from_slice(&c);
+        }
+    }
+    slint::Image::from_rgba8(buf)
 }
 
 /// "Artist - Title" as (title, artist); a title without the separator is all title.
@@ -298,6 +325,10 @@ impl App {
         self.theme_id = id.clone();
         let theme = id.as_ref().and_then(|id| self.themes.iter().find(|t| &t.id == id));
         let dark = self.default_dark();
+        self.vis_tint = theme.and_then(|t| t.effects.get("visTint")).map(|o| {
+            let c = |k: &str, d: Color| o.get(k).and_then(Value::as_str).and_then(Color::parse).unwrap_or(d);
+            tint_table(c("back", Color { a: 255, r: 0, g: 0, b: 0 }), c("ink", Color { a: 255, r: 255, g: 255, b: 255 }))
+        });
         // The Full layout.
         let f = fullpal::full(theme, dark);
         let th = ui.global::<Th>();
@@ -813,7 +844,7 @@ impl App {
             let (dw, dh) = self.mini.host.size();
             let px = self.mini.host.frame(&samples, channels, rate, t, self.mini_dt);
             let h0 = Instant::now();
-            ui.set_vis_mini(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, dw as u32, dh as u32)));
+            ui.set_vis_mini(vis_image(px, dw, dh, self.vis_tint.as_deref()));
             handover += (Instant::now() - h0).as_secs_f64();
             self.mini_dt = 0.0;
         }
@@ -826,15 +857,17 @@ impl App {
             let px = self.big.host.frame(&samples, channels, rate, t, dt * step as f32);
             let h0 = Instant::now();
             self.big_ms += ((h0 - b0).as_secs_f64() * 1000.0 - self.big_ms) * 0.05;
-            ui.set_vis_big(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, dw as u32, dh as u32)));
+            ui.set_vis_big(vis_image(px, dw, dh, self.vis_tint.as_deref()));
             handover += (Instant::now() - h0).as_secs_f64();
         }
         let t2 = Instant::now();
-        // Adaptive quality, checked every couple of seconds: keep the big visualizer near a millisecond a frame.
-        if big_tick && self.frame.is_multiple_of(48) {
-            let budget = if self.big_ms > 1.2 && self.budget > 12_000 {
+        // Adaptive quality, checked every couple of seconds: keep the big visualizer near a millisecond a frame. Not
+        // in the first seconds (starting up is slow for everything), and the budget comes back as soon as the larger
+        // picture would fit in the millisecond again (its cost follows its pixels).
+        if big_tick && self.frame.is_multiple_of(48) && self.started.elapsed() > Duration::from_secs(5) {
+            let budget = if self.big_ms > 1.25 && self.budget > 12_000 {
                 (self.budget as f64 * 0.75) as usize
-            } else if self.big_ms < 0.45 && self.budget < driftwave_vis::host::PIXEL_BUDGET {
+            } else if self.big_ms * 1.25 < 1.0 && self.budget < driftwave_vis::host::PIXEL_BUDGET {
                 ((self.budget as f64 * 1.25) as usize).min(driftwave_vis::host::PIXEL_BUDGET)
             } else {
                 self.budget
@@ -1091,6 +1124,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }),
         find: finding::Finding::default(),
         played: played::Tracks::default(),
+        vis_tint: None,
         updates: update::Updates::default(),
         look: look::Look::default(),
         decor: decor::Decor::default(),

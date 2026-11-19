@@ -109,7 +109,7 @@ impl App {
         let group = |k: &str| match k {
             "grain" | "vignette" | "scanlines" | "frame" | "spotlight" => 1,
             "titleShadow" | "cursor" | "windowTitle" => 2,
-            "lcd" | "analyzer" | "dial" | "vu" | "chrome" | "tiles" => 3,
+            "lcd" | "analyzer" | "dial" | "vu" | "chrome" | "tiles" | "visTint" => 3,
             _ => 0,
         };
         let mut slots = [0; 4];
