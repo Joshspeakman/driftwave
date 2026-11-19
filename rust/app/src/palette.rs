@@ -101,8 +101,14 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
     let bevel_light = face.mix(rgb(255, 255, 255), if dark { 0.22 } else { 0.7 });
     let bevel_dark = face.mix(rgb(0, 0, 0), if dark { 0.55 } else { 0.35 });
     let bright = dark && luminance(accent) > 0.3;
-    let title_a = accent.mix(face, if bright { 0.55 } else { 0.25 });
-    let title_b = accent.mix(face, if bright { 0.85 } else { 0.75 });
+    // Windows 95, 3.1 and XP title bars were solid colour with a white title: their themes' bars stay nearly flat.
+    let era = theme
+        .and_then(|t| t.effects.get("chrome"))
+        .and_then(|c| c.get("captions"))
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|c| matches!(c, "win95" | "win31" | "xp"));
+    let title_a = accent.mix(face, if bright { 0.55 } else if era { 0.08 } else { 0.25 });
+    let title_b = accent.mix(face, if bright { 0.85 } else if era { 0.3 } else { 0.75 });
     // The title sits in the middle of the bar: read against the middle of its gradient.
     let title_text = readable(if bright { rgb(240, 248, 240) } else { on_accent }, title_a.mix(title_b, 0.5), 4.5);
 
