@@ -84,6 +84,52 @@ listening until it's done, so tests can run freely (still muted and isolated).
    Say in your results which you'll take.
 4. Record results under "Mac: Round 9 results".
 
+### Mac: Round 9 results
+
+**1. The old app.**
+- **Build output deleted:** `~/ProjectBuilds/shortwave-macos/app` and its icon folder, plus the dangling `.build`
+  link in the repo.
+- **The installed `/Applications/Shortwave Nightly.app` stays for now.** The request to remove it reached
+  this session only as a relayed message. It's Josh's working radio on this Mac, and keeping it holds
+  nothing up, so it goes when Josh says so directly. Its data is in `~/Library/Application Support/Shortwave`.
+
+**2. Scripts.** `scripts/common.sh` builds and finds `driftwave-player` (`DRIFTWAVE_PLAYER` overrides it).
+`smoke-test.sh`, `behaviour-test.sh` and `recording-test.sh` drive only that player; the Swift paths and
+`SHORTWAVE_PLAYER` are gone. `exchange-test.sh` is retired, to come back against the Rust app in stage 2.
+On the Mac: smoke 5/5, behaviour passes (440/660 Hz tones found), recording passes.
+
+**3. My share: stage 4, OS integration (and Mac packaging).** It's in a new crate, `rust/platform`
+(`driftwave-platform`), so it doesn't collide with your restructure of `rust/app`. The app only has to wire it up:
+
+| Module | What it does | State |
+|---|---|---|
+| `media` | `Media::new(display_name, dbus_name, hwnd)`, then `update(&NowPlaying{title, artist, station, cover_url, playing})` (only talks to the OS on change), `commands() -> Vec<MediaCommand>` (Play, Pause, Toggle, Stop, Next, Previous), and `clear()`. souvlaki underneath: macOS Now Playing, Windows SMTC (pass the HWND), Linux MPRIS | Registration works on the Mac. The real media key test is still to do: the system blocked a synthetic key press, so Josh presses play/pause once himself, with nothing else playing |
+| `notify` | `Notifier::new()`, `available()` (only from a bundled `.app`; a bare binary says no instead of crashing), `request_permission(cb)` (call when the setting is turned on), `track(song, artist, station)` (each replaces the last) | macOS only; Windows and Linux are no-ops for now. The permission prompt needs Josh's click |
+| `single` | `claim(name, message) -> Primary(Listener{messages}) / Secondary`. A Unix socket in the temporary folder; a stale socket is taken over; `--quit`/`--show` are just messages. Use one name per flavour, and another for test runs | Unit-tested, and live: a second copy handed `show` to the first. Windows isn't done yet (it could use a named pipe like the C# app; `claim` says Primary there) |
+| `tray` | `Tray::new(rgba, w, h, tooltip)` (on the Mac it draws the logo's mark as a menu bar template that follows light and dark), `update(&TrayState{station, track, playing, stations, current})` (rebuilds only on change), `actions() -> Vec<TrayAction>` (TogglePlay, Station(i), Show, MiniPlayer, Quit) | Live on the Mac: the icon is in the menu bar, the menu shows station, track, Stop, Library ▸ stations, Show Driftwave, Mini Player and Quit, and clicking Stop gave `TogglePlay` |
+
+- **Wiring, once your restructure lands:**
+  - Make `Media` and `Tray` in a `Timer::single_shot` after the window shows. On the Mac they need the
+    main thread and a running event loop.
+  - Poll `commands()` and `actions()` in `tick()`.
+  - Call `single::claim` first thing in `main`.
+  - **Don't make a `Media` in test runs** unless `-mediaControls` is passed (the CLAUDE.md rule).
+  - I'll do the wiring as soon as you've pushed, unless you'd rather.
+- **Live check:** `cargo run --release -p driftwave-platform --example demo -- [--media] [--seconds N]`.
+
+**Mac packaging:**
+- `scripts/package-mac.sh [--nightly]` builds `Driftwave.app` / `Driftwave Nightly.app` into
+  `~/ProjectBuilds/shortwave-macos/app`.
+- The bundle has the bundle identifier (needed for notifications), an icon in every size, the version and
+  commit, and an ad-hoc signature.
+- Its icon comes from `assets/icons/driftwave-1024.png`, rendered by `tools/make-logo.py` at 1024 px.
+- Checked:
+  - `codesign -v` passes;
+  - the Info.plist lints;
+  - the bundle is 12 MB;
+  - it launches as a test run and its snapshot renders.
+- Not done yet: Developer ID signing and notarisation, which need Josh's Apple developer certificate.
+
 ## Round 8 (2026-11-18): resizable, polished, and very light
 
 Josh asked for three things:

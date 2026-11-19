@@ -1,0 +1,25 @@
+[package]
+name = "driftwave-platform"
+description = "Driftwave's system integration: Now Playing and media keys, notifications, single instance, menu bar / tray icon"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+name = "driftwave_platform"
+
+[dependencies]
+# Now Playing / media keys on all three platforms (MPNowPlayingInfoCenter, SMTC, MPRIS).
+souvlaki = "0.9"
+# The menu bar (macOS) / notification-area (Windows) / StatusNotifier (Linux) icon and its menu.
+tray-icon = "0.26"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSBundle", "NSError"] }
+objc2-user-notifications = { version = "0.3", default-features = false, features = ["std", "block2", "UNUserNotificationCenter", "UNNotificationContent", "UNNotificationRequest", "UNNotificationTrigger"] }
+block2 = "0.6"
+
+[dev-dependencies]
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software"] }
