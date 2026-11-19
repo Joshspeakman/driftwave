@@ -5,6 +5,11 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 APP="${SHORTWAVE_APP:-$HOME/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app}"
+# SHORTWAVE_PLAYER=rust runs the Rust headless player (rust/audio, driftwave-player) instead of the app.
+BIN="$APP/Contents/MacOS/Shortwave"
+if [ "${SHORTWAVE_PLAYER:-}" = rust ]; then
+  BIN="${DRIFTWAVE_PLAYER:-$HOME/ProjectBuilds/shortwave-macos/rust-target/release/driftwave-player}"
+fi
 OUT=$( (command -v scratchdir >/dev/null && scratchdir shortwave-rectest) || mktemp -d)
 rm -rf "$OUT"; mkdir -p "$OUT/media"
 ffmpeg -loglevel error -f lavfi -i "sine=frequency=440:duration=30" -ac 2 -ar 44100 -b:a 128k "$OUT/media/tone.mp3"
@@ -16,7 +21,7 @@ sleep 1
 fail=0
 for fmt in mp3 aac; do
   tracks="$OUT/tracks-$fmt"; mkdir -p "$tracks"
-  SHORTWAVE_LOG=1 "$APP/Contents/MacOS/Shortwave" -playURL "http://127.0.0.1:$PORT/$fmt" -muted \
+  SHORTWAVE_LOG=1 "$BIN" -playURL "http://127.0.0.1:$PORT/$fmt" -muted \
     -recordingMode everything -recordingMinimumDuration 5 -trackDirectory "$tracks" >"$OUT/$fmt.log" 2>&1 &
   pid=$!
   sleep $((INTERVAL * 3 + 8))

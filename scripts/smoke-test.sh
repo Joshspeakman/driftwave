@@ -4,6 +4,11 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 APP="${SHORTWAVE_APP:-$HOME/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app}"
+# SHORTWAVE_PLAYER=rust runs the Rust headless player (rust/audio, driftwave-player) instead of the app.
+BIN="$APP/Contents/MacOS/Shortwave"
+if [ "${SHORTWAVE_PLAYER:-}" = rust ]; then
+  BIN="${DRIFTWAVE_PLAYER:-$HOME/ProjectBuilds/shortwave-macos/rust-target/release/driftwave-player}"
+fi
 SECS=${1:-20}
 OUT=$( (command -v scratchdir >/dev/null && scratchdir shortwave-smoke) || mktemp -d)
 mkdir -p "$OUT"
@@ -18,7 +23,7 @@ fail=0
 for entry in "${STREAMS[@]}"; do
   IFS='|' read -r name url expect <<<"$entry"
   log="$OUT/$name.log"
-  SHORTWAVE_LOG=1 "$APP/Contents/MacOS/Shortwave" -playURL "$url" -muted >"$log" 2>&1 &
+  SHORTWAVE_LOG=1 "$BIN" -playURL "$url" -muted >"$log" 2>&1 &
   pid=$!
   sleep "$SECS"
   kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
