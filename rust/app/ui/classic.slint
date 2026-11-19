@@ -1,0 +1,505 @@
+// Driftwave's Classic layout: an homage to the stacked player windows of the late 90s. Original drawing throughout
+// (vector shapes, no skin bitmaps), coloured from whatever theme is chosen (palette.rs).
+//
+// Units: everything is laid out on the classic 275-unit-wide grid; `u` is how many pixels a unit is (2 normally,
+// 3 at double size), so the whole player scales crisply.
+
+export global Pal {
+    in-out property <color> face: #2A2D38;
+    in-out property <color> bevel-light: #5A5E6E;
+    in-out property <color> bevel-dark: #0E0F14;
+    in-out property <color> title-a: #3B6EA8;
+    in-out property <color> title-b: #24324A;
+    in-out property <color> title-text: #FFFFFF;
+    in-out property <color> lcd-back: #05070A;
+    in-out property <color> lcd-lit: #4CC2FF;
+    in-out property <color> lcd-ghost: #4CC2FF1A;
+    in-out property <color> button: #343846;
+    in-out property <color> glyph: #E8EAF0;
+    in-out property <color> glyph-on: #4CC2FF;
+    in-out property <color> groove: #15161C;
+    in-out property <color> fill-low: #2E7DFF;
+    in-out property <color> fill-high: #9FE3FF;
+    in-out property <color> list-back: #14151B;
+    in-out property <color> list-text: #DDE1EA;
+    in-out property <color> list-playing: #4CC2FF;
+    in-out property <color> list-selected-back: #2D5F9A;
+    in-out property <color> list-selected-text: #FFFFFF;
+    in-out property <color> glow: #00000000;
+    in-out property <string> body-font: "Segoe UI";
+    in-out property <string> lcd-font: "Consolas";
+}
+
+export struct StationRow {
+    name: string,
+    detail: string,
+    playing: bool,
+}
+
+export struct Choice {
+    id: string,
+    name: string,
+    on: bool,
+}
+
+// A raised (or sunken) bevelled panel: light on the top-left edge, dark on the bottom-right.
+component Bevel inherits Rectangle {
+    in property <bool> sunken;
+    in property <length> edge: 1px;
+    in property <color> fill: Pal.face;
+    background: fill;
+    Rectangle { x: 0; y: 0; width: parent.width; height: edge; background: sunken ? Pal.bevel-dark : Pal.bevel-light; }
+    Rectangle { x: 0; y: 0; width: edge; height: parent.height; background: sunken ? Pal.bevel-dark : Pal.bevel-light; }
+    Rectangle { x: 0; y: parent.height - edge; width: parent.width; height: edge; background: sunken ? Pal.bevel-light : Pal.bevel-dark; }
+    Rectangle { x: parent.width - edge; y: 0; width: edge; height: parent.height; background: sunken ? Pal.bevel-light : Pal.bevel-dark; }
+    @children
+}
+
+// One seven-segment digit; the unlit segments stay faintly visible, like real LCD glass.
+component Digit inherits Rectangle {
+    in property <int> value;
+    in property <bool> dim;
+    property <length> t: self.width * 0.16;
+    property <color> on: dim ? Pal.lcd-lit.transparentize(55%) : Pal.lcd-lit;
+    property <color> off: Pal.lcd-ghost;
+    property <bool> a: value == 0 || value == 2 || value == 3 || value == 5 || value == 6 || value == 7 || value == 8 || value == 9;
+    property <bool> b: value == 0 || value == 1 || value == 2 || value == 3 || value == 4 || value == 7 || value == 8 || value == 9;
+    property <bool> c: value == 0 || value == 1 || value == 3 || value == 4 || value == 5 || value == 6 || value == 7 || value == 8 || value == 9;
+    property <bool> d: value == 0 || value == 2 || value == 3 || value == 5 || value == 6 || value == 8 || value == 9;
+    property <bool> e: value == 0 || value == 2 || value == 6 || value == 8;
+    property <bool> f: value == 0 || value == 4 || value == 5 || value == 6 || value == 8 || value == 9;
+    property <bool> g: value == 2 || value == 3 || value == 4 || value == 5 || value == 6 || value == 8 || value == 9;
+    property <length> half: self.height / 2;
+    Rectangle { x: t; y: 0; width: parent.width - 2 * t; height: t; border-radius: t / 2; background: a ? on : off; }
+    Rectangle { x: parent.width - t; y: t * 0.6; width: t; height: half - t * 0.9; border-radius: t / 2; background: b ? on : off; }
+    Rectangle { x: parent.width - t; y: half + t * 0.3; width: t; height: half - t * 0.9; border-radius: t / 2; background: c ? on : off; }
+    Rectangle { x: t; y: parent.height - t; width: parent.width - 2 * t; height: t; border-radius: t / 2; background: d ? on : off; }
+    Rectangle { x: 0; y: half + t * 0.3; width: t; height: half - t * 0.9; border-radius: t / 2; background: e ? on : off; }
+    Rectangle { x: 0; y: t * 0.6; width: t; height: half - t * 0.9; border-radius: t / 2; background: f ? on : off; }
+    Rectangle { x: t; y: half - t / 2; width: parent.width - 2 * t; height: t; border-radius: t / 2; background: g ? on : off; }
+}
+
+// A title bar: gradient, ridged stripes either side of the title, and a grip to drag the window by.
+component TitleBar inherits Rectangle {
+    in property <length> u;
+    in property <string> title;
+    in property <bool> active: true;
+    callback drag();
+    background: @linear-gradient(90deg, Pal.title-a 0%, Pal.title-b 100%);
+    opacity: active ? 1 : 0.72;
+    grip := TouchArea {
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); }
+        }
+    }
+    for k in 4: Rectangle {
+        x: 12 * u; y: (3 + k * 2.4) * u; width: parent.width / 2 - 12 * u - tt.width / 2 - 5 * u; height: 0.6 * u;
+        background: Pal.title-text.transparentize(65%);
+    }
+    for k in 4: Rectangle {
+        x: parent.width / 2 + tt.width / 2 + 5 * u; y: (3 + k * 2.4) * u; width: parent.width / 2 - 34 * u - tt.width / 2 - 5 * u; height: 0.6 * u;
+        background: Pal.title-text.transparentize(65%);
+    }
+    tt := Text {
+        text: title; color: Pal.title-text; font-family: Pal.lcd-font; font-size: 6.5 * u; font-weight: 700;
+        letter-spacing: 1.2 * u; x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+    }
+    @children
+}
+
+// A small square title-bar button with a vector glyph.
+component TitleButton inherits Bevel {
+    in property <length> u;
+    in property <string> glyph; // "min", "shade", "close", "menu"
+    callback clicked();
+    width: 9 * u; height: 9 * u; fill: ta.pressed ? Pal.bevel-dark : Pal.button; sunken: ta.pressed; edge: max(1px, 0.5 * u);
+    ta := TouchArea { clicked => { root.clicked(); } }
+    if glyph == "min": Rectangle { x: 2.5 * u; y: 6 * u; width: 4 * u; height: 1 * u; background: Pal.glyph; }
+    if glyph == "shade": Rectangle { x: 2.5 * u; y: 2.5 * u; width: 4 * u; height: 4 * u; border-width: 0.8 * u; border-color: Pal.glyph; }
+    if glyph == "close": Path {
+        x: 2.5 * u; y: 2.5 * u; width: 4 * u; height: 4 * u; viewbox-width: 10; viewbox-height: 10;
+        commands: "M 1 1 L 9 9 M 9 1 L 1 9"; stroke: Pal.glyph; stroke-width: 0.9 * u;
+    }
+    if glyph == "menu": Path {
+        x: 2.5 * u; y: 2.5 * u; width: 4 * u; height: 4 * u; viewbox-width: 10; viewbox-height: 10;
+        commands: "M 1 2 L 9 2 M 1 5 L 9 5 M 1 8 L 9 8"; stroke: Pal.glyph; stroke-width: 0.8 * u;
+    }
+}
+
+// A transport button: bevelled, presses in, with a vector glyph.
+component Transport inherits Bevel {
+    in property <length> u;
+    in property <string> glyph; // prev play pause stop next eject rec
+    in property <bool> on;
+    callback clicked();
+    fill: ta.pressed ? Pal.bevel-dark : (ta.has-hover ? Pal.button.brighter(12%) : Pal.button);
+    sunken: ta.pressed || on;
+    edge: max(1px, 0.6 * u);
+    animate fill { duration: 90ms; }
+    ta := TouchArea { clicked => { root.clicked(); } }
+    property <color> ink: on ? Pal.glyph-on : Pal.glyph;
+    Path {
+        x: parent.width * 0.28; y: parent.height * 0.25; width: parent.width * 0.44; height: parent.height * 0.5;
+        viewbox-width: 20; viewbox-height: 16; fill: ink; stroke: transparent;
+        commands: glyph == "play" ? "M 4 0 L 18 8 L 4 16 Z"
+            : glyph == "pause" ? "M 3 0 L 8 0 L 8 16 L 3 16 Z M 12 0 L 17 0 L 17 16 L 12 16 Z"
+            : glyph == "stop" ? "M 3 1 L 17 1 L 17 15 L 3 15 Z"
+            : glyph == "prev" ? "M 1 0 L 4 0 L 4 16 L 1 16 Z M 19 0 L 19 16 L 5 8 Z"
+            : glyph == "next" ? "M 1 0 L 15 8 L 1 16 Z M 16 0 L 19 0 L 19 16 L 16 16 Z"
+            : glyph == "eject" ? "M 10 0 L 19 9 L 1 9 Z M 1 12 L 19 12 L 19 16 L 1 16 Z"
+            : "M 10 2 A 6 6 0 1 1 9.99 2 Z";
+    }
+}
+
+// The clutter strip's little letter buttons.
+component Letter inherits Rectangle {
+    in property <length> u;
+    in property <string> letter;
+    in property <bool> on;
+    in property <string> tip;
+    callback clicked();
+    width: 6 * u; height: 7 * u;
+    background: ta.pressed ? Pal.bevel-dark : transparent;
+    ta := TouchArea { clicked => { root.clicked(); } }
+    Text {
+        text: letter; font-family: Pal.lcd-font; font-size: 5.5 * u; font-weight: 700;
+        color: on ? Pal.glyph-on : (ta.has-hover ? Pal.glyph : Pal.glyph.transparentize(45%));
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+        animate color { duration: 150ms; }
+    }
+}
+
+// A horizontal slider: a groove, a gradient fill, and a bevelled thumb you can drag.
+component Slider inherits Rectangle {
+    in property <length> u;
+    in-out property <float> value; // 0..1
+    callback changed(float);
+    background: transparent;
+    Bevel { y: (parent.height - 3 * u) / 2; height: 3 * u; width: parent.width; sunken: true; fill: Pal.groove; edge: max(1px, 0.5 * u); }
+    Rectangle {
+        x: 0.5 * u; y: (parent.height - 2 * u) / 2; height: 2 * u; width: max(0px, (parent.width - 1 * u) * value);
+        background: @linear-gradient(90deg, Pal.fill-low 0%, Pal.fill-high 100%);
+    }
+    thumb := Bevel {
+        width: 9 * u; height: parent.height; x: (parent.width - self.width) * value;
+        fill: ta.pressed ? Pal.button.darker(15%) : Pal.button; edge: max(1px, 0.5 * u);
+        Rectangle { x: parent.width / 2 - 0.5 * u; y: 2 * u; width: 1 * u; height: parent.height - 4 * u; background: Pal.glyph.transparentize(40%); }
+    }
+    ta := TouchArea {
+        moved => { if (self.pressed) { root.changed(clamp((self.mouse-x - 4.5 * u) / (root.width - 9 * u), 0, 1)); } }
+        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.changed(clamp((self.mouse-x - 4.5 * u) / (root.width - 9 * u), 0, 1)); } }
+    }
+}
+
+// The Driftwave sun over drifting waves, drawn small for the corner of the player.
+component Logo inherits Rectangle {
+    in property <length> u;
+    Rectangle {
+        x: 2 * u; y: 1 * u; width: 10 * u; height: 10 * u; border-radius: 5 * u; clip: true;
+        background: @linear-gradient(180deg, #FFD36E 0%, #FF6FA8 100%);
+        for k in 3: Rectangle { x: 0; y: (5.5 + k * 1.6) * u; width: parent.width; height: 0.7 * u; background: Pal.face; }
+    }
+    Path {
+        x: 0; y: 9 * u; width: 14 * u; height: 4 * u; viewbox-width: 28; viewbox-height: 8;
+        commands: "M 0 4 Q 3.5 0 7 4 T 14 4 T 21 4 T 28 4"; stroke: Pal.glyph-on; stroke-width: 0.7 * u; fill: transparent;
+    }
+}
+
+export component ClassicWindow inherits Window {
+    title: "Driftwave";
+    no-frame: true;
+    background: Pal.face;
+    default-font-family: Pal.body-font;
+
+    in-out property <length> u: 2px;
+    in-out property <bool> shaded;
+    in-out property <bool> show-vis: true;
+    in-out property <bool> show-list: true;
+    in-out property <bool> on-top;
+    in-out property <bool> active: true;
+
+    // Now playing.
+    in property <string> station: "Driftwave";
+    in property <string> marquee: "DRIFTWAVE  ***  CHOOSE A STATION BELOW";
+    in-out property <length> marquee-offset;
+    out property <length> marquee-width: mq.width;
+    in property <int> minutes;
+    in property <int> seconds;
+    in property <bool> clock-mode;
+    in property <int> kbps;
+    in property <int> khz;
+    in property <bool> stereo;
+    in property <bool> playing;
+    in property <bool> loading;
+    in property <float> buffer; // 0..1
+    in property <string> status: "STOPPED";
+    in-out property <float> volume: 0.8;
+    in property <bool> recording;
+
+    // Visualizers.
+    in property <image> vis-mini;
+    in property <image> vis-big;
+    in property <string> vis-name: "Peak Meter";
+    out property <length> mini-width: 76 * u;
+    out property <length> mini-height: 16 * u;
+    out property <length> big-width: 263 * u;
+    out property <length> big-height: 100 * u;
+
+    // The station list.
+    in property <[StationRow]> stations;
+    in-out property <int> selected: -1;
+    in property <string> list-summary;
+
+    // Options.
+    in property <[Choice]> themes;
+    in property <string> layout-name: "Classic";
+    in property <string> version;
+
+    callback drag();
+    callback minimize();
+    callback quit();
+    callback play();
+    callback pause();
+    callback stop();
+    callback prev();
+    callback next();
+    callback eject();
+    callback toggle-record();
+    callback toggle-clock();
+    callback volume-changed(float);
+    callback play-station(int);
+    callback next-vis();
+    callback prev-vis();
+    callback toggle-on-top();
+    callback choose-theme(string);
+    callback toggle-double();
+
+    property <length> main-h: shaded ? 14 * u : 116 * u;
+    property <length> vis-h: show-vis ? 116 * u : 0;
+    property <length> list-h: show-list ? 174 * u : 0;
+    width: 275 * u;
+    height: main-h + vis-h + list-h;
+
+    // ───────────────────────── The main panel ─────────────────────────
+    main := Bevel {
+        x: 0; y: 0; width: 275 * u; height: main-h; edge: max(1px, 0.6 * u);
+        TitleBar {
+            x: 1 * u; y: 1 * u; width: parent.width - 2 * u; height: 12 * u; u: u; active: root.active;
+            title: shaded ? "" : "DRIFTWAVE";
+            drag => { root.drag(); }
+            TitleButton { x: 1.5 * u; y: 1.5 * u; u: u; glyph: "menu"; clicked => { options.show(); } }
+            TitleButton { x: parent.width - 31 * u; y: 1.5 * u; u: u; glyph: "min"; clicked => { root.minimize(); } }
+            TitleButton { x: parent.width - 21 * u; y: 1.5 * u; u: u; glyph: "shade"; clicked => { root.shaded = !root.shaded; } }
+            TitleButton { x: parent.width - 11 * u; y: 1.5 * u; u: u; glyph: "close"; clicked => { root.quit(); } }
+            // Shaded: the time and a sliver of the marquee live in the title bar itself.
+            if shaded: Text {
+                x: 14 * u; y: 2.5 * u; text: root.marquee; color: Pal.title-text; font-family: Pal.lcd-font; font-size: 6 * u;
+                width: parent.width - 80 * u; overflow: elide;
+            }
+            if shaded: Text {
+                x: parent.width - 62 * u; y: 2.5 * u; color: Pal.title-text; font-family: Pal.lcd-font; font-size: 6 * u;
+                text: (root.minutes < 10 ? "0" : "") + root.minutes + ":" + (root.seconds < 10 ? "0" : "") + root.seconds;
+            }
+        }
+        if !shaded: Rectangle {
+            // The clutter strip: Options, Always on top, Info, Double size, Visualizer.
+            x: 10 * u; y: 21 * u; width: 6 * u; height: 44 * u;
+            VerticalLayout {
+                spacing: 1.5 * u;
+                Letter { u: u; letter: "O"; tip: "Options"; clicked => { options.show(); } }
+                Letter { u: u; letter: "A"; tip: "Always on top"; on: root.on-top; clicked => { root.toggle-on-top(); } }
+                Letter { u: u; letter: "I"; tip: "Station list"; on: root.show-list; clicked => { root.show-list = !root.show-list; } }
+                Letter { u: u; letter: "D"; tip: "Double size"; on: root.u > 2px; clicked => { root.toggle-double(); } }
+                Letter { u: u; letter: "V"; tip: "Visualizer"; on: root.show-vis; clicked => { root.show-vis = !root.show-vis; } }
+            }
+        }
+        if !shaded: Bevel {
+            // The LCD: state, time, and the mini visualizer.
+            x: 20 * u; y: 20 * u; width: 82 * u; height: 46 * u; sunken: true; fill: Pal.lcd-back; edge: max(1px, 0.6 * u);
+            Path {
+                x: 5 * u; y: 5 * u; width: 6 * u; height: 7 * u; viewbox-width: 12; viewbox-height: 14; stroke: transparent;
+                fill: root.playing ? Pal.lcd-lit : Pal.lcd-lit.transparentize(60%);
+                commands: root.playing ? "M 1 0 L 12 7 L 1 14 Z" : (root.loading ? "M 0 0 L 4 0 L 4 14 L 0 14 Z M 7 0 L 11 0 L 11 14 L 7 14 Z" : "M 0 1 L 12 1 L 12 13 L 0 13 Z");
+            }
+            // Recording lamp: steady, never blinking.
+            Rectangle { x: 5 * u; y: 15 * u; width: 6 * u; height: 2.5 * u; border-radius: 1.2 * u; background: root.recording ? #FF6F4FCC : Pal.lcd-ghost; }
+            Digit { x: 26 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: root.clock-mode ? root.minutes / 10 : root.minutes / 10; dim: !root.playing; }
+            Digit { x: 37 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: mod(root.minutes, 10); dim: !root.playing; }
+            Rectangle { x: 48.5 * u; y: 7.5 * u; width: 1.6 * u; height: 1.6 * u; border-radius: 0.8 * u; background: root.playing ? Pal.lcd-lit : Pal.lcd-lit.transparentize(55%); }
+            Rectangle { x: 48.5 * u; y: 13 * u; width: 1.6 * u; height: 1.6 * u; border-radius: 0.8 * u; background: root.playing ? Pal.lcd-lit : Pal.lcd-lit.transparentize(55%); }
+            Digit { x: 52 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: root.seconds / 10; dim: !root.playing; }
+            Digit { x: 63 * u; y: 4 * u; width: 9 * u; height: 15 * u; value: mod(root.seconds, 10); dim: !root.playing; }
+            TouchArea { x: 24 * u; y: 2 * u; width: 52 * u; height: 19 * u; clicked => { root.toggle-clock(); } }
+            Text { x: 74 * u; y: 4 * u; text: root.clock-mode ? "TIME" : ""; color: Pal.lcd-lit.transparentize(40%); font-size: 3.5 * u; font-family: Pal.lcd-font; }
+            // The mini visualizer: click for the next one.
+            Rectangle {
+                x: 3 * u; y: 26 * u; width: 76 * u; height: 16 * u; clip: true; background: #000000;
+                Image { width: parent.width; height: parent.height; source: root.vis-mini; image-rendering: smooth; }
+                TouchArea { clicked => { root.next-vis(); } }
+            }
+        }
+        Bevel {
+            // The marquee: the song, scrolling smoothly. (Hidden rather than removed when shaded, so its width is known.)
+            visible: !shaded;
+            x: 108 * u; y: 21 * u; width: 158 * u; height: 13 * u; sunken: true; fill: Pal.lcd-back; edge: max(1px, 0.6 * u); clip: true;
+            mq := Text {
+                x: 3 * u - root.marquee-offset; y: (parent.height - self.height) / 2;
+                text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 7 * u;
+            }
+            Text {
+                x: mq.x + mq.width + 24 * u; y: mq.y; text: root.marquee; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 7 * u;
+            }
+        }
+        if !shaded: Rectangle {
+            // Bitrate, sample rate, and mono / stereo lights.
+            x: 108 * u; y: 37 * u; width: 158 * u; height: 10 * u;
+            Bevel { x: 0; width: 20 * u; height: parent.height; sunken: true; fill: Pal.lcd-back; edge: max(1px, 0.5 * u);
+                Text { x: 2 * u; y: 1.5 * u; text: root.kbps > 0 ? root.kbps : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 6 * u; } }
+            Text { x: 22 * u; y: 2.5 * u; text: "kbps"; color: Pal.glyph.transparentize(30%); font-size: 4.5 * u; }
+            Bevel { x: 42 * u; width: 14 * u; height: parent.height; sunken: true; fill: Pal.lcd-back; edge: max(1px, 0.5 * u);
+                Text { x: 2 * u; y: 1.5 * u; text: root.khz > 0 ? root.khz : "--"; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 6 * u; } }
+            Text { x: 58 * u; y: 2.5 * u; text: "kHz"; color: Pal.glyph.transparentize(30%); font-size: 4.5 * u; }
+            Text { x: 104 * u; y: 2.5 * u; text: "mono"; font-size: 5 * u; font-weight: 700;
+                color: root.playing && !root.stereo ? Pal.glyph-on : Pal.glyph.transparentize(78%); }
+            Text { x: 126 * u; y: 2.5 * u; text: "stereo"; font-size: 5 * u; font-weight: 700;
+                color: root.playing && root.stereo ? Pal.glyph-on : Pal.glyph.transparentize(78%); }
+        }
+        if !shaded: Slider {
+            // Volume.
+            x: 108 * u; y: 52 * u; width: 82 * u; height: 9 * u; u: u; value: root.volume;
+            changed(v) => { root.volume = v; root.volume-changed(v); }
+        }
+        if !shaded: Text {
+            x: 196 * u; y: 53 * u; text: Math.round(root.volume * 100) + "%"; color: Pal.glyph.transparentize(30%);
+            font-family: Pal.lcd-font; font-size: 5.5 * u;
+        }
+        if !shaded: Text {
+            x: 224 * u; y: 53 * u; text: root.status; color: Pal.glyph.transparentize(20%); font-family: Pal.lcd-font; font-size: 5.5 * u;
+            width: 44 * u; horizontal-alignment: right; overflow: elide;
+        }
+        if !shaded: Rectangle {
+            // The buffer gauge: how much of the stream is waiting to play (live radio has no position to seek).
+            x: 16 * u; y: 70 * u; width: 250 * u; height: 7 * u;
+            Bevel { width: parent.width; height: parent.height; sunken: true; fill: Pal.groove; edge: max(1px, 0.5 * u); }
+            Rectangle {
+                x: 1 * u; y: 1 * u; height: parent.height - 2 * u; width: (parent.width - 2 * u) * root.buffer;
+                // Eased in the app: an animation restarting every tick would redraw at the display's rate.
+                background: @linear-gradient(90deg, Pal.fill-low.transparentize(50%) 0%, Pal.fill-low 100%);
+            }
+            Text { x: parent.width - self.width - 3 * u; y: 0.5 * u; text: root.playing ? "LIVE" : ""; color: Pal.glyph; font-size: 5 * u; font-weight: 700; }
+        }
+        if !shaded: Rectangle {
+            // Transport.
+            x: 16 * u; y: 84 * u; width: 250 * u; height: 20 * u;
+            Transport { x: 0; width: 23 * u; height: 18 * u; u: u; glyph: "prev"; clicked => { root.prev(); } }
+            Transport { x: 23 * u; width: 23 * u; height: 18 * u; u: u; glyph: "play"; on: root.playing; clicked => { root.play(); } }
+            Transport { x: 46 * u; width: 23 * u; height: 18 * u; u: u; glyph: "pause"; clicked => { root.pause(); } }
+            Transport { x: 69 * u; width: 23 * u; height: 18 * u; u: u; glyph: "stop"; clicked => { root.stop(); } }
+            Transport { x: 92 * u; width: 22 * u; height: 18 * u; u: u; glyph: "next"; clicked => { root.next(); } }
+            Transport { x: 120 * u; width: 22 * u; height: 16 * u; u: u; glyph: "eject"; on: root.show-list; clicked => { root.show-list = !root.show-list; } }
+            Transport { x: 150 * u; width: 28 * u; height: 14 * u; u: u; glyph: "rec"; on: root.recording; clicked => { root.toggle-record(); } }
+            Transport { x: 180 * u; width: 28 * u; height: 14 * u; u: u; glyph: "next"; on: root.show-vis; clicked => { root.show-vis = !root.show-vis; } }
+            Logo { x: 226 * u; y: 3 * u; width: 16 * u; height: 14 * u; u: u; }
+        }
+    }
+
+    // ───────────────────────── The visualizer panel ─────────────────────────
+    if show-vis: Bevel {
+        x: 0; y: main-h; width: 275 * u; height: vis-h; edge: max(1px, 0.6 * u);
+        TitleBar {
+            x: 1 * u; y: 1 * u; width: parent.width - 2 * u; height: 12 * u; u: u; active: root.active;
+            title: "VISUALIZER  ·  " + root.vis-name;
+            drag => { root.drag(); }
+            TitleButton { x: 1.5 * u; y: 1.5 * u; u: u; glyph: "menu"; clicked => { root.prev-vis(); } }
+            TitleButton { x: parent.width - 11 * u; y: 1.5 * u; u: u; glyph: "close"; clicked => { root.show-vis = false; } }
+        }
+        Bevel {
+            x: 5 * u; y: 13 * u; width: 265 * u; height: 102 * u; sunken: true; fill: #000000; edge: max(1px, 0.6 * u);
+            Rectangle {
+                x: 1 * u; y: 1 * u; width: 263 * u; height: 100 * u; clip: true; background: #000000;
+                Image { width: parent.width; height: parent.height; source: root.vis-big; image-rendering: smooth; }
+                // Neon themes light the slot's edge.
+                Rectangle { border-width: 1px; border-color: Pal.glow; }
+                TouchArea { clicked => { root.next-vis(); } }
+            }
+        }
+    }
+
+    // ───────────────────────── The station list ─────────────────────────
+    if show-list: Bevel {
+        x: 0; y: main-h + vis-h; width: 275 * u; height: list-h; edge: max(1px, 0.6 * u);
+        TitleBar {
+            x: 1 * u; y: 1 * u; width: parent.width - 2 * u; height: 12 * u; u: u; active: root.active;
+            title: "STATIONS";
+            drag => { root.drag(); }
+            TitleButton { x: parent.width - 11 * u; y: 1.5 * u; u: u; glyph: "close"; clicked => { root.show-list = false; } }
+        }
+        Bevel {
+            x: 5 * u; y: 14 * u; width: 265 * u; height: 140 * u; sunken: true; fill: Pal.list-back; edge: max(1px, 0.6 * u); clip: true;
+            Flickable {
+                x: 1 * u; y: 1 * u; width: parent.width - 2 * u; height: parent.height - 2 * u;
+                content-height: root.stations.length * 9 * u;
+                for s[i] in root.stations: Rectangle {
+                    y: i * 9 * u; height: 9 * u; width: parent.width;
+                    background: i == root.selected ? Pal.list-selected-back : (row.has-hover ? Pal.list-selected-back.transparentize(75%) : transparent);
+                    animate background { duration: 100ms; }
+                    row := TouchArea {
+                        clicked => { root.selected = i; }
+                        double-clicked => { root.selected = i; root.play-station(i); }
+                    }
+                    Text {
+                        x: 3 * u; y: (parent.height - self.height) / 2; width: 180 * u; overflow: elide;
+                        text: (i + 1) + ". " + s.name; font-size: 5.6 * u;
+                        color: i == root.selected ? Pal.list-selected-text : (s.playing ? Pal.list-playing : Pal.list-text);
+                        font-weight: s.playing ? 700 : 400;
+                    }
+                    Text {
+                        x: parent.width - self.width - 3 * u; y: (parent.height - self.height) / 2; width: 72 * u; horizontal-alignment: right; overflow: elide;
+                        text: s.detail; font-size: 4.8 * u; font-family: Pal.lcd-font;
+                        color: i == root.selected ? Pal.list-selected-text : Pal.list-text.transparentize(35%);
+                    }
+                }
+            }
+        }
+        Rectangle {
+            x: 5 * u; y: 157 * u; width: 265 * u; height: 14 * u;
+            Transport { x: 0; width: 22 * u; height: 12 * u; u: u; glyph: "play"; clicked => { if (root.selected >= 0) { root.play-station(root.selected); } } }
+            Bevel {
+                x: 26 * u; width: 120 * u; height: 12 * u; sunken: true; fill: Pal.lcd-back; edge: max(1px, 0.5 * u);
+                Text { x: 3 * u; y: (parent.height - self.height) / 2; text: root.list-summary; color: Pal.lcd-lit; font-family: Pal.lcd-font; font-size: 5.5 * u; }
+            }
+            Text {
+                x: parent.width - self.width - 2 * u; y: (parent.height - self.height) / 2;
+                text: root.layout-name + " layout"; color: Pal.glyph.transparentize(45%); font-size: 4.8 * u;
+            }
+        }
+    }
+
+    // ───────────────────────── Options ─────────────────────────
+    options := PopupWindow {
+        x: 6 * u; y: 13 * u; width: 150 * u; height: min(root.height - 16 * u, (themes.length + 6) * 9 * u + 6 * u);
+        Bevel {
+            width: parent.width; height: parent.height; edge: max(1px, 0.6 * u);
+            Flickable {
+                x: 2 * u; y: 2 * u; width: parent.width - 4 * u; height: parent.height - 4 * u;
+                content-height: (root.themes.length + 6) * 9 * u;
+                Text { x: 3 * u; y: 1 * u; text: "LAYOUT"; color: Pal.glyph.transparentize(40%); font-size: 4.8 * u; font-weight: 700; }
+                Text { x: 6 * u; y: 9 * u; text: "✓  " + root.layout-name; color: Pal.glyph-on; font-size: 5.6 * u; }
+                Text { x: 3 * u; y: 19 * u; text: "THEME"; color: Pal.glyph.transparentize(40%); font-size: 4.8 * u; font-weight: 700; }
+                // About, under the themes: the Slint licence asks for the credit.
+                Text { x: 3 * u; y: (root.themes.length + 3.6) * 9 * u; text: "ABOUT"; color: Pal.glyph.transparentize(40%); font-size: 4.8 * u; font-weight: 700; }
+                Text { x: 6 * u; y: (root.themes.length + 4.5) * 9 * u; text: "Driftwave " + root.version + "  ·  Made with Slint"; color: Pal.glyph; font-size: 5.2 * u; }
+                for t[i] in root.themes: Rectangle {
+                    y: (i + 3) * 9 * u; height: 9 * u; width: parent.width;
+                    background: ta.has-hover ? Pal.list-selected-back : transparent;
+                    ta := TouchArea { clicked => { root.choose-theme(t.id); } }
+                    Text {
+                        x: 6 * u; y: (parent.height - self.height) / 2; font-size: 5.6 * u;
+                        text: (t.on ? "✓  " : "     ") + t.name;
+                        color: ta.has-hover ? Pal.list-selected-text : (t.on ? Pal.glyph-on : Pal.glyph);
+                    }
+                }
+            }
+        }
+    }
+}

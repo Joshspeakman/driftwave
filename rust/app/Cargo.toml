@@ -1,0 +1,25 @@
+[package]
+name = "driftwave-app"
+description = "Driftwave: internet radio, in the Classic layout"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "driftwave"
+path = "src/main.rs"
+
+[dependencies]
+driftwave-core = { path = "../core" }
+driftwave-audio = { path = "../audio" }
+driftwave-vis = { path = "../vis" }
+serde_json.workspace = true
+# Local time for the LCD clock.
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+# Royalty-free licence: About says "Made with Slint" (docs/RUST-SCOPE.md).
+# Only the software renderer (measured lighter for this window than the GPU one) and the winit backend.
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "accessibility", "backend-winit", "renderer-software", "unstable-winit-030"] }
+
+[build-dependencies]
+slint-build = "1.19"

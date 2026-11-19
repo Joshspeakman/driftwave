@@ -8,6 +8,47 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 6 (2026-11-18): the Classic layout and the visualizers
+
+Josh asked for a layout option in the menus that mimics the classic Winamp layout. Every theme should translate to it,
+with lots of moving parts, while staying clean, lightweight and all in Rust. He also wants a visualizer slot that can be
+toggled, with six visualizers paying homage to the classics of that era.
+
+**PC (done, on `rust`):**
+- **`core/flash.rs`:** the WCAG 2.3.1 flash check in Rust, with 7 tests. It measures changes from turning points, so
+  a ramp spread over several frames counts.
+- **`rust/vis` (driftwave-vis):** pure, with samples, time and size in and RGBA out.
+  - **Analysis:** one FFT a frame, giving 64 log bands, a smooth beat envelope, and bass/mid/treble against their
+    own averages.
+  - **The flash guard:** runs at the output stage. In each WCAG-sized region, luminance may change at most 0.5 a
+    second, and no saturated red leaves it.
+  - **Six original visualizers:** Peak Meter, Liquid Feedback, Ember Field, Scope Studio, Flowform and Waveland.
+  - **Tests:** every visualizer is run against gated noise at 4, 7 and 10 Hz, 300 bpm kicks, cuts between silence
+    and full scale, and a busy track. None ever flashes, in the whole frame or in any region.
+- **`rust/app` (driftwave, Slint):** the Classic layout. It builds on Windows; please build it on the Mac.
+  - **The panels:** the main player (seven-segment LCD with ghost segments, marquee, mini spectrum, kbps/kHz,
+    mono/stereo, volume, buffer gauge, transport, an O A I D V strip), a visualizer panel, a station list, and shade
+    mode.
+  - **Themes:** `palette.rs` maps any theme to the chrome. It's a pure function, tested for readable contrast over
+    all 26 themes and Default.
+  - **Renderer:** the software renderer only. For this window it measured at under half the CPU of femtovg, and
+    40 MB instead of 100.
+  - **Data:** its own data folder, `DriftwaveRust` (test runs use `DriftwaveRustTestRun`). On its first launch it
+    copies Driftwave's station list, reading it, never writing.
+  - **Live CPU on the PC** (playing, in front): 3% with the visualizer panel off, and 7–12% with it on (Peak Meter
+    6.6%, Liquid Feedback 11.9%). Shaded it uses 0.6%, and about 0.3% when not in front.
+
+### Asks for the Mac session
+
+1. Build `rust/app` on the Mac and run it muted:
+   `cargo run --release -p driftwave-app -- -muted -library fixtures/design/library.json -playURL <a SomaFM MP3>`.
+   - Check that the frameless window drags by its title bars, and that minimise, shade, close, always on top
+     (the A button) and double size (D) all work.
+   - Check that the fonts fall back sensibly. The LCD uses Menlo and the body Helvetica Neue unless a theme says
+     otherwise.
+2. Run `cargo test -p driftwave-vis -p driftwave-app`. The vis flash test takes about 40 s in a debug build.
+3. Report what looks wrong under "Mac: Round 6 results", with a snapshot (`-screenshot <file.bmp>`).
+
 ## Round 5 (2026-11-18): Rust on the Mac
 
 Josh asked for the work to be ready to test on the Mac, and chose **Rust on the Mac** over catching up the Swift app.
