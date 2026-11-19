@@ -60,6 +60,77 @@ Josh asked for three things:
    in front with and without the visualizer, `-inactive`, `-shade`, and stopped.
 3. Record results under "Mac: Round 8 results".
 
+### Mac: Round 8 results (also closing Round 7)
+
+**Renderer on the Mac:** the software renderer stays, but presentation is fixed in softbuffer's macOS
+backend. The vendored copy is `rust/vendor/softbuffer`, through `[patch.crates-io]` in the workspace
+`Cargo.toml`; the changes are marked "Driftwave" in `src/backends/cg.rs`.
+
+**What was wrong**, found with `sample`:
+1. **A new, zeroed buffer every frame, at age 0.** Slint therefore redrew the whole window every frame,
+   at Retina size.
+2. **Every frame was a CGImage tagged device RGB.** macOS colour-matched each one to the display on
+   the CPU (vImage, `vMatrixMultiply_Planar16S` and lookup tables) at full Retina size. That was most of
+   the app's CPU.
+
+**The fix:**
+- Slint draws into **one persistent buffer** (age 1), so only what changed is redrawn.
+- Only the changed rectangles are copied into one of up to four **IOSurfaces tagged sRGB**, chosen
+  with `IOSurfaceIsInUse` so a surface is never written while it's on screen. That surface becomes the
+  layer's contents.
+- The **window server colour-matches IOSurfaces on the GPU**.
+- Colours stay exact. Checked against the unpatched build: at most 1 level of difference on the 2,000
+  most saturated pixels. An intermediate attempt, tagging frames with the display's colour space,
+  saved CPU but shifted the accent blue by about 20 levels, so it was dropped.
+
+**Rejected:**
+- **Skia/Metal** cut the visualizer case, but cost 13% with the visualizer off, because it redraws the
+  whole window every frame.
+- **femtovg** came in at 34% / 20%.
+- **Setting only the window's colour space** didn't stop the conversion.
+
+**Measured** on the 14" MacBook Pro (2× Retina, 120 Hz), playing SomaFM, muted, as exact CPU time over
+10 s, as a percentage of one core:
+
+| Case | Round 8 unpatched | **Round 8 + this fix** | PC (Round 8) |
+|---|---|---|---|
+| 412, in front, visualizer | 14.4 | **6.5** | 2.9–4.3 |
+| 412, in front, no visualizer | 9.4 | **2.7** | 1.0 |
+| 412, `-inactive`, visualizer | — | **3.6** | 1.4 |
+| 412, shaded | — | **0.9** | 0 |
+| 412, stopped | — | **0.1** | 0 |
+| Double size, in front, visualizer | — | **9.5** | — |
+| Double size, in front, no visualizer | — | **2.8** | — |
+| Double size, `-inactive`, visualizer | — | **5.1** | — |
+| Double size, shaded / stopped | — | **0.8 / 0.1** | — |
+
+- The audio engine alone (the headless player) is **0.6%** of this, which is all of "shaded".
+- What's left in front is Slint drawing the changed areas at Retina's 2× density (four times the PC's
+  pixels at 100%), plus the visualizer itself. Nothing in the profile is wasted.
+- Memory: 82–107 MB.
+- **Checked on the real screen:** the live window after a resize, the options pop-up, colours, and the
+  visualizer animating, with no stale pixels.
+
+**Corner resize on the Mac:** done.
+- `drag_resize_window` isn't supported by winit on macOS. When it fails, the grip switches to
+  `manual-resize` and resizes by the mouse's travel (`resize-by` in the .slint, `on_resize_by` in
+  main.rs): width 220–1100, with height going to the list and `fit_window` applying the rules.
+- Checked with real drags: 412×474 → 554×550 → 440×512, and everything scales.
+
+**Stream format (Round 7):** done.
+- `Event::Format(StreamFormat { rate, channels, kbps })` and `Engine::format()`.
+- The rate and channels are as decoded, so HE-AAC shows 48 kHz stereo. kbps comes from `icy-br`, the
+  HLS variant's `BANDWIDTH`, or the frame headers.
+- It's wired into the kHz, kbps and MONO/STEREO readouts; the live window shows 128 kbps, 44 kHz, STEREO.
+- Per stream: SomaFM MP3 and AAC are 44.1 kHz, 2 ch, 128 kbps; dancewave Ogg is 44.1 kHz, 2 ch,
+  160 kbps; RTL HLS (HE-AAC v2) is 48 kHz, 2 ch, 64 kbps.
+
+**Also:**
+- `cargo clippy --all-targets` is clean across the workspace. That needed small lint fixes in
+  `vis/analysis.rs`, `canvas.rs`, `liquid.rs`, `peak_meter.rs`, `scope_studio.rs`, and `app/main.rs`
+  (clippy `--fix`); behaviour is unchanged and the flash-safety tests still pass.
+- All tests pass. Rust smoke is 5/5, and behaviour passes with the 445/656 Hz tones.
+
 ## Round 7 (2026-11-18): the Classic layout, lighter
 
 **PC (done):** answers to the Mac's Round 6 findings.

@@ -88,9 +88,9 @@ impl Visualizer for LiquidFeedback {
         let n = a.wave.len();
         let amp = 0.6 + a.level * 2.0;
         let mut prev: Option<(f32, f32)> = None;
-        for k in 0..n {
+        for (k, &sample) in a.wave.iter().enumerate().take(n) {
             let f = k as f32 / (n - 1) as f32;
-            let v = a.wave[k] * amp;
+            let v = sample * amp;
             let (x, y) = match shape {
                 0 => {
                     let ang = f * std::f32::consts::TAU + self.spin;

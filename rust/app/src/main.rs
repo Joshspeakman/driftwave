@@ -95,7 +95,7 @@ fn built_in_themes() -> Vec<Theme> {
         let candidate = d.join("themes");
         if candidate.join("night-market.json").exists() {
             let mut t = load_folder(&candidate, true);
-            t.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+            t.sort_by_key(|a| a.name.to_lowercase());
             return t;
         }
         dir = d.parent().map(Path::to_path_buf);
@@ -469,11 +469,11 @@ impl App {
         self.marquee_dt += dt;
         self.mini_dt += dt;
         let big_on = ui.get_show_vis();
-        let big_tick = big_on && self.frame % step == 0;
-        let small_tick = self.frame % (if big_on { 2 * step } else { step }) == 0;
+        let big_tick = big_on && self.frame.is_multiple_of(step);
+        let small_tick = self.frame.is_multiple_of(if big_on { 2 * step } else { step });
 
         // The marquee: a steady pace, wrapping seamlessly (resting once stopped).
-        if self.frame % (2 * step) == 0 && !settled {
+        if self.frame.is_multiple_of(2 * step) && !settled {
             let u = ui.get_u();
             let span = ui.get_marquee_width() + 24.0 * u;
             if span > 24.0 * u + 1.0 {
@@ -524,7 +524,7 @@ impl App {
         }
         let t2 = Instant::now();
         // Adaptive quality, checked every couple of seconds: keep the big visualizer near a millisecond a frame.
-        if big_tick && self.frame % 48 == 0 {
+        if big_tick && self.frame.is_multiple_of(48) {
             let budget = if self.big_ms > 1.2 && self.budget > 12_000 {
                 (self.budget as f64 * 0.75) as usize
             } else if self.big_ms < 0.45 && self.budget < driftwave_vis::host::PIXEL_BUDGET {
@@ -733,11 +733,25 @@ fn main() -> Result<(), slint::PlatformError> {
     ui.on_resize(move || {
         if let Some(ui) = weak.upgrade() {
             // The OS's own resize from the corner (smooth, and snaps like any window).
-            ui.window().with_winit_window(|w: &winit::window::Window| {
-                if let Err(e) = w.drag_resize_window(winit::window::ResizeDirection::SouthEast) {
-                    log(&format!("resize: {e}"));
-                }
-            });
+            let supported = ui
+                .window()
+                .with_winit_window(|w: &winit::window::Window| w.drag_resize_window(winit::window::ResizeDirection::SouthEast).is_ok())
+                .unwrap_or(false);
+            // winit can't hand a corner resize to macOS: the grip does it from the mouse's travel instead.
+            ui.set_manual_resize(!supported);
+        }
+    });
+    let weak = ui.as_weak();
+    ui.on_resize_by(move |dx, dy| {
+        if let Some(ui) = weak.upgrade() {
+            let size = ui.window().size().to_logical(ui.window().scale_factor());
+            // Width scales the whole window (220–1100 as in the .slint); height goes to the list, and the
+            // tick's fit_window keeps it within what the panels need.
+            let width = (size.width + dx).clamp(220.0, 1100.0);
+            let height = (size.height + dy).max(1.0);
+            if (width - size.width).abs() >= 0.5 || (height - size.height).abs() >= 0.5 {
+                ui.window().set_size(slint::LogicalSize::new(width, height));
+            }
         }
     });
     let a = app.clone();
