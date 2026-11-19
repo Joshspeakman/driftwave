@@ -44,7 +44,14 @@ impl Tray {
         };
         let icon = icon.map_err(|e| format!("tray icon: {e}"))?;
         let builder = TrayIconBuilder::new();
+        // `with_icon_templated` exists only on macOS: elsewhere the colour icon goes in as it is.
+        #[cfg(target_os = "macos")]
         let builder = if template { builder.with_icon_templated(icon) } else { builder.with_icon(icon) };
+        #[cfg(not(target_os = "macos"))]
+        let builder = {
+            let _ = template;
+            builder.with_icon(icon)
+        };
         let tray = builder
             .with_tooltip(tooltip)
             .with_menu(Box::new(Menu::new()))
