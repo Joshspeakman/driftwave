@@ -49,6 +49,7 @@ fn main() {
     let num = |k: &str| values.get(k).and_then(|v| v.parse::<f64>().ok());
     let silent = !flag("audible");
     let paths = AppPaths::for_app("DriftwaveTestRun");
+    clear_dead_runs(&paths.recording());
     let recording_dir = paths.recording().join(std::process::id().to_string());
     let track_dir = values.get("trackDirectory").map(PathBuf::from).unwrap_or_else(|| paths.support.join("Tracks"));
     let mode = values.get("recordingMode").and_then(|m| RecordingMode::from_raw_value(m)).unwrap_or(RecordingMode::Decide);
@@ -97,6 +98,22 @@ fn main() {
     engine.stop();
     let _ = std::fs::remove_dir_all(&recording_dir);
     std::process::exit(0);
+}
+
+/// Test runs a script killed leave their temporary recordings (one folder per process); drop the ones
+/// whose process is gone.
+fn clear_dead_runs(dir: &std::path::Path) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for e in entries.flatten() {
+        let name = e.file_name().to_string_lossy().to_string();
+        if name.parse::<u32>().is_err() {
+            continue;
+        }
+        let alive = std::process::Command::new("kill").args(["-0", &name]).stderr(std::process::Stdio::null()).status().is_ok_and(|s| s.success());
+        if !alive {
+            let _ = std::fs::remove_dir_all(e.path());
+        }
+    }
 }
 
 fn report(e: Event) {
