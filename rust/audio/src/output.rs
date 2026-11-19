@@ -29,6 +29,10 @@ pub struct OutputShared {
     muted: AtomicBool,
     stop: AtomicBool,
     pub device_name: Mutex<String>,
+    /// Diagnostics: with DRIFTWAVE_OUTPUT_WAV=<file>, up to 30 s of what goes to the device (after volume, before mute
+    /// and a test run's silence), written as a WAV when the output stops.
+    capture: Option<(Mutex<Vec<f32>>, std::path::PathBuf)>,
+    captured: AtomicBool,
 }
 
 impl OutputShared {
@@ -46,7 +50,38 @@ impl OutputShared {
             muted: AtomicBool::new(false),
             stop: AtomicBool::new(false),
             device_name: Mutex::new(String::new()),
+            capture: std::env::var_os("DRIFTWAVE_OUTPUT_WAV").map(|p| (Mutex::new(Vec::new()), std::path::PathBuf::from(p))),
+            captured: AtomicBool::new(false),
         })
+    }
+
+    /// Writes the diagnostic capture (32-bit float WAV).
+    fn write_capture(&self) {
+        let Some((buf, path)) = &self.capture else { return };
+        // Once: stop can come twice (at quit, and as the engine is dropped).
+        if self.captured.swap(true, Ordering::Relaxed) {
+            return;
+        }
+        let data = std::mem::take(&mut *buf.lock().unwrap());
+        let (ch, rate) = (self.channels as u32, self.rate);
+        let bytes = (data.len() * 4) as u32;
+        let mut out = Vec::with_capacity(44 + bytes as usize);
+        out.extend_from_slice(b"RIFF");
+        out.extend_from_slice(&(36 + bytes).to_le_bytes());
+        out.extend_from_slice(b"WAVEfmt ");
+        out.extend_from_slice(&16u32.to_le_bytes());
+        out.extend_from_slice(&3u16.to_le_bytes()); // IEEE float
+        out.extend_from_slice(&(ch as u16).to_le_bytes());
+        out.extend_from_slice(&rate.to_le_bytes());
+        out.extend_from_slice(&(rate * ch * 4).to_le_bytes());
+        out.extend_from_slice(&((ch * 4) as u16).to_le_bytes());
+        out.extend_from_slice(&32u16.to_le_bytes());
+        out.extend_from_slice(b"data");
+        out.extend_from_slice(&bytes.to_le_bytes());
+        for v in data {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+        let _ = std::fs::write(path, out);
     }
 
     pub fn push(&self, samples: &[f32]) {
@@ -106,6 +141,7 @@ impl OutputShared {
 
     pub fn stop(&self) {
         self.stop.store(true, Ordering::Relaxed);
+        self.write_capture();
     }
 
     /// Fills one device buffer. Public so tests can check what reaches the device.
@@ -133,6 +169,14 @@ impl OutputShared {
             if t.len() > max {
                 let extra = t.len() - max;
                 t.drain(..extra);
+            }
+        }
+        // The diagnostic capture: the signal as the volume leaves it (mute aside, so a muted run captures too).
+        if let Some((buf, _)) = self.capture.as_ref().filter(|_| !self.captured.load(Ordering::Relaxed)) {
+            let mut b = buf.lock().unwrap();
+            if b.len() < 30 * self.rate as usize * self.channels {
+                let v = self.volume();
+                b.extend(out.iter().map(|o| o * v));
             }
         }
         let gain = if self.is_muted() { 0.0 } else { self.volume() };

@@ -15,6 +15,9 @@
 //! -swapAt <s>[,<s>…], -still, -search <text>, -details <n>, -double, -shade, -noVis,
 //! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
 //! -screenshotDelay <s>, -quitAfter <s>.
+// A Windows app, not a console program: opened from the Start menu it has no terminal window beside it. (Release
+// builds; a debug build keeps its console for logs. Logs still reach a redirected stderr, as the test scripts use.)
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 /// macOS: see `mimalloc` in Cargo.toml.
 #[cfg(target_os = "macos")]
