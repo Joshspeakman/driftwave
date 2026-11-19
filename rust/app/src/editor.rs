@@ -105,7 +105,23 @@ impl App {
         ed.set_upper(t.fonts.title_uppercase);
         ed.set_corners((t.corners.card.unwrap_or(8.0) / 20.0).clamp(0.0, 1.0) as f32);
         ed.set_cover((t.corners.cover.unwrap_or(0.07) / 0.5).clamp(0.0, 1.0) as f32);
-        let effects: Vec<EffectRow> = EFFECT_KINDS.iter().map(|(k, label)| EffectRow { key: (*k).into(), label: (*label).into(), on: t.effects.contains_key(*k) }).collect();
+        // Four groups: behind the panels, over everything, the titles, and the player and window.
+        let group = |k: &str| match k {
+            "grain" | "vignette" | "scanlines" | "frame" | "spotlight" => 1,
+            "titleShadow" | "cursor" | "windowTitle" => 2,
+            "lcd" | "analyzer" | "dial" | "vu" | "chrome" | "tiles" => 3,
+            _ => 0,
+        };
+        let mut slots = [0; 4];
+        let effects: Vec<EffectRow> = EFFECT_KINDS
+            .iter()
+            .map(|(k, label)| {
+                let g = group(k);
+                slots[g] += 1;
+                EffectRow { key: (*k).into(), label: (*label).into(), on: t.effects.contains_key(*k), group: g as i32, slot: slots[g] - 1 }
+            })
+            .collect();
+        ed.set_effect_counts(ModelRc::from(Rc::new(VecModel::from(slots.to_vec()))));
         ed.set_effects(ModelRc::from(Rc::new(VecModel::from(effects))));
         ed.set_confirm_delete(false);
     }

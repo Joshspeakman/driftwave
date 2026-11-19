@@ -191,9 +191,9 @@ impl App {
             let a = (target - dec.needle) * 40.0 - dec.needle_v * 11.0;
             dec.needle_v += a * dt;
             dec.needle += dec.needle_v * dt;
-            let shown = dec.needle + if playing { (dec.started.elapsed().as_secs_f32() * 3.1).sin() * 0.0002 } else { 0.0 };
-            if (d.get_needle() - shown).abs() > 0.0001 {
-                d.set_needle(shown);
+            // Redrawn only when it moves a visible amount (it settles on the station's spot and stays).
+            if (d.get_needle() - dec.needle).abs() > 0.0004 {
+                d.set_needle(dec.needle);
             }
         }
 
@@ -212,10 +212,11 @@ impl App {
                 dec.vu_v[c] += a * dt;
                 dec.vu_angle[c] = (dec.vu_angle[c] + dec.vu_v[c] * dt).clamp(-50.0, 50.0);
             }
-            if (d.get_vu_left() - dec.vu_angle[0]).abs() > 0.05 {
+            // A needle is redrawn when it moves a third of a degree or more (finer moves don't show).
+            if (d.get_vu_left() - dec.vu_angle[0]).abs() > 0.33 {
                 d.set_vu_left(dec.vu_angle[0]);
             }
-            if (d.get_vu_right() - dec.vu_angle[1]).abs() > 0.05 {
+            if (d.get_vu_right() - dec.vu_angle[1]).abs() > 0.33 {
                 d.set_vu_right(dec.vu_angle[1]);
             }
         }
