@@ -40,7 +40,7 @@ pub struct Finding {
 }
 
 /// Runs `work` on a thread, then `done` with its answer on the UI thread.
-fn background<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(&mut App, T) + Send + 'static) {
+pub(crate) fn background<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(&mut App, T) + Send + 'static) {
     let _ = std::thread::Builder::new().name("driftwave-directory".into()).spawn(move || {
         let answer = work();
         let _ = slint::invoke_from_event_loop(move || {

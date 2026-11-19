@@ -55,6 +55,13 @@ pub struct Effects {
     dark: bool,
 }
 
+impl Effects {
+    /// No effects at all (a scene that's only your own background).
+    pub fn none() -> Effects {
+        Effects::default()
+    }
+}
+
 /// When the aurora's still frame sits on its paths (C#: EffectsClock.StillTime).
 const STILL_TIME: f64 = 30.0;
 

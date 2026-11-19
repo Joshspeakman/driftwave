@@ -125,6 +125,10 @@ export global Scenery {
     // view is drawn see-through over them instead of drawing those two pictures itself.
     in property <bool> native;
     in property <[SceneText]> texts;
+    // Your own background's GIF, playing over its first frame (which the backdrop holds), and its dim.
+    in property <bool> user-anim;
+    in property <image> user-image;
+    in property <float> user-dim;
     // What lies over everything (grain, vignette, scanlines): one still, mostly clear picture.
     in property <bool> front-on;
     in property <image> front;
@@ -756,6 +760,54 @@ component GroupHeading inherits Text {
     color: Th.text; font-size: 14px; font-weight: 600;
 }
 
+// A GIF on GIPHY, for the search dialog: its title and still preview.
+export struct GiphyItem {
+    title: string,
+    preview: image,
+    ready: bool,
+}
+
+// Your own background (bg.rs): in use or not, its dim, the GIPHY key and search.
+export global Bg {
+    in property <bool> has;
+    in-out property <float> dim: 0.35;
+    in property <bool> builtin-key;
+    in-out property <string> key;
+    in property <string> status;
+    in-out property <bool> search-open;
+    in-out property <string> query;
+    in property <[GiphyItem]> results;
+    callback choose-file();
+    callback remove();
+    callback dim-changed(float);
+    callback open-search();
+    callback search(string);
+    callback pick(int);
+    callback key-changed(string);
+}
+
+// A horizontal slider, 0 to 1: its value follows the pointer; `released` says where it was let go.
+component Slider01 inherits Rectangle {
+    in-out property <float> value;
+    callback released(float);
+    height: 20px;
+    width: 180px;
+    Rectangle { y: 8px; height: 4px; border-radius: 2px; background: Th.control-stroke; }
+    Rectangle { x: 0; y: 8px; height: 4px; width: parent.width * root.value; border-radius: 2px; background: Th.accent; }
+    Rectangle {
+        x: clamp(parent.width * root.value - 9px, -9px, parent.width - 9px); y: 1px; width: 18px; height: 18px;
+        border-radius: Th.radius-control <= 1px ? 1px : 9px; background: Th.control; border-width: 1px; border-color: Th.control-stroke;
+        Rectangle { x: 5px; y: 5px; width: 8px; height: 8px; border-radius: Th.radius-control <= 1px ? 0px : 4px; background: Th.accent; }
+    }
+    TouchArea {
+        moved => { if (self.pressed) { root.value = clamp(self.mouse-x / self.width, 0, 1); } }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) { root.value = clamp(self.mouse-x / self.width, 0, 1); }
+            if (e.kind == PointerEventKind.up) { root.released(root.value); }
+        }
+    }
+}
+
 // A settings card: a heading, a line of explanation, and its controls.
 component SettingsCard inherits Rectangle {
     in property <string> heading;
@@ -1006,6 +1058,10 @@ export component FullView inherits Rectangle {
     out property <length> title-end: Th.title-center ? max(captions.lead, 30px) - 16px : window-title.x + window-title.width;
 
     if Scenery.on && !Scenery.native: Image { x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.back; image-fit: fill; }
+    if Scenery.on && Scenery.user-anim: Rectangle {
+        Image { x: 0; y: 0; width: root.width; height: root.height; source: Scenery.user-image; image-fit: ImageFit.cover; image-rendering: smooth; }
+        Rectangle { background: #000000.transparentize(1 - Scenery.user-dim); }
+    }
     if Scenery.on && !Scenery.native && Scenery.moving: Image {
         x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.motion; image-fit: fill; image-rendering: smooth;
     }
@@ -1245,6 +1301,30 @@ export component FullView inherits Rectangle {
                     }
                 }
                 SettingRow {
+                    label: "Background";
+                    note: Bg.has ? "Your own picture is behind the window, in every theme." : "A GIF or picture behind the whole window, in any theme. A GIF that flashes is refused.";
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Btn { text: "Choose File…"; clicked => { Bg.choose-file(); } }
+                        Btn { text: "Search GIPHY…"; clicked => { Bg.open-search(); } }
+                        if Bg.has: Btn { text: "Remove"; clicked => { Bg.remove(); } }
+                    }
+                }
+                if Bg.has: SettingRow {
+                    label: "Dim";
+                    note: "Darkens your background so the text over it stays easy to read.";
+                    HorizontalLayout {
+                        spacing: 12px; alignment: end;
+                        dim-slider := Slider01 { value: Bg.dim / 0.8; released(v) => { Bg.dim-changed(v * 0.8); } }
+                        Text { vertical-alignment: center; text: Math.round(dim-slider.value * 80) + "%"; color: Th.card-text2; font-size: 12px; min-width: 32px; }
+                    }
+                }
+                SettingRow {
+                    label: "GIPHY key";
+                    note: Bg.builtin-key ? "Searching GIPHY uses the key built in; paste your own to use it instead." : "Searching GIPHY needs a key: paste yours (free from developers.giphy.com).";
+                    Field { width: 240px; placeholder: "Paste a key"; text <=> Bg.key; accepted(t) => { Bg.key-changed(t); } }
+                }
+                SettingRow {
                     label: "Moving scenes";
                     note: "Rain on the glass, people passing by. Only while Driftwave is in front; it holds still by itself on a slower computer.";
                     Segmented { options: ["Moving", "Still"]; current: Scenery.motion-on ? 0 : 1; chosen(i) => { Scenery.motion-chosen(i == 0); } }
@@ -1462,6 +1542,48 @@ export component FullView inherits Rectangle {
         border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.accent;
         Text { x: 14px; y: (parent.height - self.height) / 2; width: parent.width - 56px; text: Dir.message; color: Th.card-text; font-size: 13px; overflow: elide; }
         Caption { x: parent.width - 42px; y: 6px; width: 36px; height: 32px; glyph: "close"; clicked => { Dir.dismiss(); } }
+    }
+
+    // GIPHY search: GIFs rated G; pick one to check and use it.
+    if Bg.search-open: Rectangle {
+        background: #00000099;
+        TouchArea { clicked => { Bg.search-open = false; } }
+        Rectangle {
+            x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; width: min(660px, parent.width - 48px); height: min(560px, parent.height - 48px);
+            border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.card-stroke;
+            drop-shadow-blur: 32px; drop-shadow-offset-y: 8px; drop-shadow-color: #00000080;
+            clip: true;
+            TouchArea { }
+            Text { x: 24px; y: 20px; text: "Search GIPHY"; color: Th.card-text; font-size: 20px; font-weight: 600; }
+            giphy-box := Field {
+                x: 24px; y: 60px; width: parent.width - 48px - 96px; placeholder: "Rain, city lights, waves…";
+                text <=> Bg.query;
+                accepted(t) => { Bg.search(t); }
+            }
+            Btn { x: parent.width - 24px - 88px; y: 60px; width: 88px; text: "Search"; primary: true; clicked => { Bg.search(giphy-box.text); } }
+            if Bg.status != "": Text { x: 24px; y: 104px; width: parent.width - 48px; text: Bg.status; color: Th.card-text2; font-size: 13px; wrap: word-wrap; }
+            results := Flickable {
+                x: 24px; y: 128px; width: parent.width - 48px; height: parent.height - 128px - 64px;
+                property <length> cw: (self.width - 3 * 8px) / 4;
+                content-height: Math.ceil(Bg.results.length / 4) * (self.cw * 0.75 + 30px);
+                for g[i] in Bg.results: Rectangle {
+                    x: Math.mod(i, 4) * (results.cw + 8px); y: Math.floor(i / 4) * (results.cw * 0.75 + 30px);
+                    width: results.cw; height: results.cw * 0.75 + 22px;
+                    pick-ta := TouchArea { clicked => { Bg.pick(i); } }
+                    Rectangle {
+                        y: 0; height: parent.width * 0.75; border-radius: Th.radius-control; clip: true;
+                        background: Th.subtle;
+                        border-width: pick-ta.has-hover ? 2px : 0px; border-color: Th.accent;
+                        if g.ready: Image { width: parent.width; height: parent.height; source: g.preview; image-fit: ImageFit.cover; }
+                    }
+                    Text { y: parent.width * 0.75 + 4px; width: parent.width; text: g.title; color: Th.card-text2; font-size: 11px; overflow: elide; }
+                }
+            }
+            Rectangle { y: parent.height - 64px; height: 64px; background: #0000001A;
+                Rectangle { y: 0; height: 1px; background: Th.divider; } }
+            Text { x: 24px; y: parent.height - 40px; text: "Powered by GIPHY"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
+            Btn { x: parent.width - 24px - self.width; y: parent.height - 48px; text: "Close"; clicked => { Bg.search-open = false; } }
+        }
     }
 
     // A station's details.

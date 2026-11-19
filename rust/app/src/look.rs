@@ -309,15 +309,22 @@ impl App {
 
         // The scene, and the panels that let it show through: a theme's see-through colours are see-through
         // whenever there's something behind them.
-        self.look.scene = Scene::for_theme(theme);
+        let user = self.bg.as_ref().map(|p| p.frames[0].clone());
+        self.look.scene = match user {
+            Some(img) => Some(Scene::with_user(theme, img, self.bg_dim(), f.background)),
+            None => Scene::for_theme(theme),
+        };
         let behind = self.look.scene.as_ref().is_some_and(Scene::has_backdrop);
+        let user = self.bg.is_some();
         self.look.panels = behind.then(|| {
             let own = |k: &str, solid: Color| theme.and_then(|t| t.colors.get(k).copied()).unwrap_or(solid);
+            // Your background shows through every theme: smoky glass in the theme's colours (as the C# app did).
+            let glass = |c: Color, a: f64| if user { Color { a: (a * 255.0) as u8, ..c } } else { c };
             Panels {
-                surface: own("surface", f.surface),
-                card: own("card", f.card),
-                pane: own("pane", f.pane),
-                control: own("control", f.control),
+                surface: glass(own("surface", f.surface), 0.72),
+                card: glass(own("card", f.card), 0.72),
+                pane: glass(own("pane", f.pane), 0.62),
+                control: glass(own("control", f.control), 0.8),
                 text: f.text2,
                 card_text: f.card_text2,
                 pane_text: f.pane_text,
@@ -463,6 +470,7 @@ impl App {
             }
         }
 
+        self.tick_background(ui, now, focused && ambient);
         if self.look.scene.is_none() {
             self.park_look(ui);
             return;

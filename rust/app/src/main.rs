@@ -21,6 +21,7 @@
 #[global_allocator]
 static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+mod bg;
 mod covers;
 mod decor;
 mod effects;
@@ -207,6 +208,9 @@ struct App {
     look: look::Look,
     decor: decor::Decor,
     eggs: eggs::Eggs,
+    /// Your own background, and its playing GIF and GIPHY search.
+    bg: Option<bg::Picture>,
+    bg_state: bg::State,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -1023,6 +1027,8 @@ fn main() -> Result<(), slint::PlatformError> {
         look: look::Look::default(),
         decor: decor::Decor::default(),
         eggs: eggs::Eggs::default(),
+        bg: None,
+        bg_state: bg::State::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
@@ -1033,12 +1039,42 @@ fn main() -> Result<(), slint::PlatformError> {
     }));
     {
         // Scenes move unless asked to hold still (-still, or "sceneMotion": false).
-        let mut a = app.borrow_mut();
-        let still = a.args.flag("still") || a.settings.get("sceneMotion").and_then(Value::as_bool) == Some(false);
-        a.look.still = still;
+        let still = {
+            let mut a = app.borrow_mut();
+            let still = a.args.flag("still") || a.settings.get("sceneMotion").and_then(Value::as_bool) == Some(false);
+            a.look.still = still;
+            still
+        };
         ui.global::<Scenery>().set_motion_on(!still);
         let w = app.clone();
         ui.global::<Scenery>().on_motion_chosen(move |on| w.borrow_mut().choose_motion(on));
+        // Your own background.
+        let b = ui.global::<Bg>();
+        let w = app.clone();
+        b.on_choose_file(move || w.borrow_mut().choose_background());
+        let w = app.clone();
+        b.on_remove(move || w.borrow_mut().remove_background());
+        let w = app.clone();
+        b.on_dim_changed(move |d| w.borrow_mut().set_background_dim(d));
+        let w = app.clone();
+        b.on_open_search(move || w.borrow_mut().open_giphy());
+        let w = app.clone();
+        b.on_search(move |q| w.borrow_mut().giphy_search(&q));
+        let w = app.clone();
+        b.on_pick(move |i| w.borrow_mut().giphy_pick(i as usize));
+        let w = app.clone();
+        b.on_key_changed(move |k| w.borrow_mut().set_giphy_key(&k));
+        b.set_builtin_key(option_env!("DRIFTWAVE_GIPHY_KEY").is_some_and(|k| !k.is_empty()));
+        {
+            let mut a = app.borrow_mut();
+            let key = a.settings.get("giphyKey").and_then(Value::as_str).unwrap_or("").to_string();
+            b.set_key(key.into());
+            // Test runs: -background <file> imports a picture or GIF (into the test folder) and uses it.
+            match a.args.get("background").map(std::path::PathBuf::from) {
+                Some(file) => a.use_background_file(file),
+                None => a.load_background(),
+            }
+        }
         let w = app.clone();
         let weak = ui.as_weak();
         ui.window().on_winit_window_event(move |window, event| {
