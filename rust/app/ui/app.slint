@@ -1,0 +1,205 @@
+// Driftwave's one window. It holds the app's state and controls, and shows them in one of two looks: Full (the
+// familiar Driftwave) or Classic (the compact player of the Winamp years). Swapping changes the look and the
+// window's size; the same engine keeps playing.
+
+import { ClassicView, Pal, StationRow, Choice } from "classic.slint";
+import { FullView, Th, StationCard, TrackRow, Swatch } from "full.slint";
+export { Pal, Th, StationRow, Choice, StationCard, TrackRow, Swatch }
+
+export component MainWindow inherits Window {
+    title: "Driftwave";
+    no-frame: true;
+    background: layout == "classic" ? Pal.face.darker(20%) : Th.background;
+    default-font-family: layout == "classic" ? Pal.body-font : Th.body-font;
+    preferred-width: 1180px;
+    preferred-height: 760px;
+    min-width: layout == "classic" ? 220px : 760px;
+    max-width: layout == "classic" ? 1100px : 100000px;
+    min-height: layout == "classic" ? 0px : 520px;
+
+    // "full" or "classic".
+    in-out property <string> layout: "full";
+
+    // ───── Shared: now playing, the library, the controls ─────
+    in property <string> station;
+    in property <bool> playing;
+    in property <bool> loading;
+    in property <string> status: "STOPPED";
+    in-out property <float> volume <=> classic.volume;
+    in property <bool> recording;
+    in property <bool> record-armed;
+    in-out property <int> selected <=> classic.selected;
+    in property <string> version;
+    in-out property <bool> active <=> classic.active;
+    callback drag();
+    callback minimize();
+    callback quit();
+    callback play();
+    callback stop();
+    callback volume-changed(float);
+    callback play-station(int);
+    callback toggle-record();
+    callback choose-theme(string);
+
+    // ───── Classic ─────
+    out property <length> u: classic.u;
+    in-out property <bool> shaded <=> classic.shaded;
+    in-out property <bool> show-vis <=> classic.show-vis;
+    in-out property <bool> show-list <=> classic.show-list;
+    in-out property <bool> on-top <=> classic.on-top;
+    in property <string> marquee;
+    in-out property <length> marquee-offset <=> classic.marquee-offset;
+    out property <length> marquee-width: classic.marquee-width;
+    in property <int> minutes;
+    in property <int> seconds;
+    in property <bool> clock-mode;
+    in property <int> kbps;
+    in property <int> khz;
+    in property <bool> stereo;
+    in property <bool> mono;
+    in property <float> buffer;
+    in property <image> vis-mini;
+    in property <image> vis-big;
+    in property <string> vis-name: "Peak Meter";
+    out property <length> mini-width: classic.mini-width;
+    out property <length> mini-height: classic.mini-height;
+    out property <length> big-width: classic.big-width;
+    out property <length> big-height: classic.big-height;
+    in property <[StationRow]> stations;
+    in property <string> list-summary;
+    in property <[Choice]> themes;
+    in property <string> layout-name: "Classic";
+    out property <length> main-h: classic.main-h;
+    out property <length> vis-h: classic.vis-h;
+    out property <length> fixed-h: classic.fixed-h;
+    out property <length> min-list-h: classic.min-list-h;
+    in property <bool> manual-resize;
+    callback resize();
+    callback resize-by(length, length);
+    callback pause();
+    callback prev();
+    callback next();
+    callback toggle-clock();
+    callback next-vis();
+    callback prev-vis();
+    callback toggle-on-top();
+    callback toggle-double();
+    callback panels-changed();
+    callback to-full();
+
+    // ───── Full ─────
+    in property <[StationCard]> cards;
+    in property <string> song;
+    in property <string> artist;
+    in property <image> cover;
+    in property <bool> has-cover;
+    in property <bool> cover-small;
+    in property <color> cover-c1: #6B4EA0;
+    in property <color> cover-c2: #C24F8E;
+    in property <[TrackRow]> tracks;
+    in property <string> sort-name: "Name";
+    in property <bool> maximized;
+    in property <[Swatch]> swatches;
+    in property <string> appearance: "system";
+    in-out property <string> page <=> full.page;
+    in-out property <bool> show-player <=> full.show-player;
+    callback toggle-maximize();
+    callback resize-edge(string);
+    callback to-classic();
+    callback cycle-sort();
+    callback choose-appearance(string);
+
+    full := FullView {
+        visible: root.layout == "full";
+        width: parent.width;
+        height: parent.height;
+        stations: root.cards;
+        selected <=> root.selected;
+        station: root.station;
+        song: root.song;
+        artist: root.artist;
+        cover: root.cover;
+        has-cover: root.has-cover;
+        cover-small: root.cover-small;
+        cover-c1: root.cover-c1;
+        cover-c2: root.cover-c2;
+        playing: root.playing;
+        loading: root.loading;
+        status: root.status;
+        volume <=> root.volume;
+        tracks: root.tracks;
+        recording: root.recording;
+        record-armed: root.record-armed;
+        sort-name: root.sort-name;
+        maximized: root.maximized;
+        active: root.active;
+        version: root.version;
+        themes: root.swatches;
+        appearance: root.appearance;
+        drag => { root.drag(); }
+        minimize => { root.minimize(); }
+        toggle-maximize => { root.toggle-maximize(); }
+        quit => { root.quit(); }
+        resize-edge(e) => { root.resize-edge(e); }
+        play-station(i) => { root.play-station(i); }
+        play => { root.play(); }
+        stop => { root.stop(); }
+        volume-changed(v) => { root.volume-changed(v); }
+        toggle-record => { root.toggle-record(); }
+        to-classic => { root.to-classic(); }
+        cycle-sort => { root.cycle-sort(); }
+        choose-theme(id) => { root.choose-theme(id); }
+        choose-appearance(a) => { root.choose-appearance(a); }
+    }
+
+    classic := ClassicView {
+        visible: root.layout == "classic";
+        width: parent.width;
+        height: parent.height;
+        station: root.station;
+        marquee: root.marquee;
+        minutes: root.minutes;
+        seconds: root.seconds;
+        clock-mode: root.clock-mode;
+        kbps: root.kbps;
+        khz: root.khz;
+        stereo: root.stereo;
+        mono: root.mono;
+        playing: root.playing;
+        loading: root.loading;
+        buffer: root.buffer;
+        status: root.status;
+        recording: root.recording;
+        record-armed: root.record-armed;
+        vis-mini: root.vis-mini;
+        vis-big: root.vis-big;
+        vis-name: root.vis-name;
+        stations: root.stations;
+        list-summary: root.list-summary;
+        themes: root.themes;
+        layout-name: root.layout-name;
+        version: root.version;
+        manual-resize: root.manual-resize;
+        drag => { root.drag(); }
+        resize => { root.resize(); }
+        resize-by(dx, dy) => { root.resize-by(dx, dy); }
+        minimize => { root.minimize(); }
+        quit => { root.quit(); }
+        play => { root.play(); }
+        pause => { root.pause(); }
+        stop => { root.stop(); }
+        prev => { root.prev(); }
+        next => { root.next(); }
+        toggle-record => { root.toggle-record(); }
+        toggle-clock => { root.toggle-clock(); }
+        volume-changed(v) => { root.volume-changed(v); }
+        play-station(i) => { root.play-station(i); }
+        next-vis => { root.next-vis(); }
+        prev-vis => { root.prev-vis(); }
+        toggle-on-top => { root.toggle-on-top(); }
+        choose-theme(id) => { root.choose-theme(id); }
+        toggle-double => { root.toggle-double(); }
+        panels-changed => { root.panels-changed(); }
+        to-full => { root.to-full(); }
+    }
+}

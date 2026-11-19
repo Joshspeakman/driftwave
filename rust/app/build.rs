@@ -1,3 +1,3 @@
 fn main() {
-    slint_build::compile("ui/classic.slint").expect("compile the Classic layout");
+    slint_build::compile("ui/app.slint").expect("compile the Classic layout");
 }

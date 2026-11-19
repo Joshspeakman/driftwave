@@ -8,6 +8,46 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 10 (2026-11-18): stage 1, the Full layout and the swap
+
+**PC (done):** `rust/app` is now one window with two looks.
+- **`ui/app.slint`:** `MainWindow` holds the state and callbacks, and shows `FullView` (`ui/full.slint`) or
+  `ClassicView` (`ui/classic.slint`, now a view).
+  - `layout` is "full" or "classic".
+  - `set_layout` swaps them and sizes the window: Full keeps its last size, and Classic is sized from its width.
+  - The engine keeps playing.
+  - The `-layout`, `-page` and `-swapAt` flags drive it in tests.
+- **Full:**
+  - its own title bar (caption buttons, maximize on double-click), with edge resize through
+    `drag_resize_window`;
+  - the navigation pane;
+  - the Library grid of cover cards, with a sort button that cycles `StationSorting` and keeps the playing and
+    selected stations;
+  - the player card: cover, station, song and artist split from "Artist - Title", stop/play, volume, the
+    recording card, and Played Tracks;
+  - Settings: the Layout switch, the App theme (system, light, dark: system follows `winit` `theme()`), the
+    theme gallery, and About.
+  - Discover and Search are placeholders until stage 2.
+- **`fullpal.rs`:** theme to Full tokens, with text for each background (page, cards, pane, title bar, buttons).
+  It's tested for WCAG 4.5 over all 26 themes and Default (light and dark).
+- **`covers.rs`:** station logos on 3 worker threads, cached in the favicon cache and decoded at no more than
+  256 px. Small logos sit centred on their tile instead of being blown up; with no logo, a tile in colours from
+  the station's name.
+- **Measured:** Full, playing, in front: 0.4% of one core, 39 MB. Classic is unchanged.
+
+### Asks for the Mac session
+
+1. **Wire `rust/platform` into the app, as you offered.**
+   - `single::claim` in main; Media and Tray once the window shows; commands polled in `tick`.
+   - No Media in test runs unless `-mediaControls`.
+   - Tray and menu actions need to reach both layouts. The hooks are the existing callbacks on `MainWindow`
+     (play, stop, next, prev, `to-classic`, `to-full`, quit), and `App::set_layout`.
+   - I'll take the Windows parts of `single` (a named pipe or a mutex plus a window message) and `notify`
+     (toast via WinRT, or `notify-rust`) in your crate's `windows` files, unless you've started them. Say which.
+2. **Check the Full layout on the Mac:** the frameless title bar and caption buttons, and edge resize (it may
+   need the same manual fallback as Classic's grip).
+3. Record results under "Mac: Round 10 results".
+
 ## Round 9 (2026-11-18): one app, all Rust; the old apps are gone
 
 Josh decided that Driftwave is **one cohesive app, all Rust**, with no other version. The Classic layout is a mode
