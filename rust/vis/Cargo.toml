@@ -1,0 +1,11 @@
+[package]
+name = "driftwave-vis"
+description = "Driftwave's visualizers: audio in, pixels out, never flashing"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+driftwave-core = { path = "../core" }
+rustfft = "6"

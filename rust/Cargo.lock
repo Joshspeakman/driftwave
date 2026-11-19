@@ -209,6 +209,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "driftwave-vis"
+version = "1.0.0"
+dependencies = [
+ "driftwave-core",
+ "rustfft",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
