@@ -293,27 +293,6 @@ fn aurora(p: &mut Picture, _scale: f32, a: &Aurora, t: f64) {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use driftwave_core::theme::load_folder;
-    use std::path::PathBuf;
-
-    #[test]
-    fn effects_paint_without_panicking_at_odd_sizes() {
-        let themes = load_folder(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../themes"), true);
-        for t in &themes {
-            let e = Effects::for_theme(t);
-            for (w, h, s) in [(1usize, 1usize, 1.0f32), (37, 211, 1.0), (300, 200, 1.5)] {
-                let mut p = Picture::filled(w, h, [0, 0, 0]);
-                e.behind(&mut p, s, true, w as f32 / 2.0);
-                e.moving(&mut p, s, 12.0);
-                let _ = e.front(w, h, s, true);
-            }
-        }
-    }
-}
-
 impl Effects {
     /// The synthwave sun on its own (transparent around it): a smooth disc cut into slices by gaps that widen towards
     /// the horizon, at `alpha`. With where its top left goes (px). The horizon is at 68% of `h`.
@@ -343,5 +322,26 @@ impl Effects {
             }
         }
         Some((p, x0, y0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use driftwave_core::theme::load_folder;
+    use std::path::PathBuf;
+
+    #[test]
+    fn effects_paint_without_panicking_at_odd_sizes() {
+        let themes = load_folder(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../themes"), true);
+        for t in &themes {
+            let e = Effects::for_theme(t);
+            for (w, h, s) in [(1usize, 1usize, 1.0f32), (37, 211, 1.0), (300, 200, 1.5)] {
+                let mut p = Picture::filled(w, h, [0, 0, 0]);
+                e.behind(&mut p, s, true, w as f32 / 2.0);
+                e.moving(&mut p, s, 12.0);
+                let _ = e.front(w, h, s, true);
+            }
+        }
     }
 }

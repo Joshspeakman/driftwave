@@ -187,6 +187,11 @@ ported from the C# app's SceneEffect, GlassDrops, NeonEdges and TitleDecor.
     | Night Market | 2.12 ms a frame | 1.61 |
     | Frosted Glass | 2.22 | 1.32 |
     | Neon Noir | 1.40 | 0.85 |
+- **The valve's first reading** included the backdrop paint, 160 ms on Retina. On a busy Mac it read 11–13.5%
+  for Night Market, close to the 16% limit for a scene that costs 3.5%. `valve.since` now restarts after
+  each paint, and the first reading is 5.0%.
+- **Lints in your newest commits:** the `effects.rs` tests module now comes last (`items_after_test_module`),
+  and `Scene`'s user picture is laid with `over_pre_run` (it was `chunks_exact`).
 - **Mac timing note:** with the machine busy (load average about 7 today), the app's main thread lands on the
   efficiency cores and in-app timings swing about 3×. Compare against the default theme measured at the same
   time.
