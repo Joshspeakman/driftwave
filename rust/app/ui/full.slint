@@ -185,6 +185,135 @@ component PageTitle inherits GlowText {
 }
 
 
+
+// The player card's decorations (decor.rs drives them from the music): an LCD marquee, spectrum bars, a backlit
+// tuning dial and VU meters.
+export global Decor {
+    in property <bool> lcd;
+    in property <color> lcd-ink: #00E000;
+    in property <color> lcd-back: #050805;
+    in property <color> lcd-stroke: #808080;
+    in property <string> lcd-font: "Consolas";
+    in property <string> lcd-text;
+    in property <string> lcd-info;
+    in property <float> lcd-time;
+    in property <bool> analyzer;
+    in property <[float]> bars;
+    in property <[float]> peaks;
+    in property <bool> dial;
+    in property <color> dial-ink: #F2A65A;
+    in-out property <float> needle: 0.02;
+    in property <bool> vu;
+    in-out property <float> vu-left: -48;
+    in-out property <float> vu-right: -48;
+}
+
+// The track on a green LCD, scrolling when it doesn't fit, with the bitrate and state below.
+component LcdPanel inherits Rectangle {
+    height: 64px;
+    border-radius: 2px; border-width: 1px; border-color: Decor.lcd-stroke; background: Decor.lcd-back;
+    clip: true;
+    strip := Rectangle {
+        x: 10px; y: 4px; width: parent.width - 20px; height: 32px; clip: true;
+        property <float> tw: line.preferred-width / 1px;
+        property <bool> scrolls: line.preferred-width > self.width;
+        property <length> off: self.scrolls ? -mod(Decor.lcd-time * 38, max(1, self.tw)) * 1px : 0px;
+        line := Text { x: parent.off; y: 0; text: Decor.lcd-text; color: Decor.lcd-ink; font-family: Decor.lcd-font; font-size: 26px; }
+        if strip.scrolls: Text {
+            x: strip.off + line.preferred-width; y: 0;
+            text: Decor.lcd-text; color: Decor.lcd-ink; font-family: Decor.lcd-font; font-size: 26px;
+        }
+    }
+    Text {
+        x: 10px; y: 38px; width: parent.width - 20px; overflow: elide;
+        text: Decor.lcd-info; color: Decor.lcd-ink.transparentize(0.3); font-family: Decor.lcd-font; font-size: 17px;
+    }
+}
+
+// Spectrum bars: green rising through yellow to red, in segments, with peaks that fall slowly.
+component SpectrumBars inherits Rectangle {
+    height: 66px;
+    border-radius: 2px; border-width: 1px; border-color: Decor.lcd-stroke; background: Decor.lcd-back;
+    clip: true;
+    property <length> bw: (self.width - 12px - 18 * 3px) / 19;
+    for v[i] in Decor.bars: Rectangle {
+        x: 6px + i * (root.bw + 3px); y: 6px; width: root.bw; height: 54px;
+        Rectangle { background: @linear-gradient(0deg, #00C800 0%, #78E600 45%, #F0DC00 70%, #FF3C14 100%); }
+        Rectangle { y: 0; height: parent.height * (1 - v); background: Decor.lcd-back; }
+        if Decor.peaks[i] > 0: Rectangle {
+            y: clamp(parent.height * (1 - Decor.peaks[i]) - 2px, 0px, parent.height - 2px); height: 2px; background: #C8FFC8;
+        }
+    }
+    for k in 18: Rectangle { x: 6px; y: 6px + k * 3px; width: root.width - 12px; height: 1px; background: Decor.lcd-back; }
+}
+
+// A backlit FM dial, 88 to 108 MHz; the pointer swings to each station's own spot.
+component TuningDial inherits Rectangle {
+    height: 58px;
+    border-radius: 6px; border-width: 1px; border-color: #140C06;
+    background: @linear-gradient(180deg, #0E0A07 0%, #1E150D 100%);
+    clip: true;
+    property <length> left: 22px;
+    property <length> right: self.width - 22px;
+    Rectangle {
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; width: parent.width * 1.1; height: self.width;
+        background: @radial-gradient(circle, Decor.dial-ink.transparentize(0.72) 0%, Decor.dial-ink.transparentize(1) 50%);
+    }
+    for m in 21: Rectangle {
+        property <bool> major: mod(m, 4) == 0;
+        x: root.left + m / 20 * (root.right - root.left); width: 1px;
+        height: self.major ? 12px : 6px; y: root.height - 18px - self.height;
+        background: #F3E3C3.transparentize(self.major ? 0.1 : 0.45);
+    }
+    for m in 6: Text {
+        x: root.left + m * 4 / 20 * (root.right - root.left) - self.width / 2; y: root.height - 17px;
+        text: 88 + m * 4; color: #F3E3C3; font-size: 11px; font-family: "Bahnschrift";
+    }
+    Text { x: 6px; y: 4px; text: "FM"; color: Decor.dial-ink; font-size: 10px; font-weight: 700; font-family: "Bahnschrift"; }
+    Text { x: root.width - 28px; y: 4px; text: "MHz"; color: #F3E3C3B3; font-size: 10px; font-family: "Bahnschrift"; }
+    property <length> nx: root.left + Decor.needle * (root.right - root.left);
+    Rectangle {
+        x: root.nx - 5px; y: 5px; width: 10px; height: root.height - 10px;
+        background: @linear-gradient(90deg, #FF5A2800 0%, #FF5A286E 50%, #FF5A2800 100%);
+    }
+    Rectangle { x: root.nx - 1.25px; y: 5px; width: 2.5px; height: root.height - 10px; background: #FF5A28; }
+}
+
+// One VU meter: a cream face with its scale and red zone, and a needle on a spring. Drawn for 124×80 and scaled.
+component VuMeter inherits Rectangle {
+    in property <string> channel;
+    in property <float> angle: -48;
+    border-radius: 6px; border-width: 1px; border-color: #140C06;
+    background: @linear-gradient(180deg, #F8ECCD 0%, #E2CA96 100%);
+    clip: true;
+    property <float> k: min(self.width / 124px, self.height / 80px);
+    property <length> ox: (self.width - 124px * self.k) / 2;
+    property <length> oy: (self.height - 80px * self.k) / 2;
+    Path {
+        x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
+        stroke: #281C12; stroke-width: 1.3px * root.k; fill: transparent;
+        commands: "M 28.56 41.89 L 21.87 35.87 M 30.50 34.46 L 27.29 30.63 M 36.03 30.45 L 33.38 26.21 M 43.70 30.89 L 40.04 22.67 M 48.49 24.90 L 47.12 20.09 M 55.18 23.48 L 54.48 18.53 M 62.00 27.00 L 62.00 18.00 M 68.82 23.48 L 69.52 18.53 M 75.51 24.90 L 76.88 20.09";
+    }
+    Path {
+        x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
+        stroke: #C8281E; stroke-width: 2px * root.k; fill: transparent;
+        commands: "M 80.30 30.89 L 83.96 22.67 M 87.97 30.45 L 90.62 26.21 M 93.50 34.46 L 96.71 30.63 M 95.44 41.89 L 102.13 35.87";
+    }
+    Path {
+        x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
+        stroke: #C8281E; stroke-width: 3px * root.k; fill: transparent;
+        commands: "M 85.18 19.93 A 57 57 0 0 1 104.36 33.86";
+    }
+    Text { x: root.ox + 53px * root.k; y: root.oy + 40px * root.k; text: "VU"; color: #281C12; font-size: 12px * root.k; font-weight: 700; font-family: "Bahnschrift"; }
+    Text { x: root.ox + 6px * root.k; y: root.oy + 62px * root.k; text: root.channel; color: #281C12B3; font-size: 10px * root.k; font-family: "Bahnschrift"; }
+    Path {
+        x: root.ox; y: root.oy; width: 124px * root.k; height: 80px * root.k; viewbox-width: 124; viewbox-height: 80;
+        stroke: #140E0A; stroke-width: 1.6px * root.k; fill: transparent;
+        commands: "M 62 72 L \{62 + 58 * sin(root.angle * 1deg)} \{72 - 58 * cos(root.angle * 1deg)}";
+    }
+    Rectangle { x: root.ox + 57.5px * root.k; y: root.oy + 67.5px * root.k; width: 9px * root.k; height: self.width; border-radius: self.width / 2; background: #281C12; }
+}
+
 export struct StationCard {
     name: string,
     detail: string,
@@ -813,20 +942,39 @@ export component FullView inherits Rectangle {
                     Text { text: "Choose a station from your library."; color: Th.card-text2; font-size: 12px; horizontal-alignment: center; wrap: word-wrap; }
                 }
                 if root.station != "": Rectangle {
-                    Cover { x: 30px; y: 24px; width: 240px; height: 240px; source: root.cover; has-source: root.has-cover; small: root.cover-small; c1: root.cover-c1; c2: root.cover-c2; }
-                    Text { x: 20px; y: 280px; width: parent.width - 40px; text: root.station; color: Th.card-text; font-size: 17px; font-weight: 600;
+                    property <length> top: Decor.dial ? 74px : 0px;
+                    property <length> bars-h: Decor.analyzer ? 74px : 0px;
+                    property <length> vu-h: Decor.vu ? 92px : 0px;
+                    property <length> extra: self.top + (Decor.lcd ? 30px : 0px) + self.bars-h + self.vu-h;
+                    property <length> cover-s: clamp(240px - self.extra * 0.7, 140px, 240px);
+                    property <length> y-name: 24px + self.top + self.cover-s + 16px;
+                    property <length> y-song: self.y-name + 50px;
+                    property <length> y-ctl: self.y-song + (Decor.lcd ? 80px : 50px);
+                    property <length> y-dec: self.y-ctl + 56px;
+                    property <length> y-rec: self.y-dec + self.bars-h + self.vu-h + (Decor.analyzer || Decor.vu ? 0px : 4px);
+                    if Decor.dial: TuningDial { x: 16px; y: 16px; width: parent.width - 32px; }
+                    Cover { x: (parent.width - parent.cover-s) / 2; y: 24px + parent.top; width: parent.cover-s; height: parent.cover-s;
+                        source: root.cover; has-source: root.has-cover; small: root.cover-small; c1: root.cover-c1; c2: root.cover-c2; }
+                    Text { x: 20px; y: parent.y-name; width: parent.width - 40px; text: root.station; color: Th.card-text; font-size: 17px; font-weight: 600;
                         horizontal-alignment: center; wrap: word-wrap; max-height: 48px; overflow: elide; }
-                    Text { x: 20px; y: 330px; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; color: Th.card-text; font-size: 13px; font-weight: 600;
+                    if !Decor.lcd: Text { x: 20px; y: parent.y-song; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; color: Th.card-text; font-size: 13px; font-weight: 600;
                         horizontal-alignment: center; overflow: elide; }
-                    Text { x: 20px; y: 350px; width: parent.width - 40px; text: root.artist; color: Th.card-text2; font-size: 12px; horizontal-alignment: center; overflow: elide; }
+                    if !Decor.lcd: Text { x: 20px; y: parent.y-song + 20px; width: parent.width - 40px; text: root.artist; color: Th.card-text2; font-size: 12px; horizontal-alignment: center; overflow: elide; }
+                    if Decor.lcd: LcdPanel { x: 16px; y: parent.y-song - 6px; width: parent.width - 32px; }
+                    if Decor.analyzer: SpectrumBars { x: 16px; y: parent.y-dec; width: parent.width - 32px; }
+                    if Decor.vu: HorizontalLayout {
+                        x: 16px; y: parent.y-dec + parent.bars-h; width: parent.width - 32px; height: 82px; spacing: 10px;
+                        VuMeter { channel: "L"; angle: Decor.vu-left; }
+                        VuMeter { channel: "R"; angle: Decor.vu-right; }
+                    }
                     RoundButton {
-                        x: 24px; y: 380px; primary: true;
+                        x: 24px; y: parent.y-ctl; primary: true;
                         glyph: root.playing || root.loading ? "M 3 3 L 13 3 L 13 13 L 3 13 Z" : "M 4 2 L 14 8 L 4 14 Z";
                         clicked => { if (root.playing || root.loading) { root.stop(); } else { root.play(); } }
                     }
                     // Volume.
                     Rectangle {
-                        x: 80px; y: 392px; width: 190px; height: 20px;
+                        x: 80px; y: parent.y-ctl + 12px; width: 190px; height: 20px;
                         Rectangle { y: 8px; height: 4px; border-radius: 2px; background: Th.control-stroke; }
                         Rectangle { y: 8px; height: 4px; width: parent.width * root.volume; border-radius: 2px; background: Th.accent; }
                         Rectangle { x: parent.width * root.volume - 9px; y: 1px; width: 18px; height: 18px; border-radius: 9px; background: Th.control;
@@ -839,7 +987,7 @@ export component FullView inherits Rectangle {
                     }
                     // Recording.
                     Rectangle {
-                        x: 16px; y: 440px; width: parent.width - 32px; height: 52px; border-radius: Th.radius-control;
+                        x: 16px; y: parent.y-rec; width: parent.width - 32px; height: 52px; border-radius: Th.radius-control;
                         background: Th.control; border-width: 1px; border-color: Th.control-stroke;
                         rec-ta := TouchArea { clicked => { root.toggle-record(); } }
                         Rectangle { x: 14px; y: 18px; width: 16px; height: 16px; border-radius: 8px; border-width: 2px;
@@ -850,9 +998,9 @@ export component FullView inherits Rectangle {
                             text: root.record-armed ? "Every song is saved as its own file." : "Click to save every song as its own file."; }
                     }
                     // Played songs.
-                    Text { x: 18px; y: 508px; text: "Played Tracks"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
+                    Text { x: 18px; y: parent.y-rec + 68px; text: "Played Tracks"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
                     Flickable {
-                        x: 12px; y: 530px; width: parent.width - 24px; height: max(0px, parent.height - 540px);
+                        x: 12px; y: parent.y-rec + 90px; width: parent.width - 24px; height: max(0px, parent.height - parent.y-rec - 100px);
                         content-height: root.tracks.length * 40px;
                         for t[i] in root.tracks: Rectangle {
                             y: i * 40px; height: 38px; border-radius: Th.radius-control; background: Th.subtle;

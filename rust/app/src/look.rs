@@ -286,6 +286,7 @@ impl App {
         self.look.last_motion = None;
         self.look.started.get_or_insert_with(Instant::now);
         self.look.valve = Valve::default();
+        self.apply_decor(theme);
         self.refresh_list();
         self.refresh_found();
         self.show_now_playing_cover();
