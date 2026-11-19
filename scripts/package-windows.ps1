@@ -1,6 +1,7 @@
 # Builds Driftwave and packages it as a release: dist\Driftwave-<version>-win-x64.zip and its .sha256, the two assets
 # the in-app updater looks for on a v<version> release. Publishing them is a separate, deliberate step.
-# The zip holds Driftwave.exe, the built-in themes and their art, Install.ps1, uninstall.ps1 and README.txt.
+# The zip holds Driftwave.exe, the built-in themes and their art, Install.ps1, uninstall.ps1, README.txt and the
+# license (GPL-3.0-or-later).
 # Usage: scripts\package-windows.ps1 [-NoBuild]
 param([switch]$NoBuild)
 $ErrorActionPreference = 'Stop'
@@ -22,6 +23,7 @@ Copy-Item $exe (Join-Path $stage 'Driftwave.exe')
 Copy-Item (Join-Path $repo 'themes') (Join-Path $stage 'themes') -Recurse
 Copy-Item (Join-Path $repo 'assets\theme-art') (Join-Path $stage 'theme-art') -Recurse
 Copy-Item (Join-Path $repo 'assets\icons\driftwave.ico') $stage
+Copy-Item (Join-Path $repo 'LICENSE') (Join-Path $stage 'LICENSE.txt')
 foreach ($f in 'Install.ps1', 'uninstall.ps1', 'README.txt') { Copy-Item (Join-Path $PSScriptRoot "windows\$f") $stage }
 
 $zip = Join-Path $dist "$name.zip"

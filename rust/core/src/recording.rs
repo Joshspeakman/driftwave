@@ -1,4 +1,8 @@
 //! Cutting a live stream into one file per track. Port of `ShortwaveCore/Recording.cs`.
+//!
+//! The recording states, what each is called and how it's explained, follow GNOME Shortwave's
+//! (`src/audio/recording_state.rs`, Copyright (C) 2024-2025 Felix Häcker, GPL-3.0-or-later), from which Driftwave's
+//! recording design is drawn.
 
 use crate::icy::RecordableFormat;
 use std::fs::{self, File};

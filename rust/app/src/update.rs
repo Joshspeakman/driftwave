@@ -26,7 +26,7 @@ pub const REPO: &str = "Joshspeakman/driftwave";
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Release {
     pub tag: String,
-    pub version: [u32; 3],
+    pub version: Version,
     pub title: String,
     pub zip: Option<String>,
     pub size: u64,
@@ -40,20 +40,76 @@ pub(crate) struct Updates {
     busy: bool,
 }
 
-/// "1.0.41" (or "1.0.41-beta.1": the number decides; the label is only shown).
-pub(crate) fn parse_version(s: &str) -> Option<[u32; 3]> {
-    let s = s.split(['-', '+']).next()?;
-    let mut parts = s.split('.').map(|p| p.parse::<u32>().ok());
-    let v = [parts.next()??, parts.next().unwrap_or(Some(0))?, parts.next().unwrap_or(Some(0))?];
-    Some(v)
+/// A version as semver orders them: 1.0.0-alpha.1 < 1.0.0-alpha.2 < 1.0.0-alpha.10 < 1.0.0-beta < 1.0.0 < 1.0.1. A
+/// pre-release's parts compare as numbers when both are numbers, else as text, numbers first.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Version {
+    pub num: [u32; 3],
+    pub pre: Vec<String>,
 }
 
-pub(crate) fn current() -> [u32; 3] {
-    parse_version(env!("CARGO_PKG_VERSION")).unwrap_or([0, 0, 0])
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering::*;
+        match self.num.cmp(&other.num) {
+            Equal => {}
+            o => return o,
+        }
+        match (self.pre.is_empty(), other.pre.is_empty()) {
+            (true, true) => return Equal,
+            (true, false) => return Greater,
+            (false, true) => return Less,
+            _ => {}
+        }
+        for (a, b) in self.pre.iter().zip(&other.pre) {
+            let o = match (a.parse::<u64>(), b.parse::<u64>()) {
+                (Ok(x), Ok(y)) => x.cmp(&y),
+                (Ok(_), Err(_)) => Less,
+                (Err(_), Ok(_)) => Greater,
+                _ => a.cmp(b),
+            };
+            if o != Equal {
+                return o;
+            }
+        }
+        self.pre.len().cmp(&other.pre.len())
+    }
 }
 
-fn shown(v: [u32; 3]) -> String {
-    format!("{}.{}.{}", v[0], v[1], v[2])
+impl PartialOrd for Version {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.num[0], self.num[1], self.num[2])?;
+        if !self.pre.is_empty() {
+            write!(f, "-{}", self.pre.join("."))?;
+        }
+        Ok(())
+    }
+}
+
+/// "1.0.41", "1.0.0-alpha.2" (build metadata after '+' is ignored).
+pub(crate) fn parse_version(s: &str) -> Option<Version> {
+    let s = s.split('+').next()?;
+    let (core, pre) = match s.split_once('-') {
+        Some((c, p)) => (c, p.split('.').filter(|x| !x.is_empty()).map(String::from).collect()),
+        None => (s, Vec::new()),
+    };
+    let mut parts = core.split('.').map(|p| p.parse::<u32>().ok());
+    let num = [parts.next()??, parts.next().unwrap_or(Some(0))?, parts.next().unwrap_or(Some(0))?];
+    Some(Version { num, pre })
+}
+
+pub(crate) fn current() -> Version {
+    parse_version(env!("CARGO_PKG_VERSION")).unwrap_or(Version { num: [0, 0, 0], pre: Vec::new() })
+}
+
+fn shown(v: &Version) -> String {
+    v.to_string()
 }
 
 /// The release zip for this computer.
@@ -116,7 +172,8 @@ pub(crate) fn parse_atom(xml: &str) -> Vec<Release> {
             let id = between(e, "<id>", "</id>")?;
             let tag = id.rsplit('/').next()?.to_string();
             let version = tag.strip_prefix('v').and_then(parse_version)?;
-            let v = tag.trim_start_matches('v').split('-').next()?.to_string();
+            // The release's own version, alpha label and all: its zip is named with it.
+            let v = tag.trim_start_matches('v').to_string();
             let zip = format!("https://github.com/{REPO}/releases/download/{tag}/Driftwave-{v}{ASSET}");
             Some(Release {
                 title: between(e, "<title>", "</title>").unwrap_or_else(|| tag.clone()),
@@ -264,7 +321,7 @@ impl App {
     }
 
     pub(crate) fn show_updates(&self) {
-        self.upd_show("idle", &format!("Driftwave {}", shown(current())), "Looks for newer versions on GitHub.");
+        self.upd_show("idle", &format!("Driftwave {}", shown(&current())), "Looks for newer versions on GitHub.");
     }
 
     /// The launch check: at most once every 20 hours, unless turned off.
@@ -288,11 +345,11 @@ impl App {
             return;
         }
         let Some(feed) = self.upd_feed() else {
-            self.upd_show("failed", &format!("Driftwave {}", shown(current())), "Test runs don't check for updates (give them -updateFeed to try it).");
+            self.upd_show("failed", &format!("Driftwave {}", shown(&current())), "Test runs don't check for updates (give them -updateFeed to try it).");
             return;
         };
         self.updates.busy = true;
-        self.upd_show("checking", &format!("Driftwave {}", shown(current())), "Checking for updates…");
+        self.upd_show("checking", &format!("Driftwave {}", shown(&current())), "Checking for updates…");
         let test = self.args.test_run();
         let windows = cfg!(windows);
         finding::background(
@@ -306,14 +363,14 @@ impl App {
                             app.save_settings();
                         }
                         // On Windows only a release with its zip counts; a Mac is offered the page.
-                        let best = list.into_iter().filter(|r| r.version > current() && (!windows || r.zip.is_some())).max_by_key(|r| r.version);
-                        log(&format!("update check: current {}, latest {}", shown(current()), best.as_ref().map(|b| shown(b.version)).unwrap_or("none newer".into())));
+                        let best = list.into_iter().filter(|r| r.version > current() && (!windows || r.zip.is_some())).max_by_key(|r| r.version.clone());
+                        log(&format!("update check: current {}, latest {}", shown(&current()), best.as_ref().map(|b| shown(&b.version)).unwrap_or("none newer".into())));
                         match &best {
                             Some(b) => {
-                                let name = if b.title.starts_with("Driftwave") { b.title.clone() } else { format!("Driftwave {}", shown(b.version)) };
-                                app.upd_show("available", &format!("{name} is available"), &format!("You have {}.", shown(current())));
+                                let name = if b.title.starts_with("Driftwave") { b.title.clone() } else { format!("Driftwave {}", shown(&b.version)) };
+                                app.upd_show("available", &format!("{name} is available"), &format!("You have {}.", shown(&current())));
                             }
-                            None => app.upd_show("uptodate", &format!("Driftwave {}", shown(current())), &format!("Up to date · checked {}", crate::played::short_time())),
+                            None => app.upd_show("uptodate", &format!("Driftwave {}", shown(&current())), &format!("Up to date · checked {}", crate::played::short_time())),
                         }
                         let found = best.is_some();
                         app.updates.latest = best;
@@ -324,7 +381,7 @@ impl App {
                     }
                     Err(e) => {
                         log(&format!("update check failed: {e}"));
-                        app.upd_show("failed", &format!("Driftwave {}", shown(current())), &format!("Couldn't check for updates: {e}"));
+                        app.upd_show("failed", &format!("Driftwave {}", shown(&current())), &format!("Couldn't check for updates: {e}"));
                     }
                 }
             },
@@ -352,7 +409,7 @@ impl App {
     #[cfg(windows)]
     fn download_and_install(&mut self, release: Release) {
         let (Some(zip), Some(sha)) = (release.zip.clone(), release.sha.clone()) else {
-            self.upd_show("failed", &format!("Driftwave {}", shown(current())), "Couldn't update: the release has no checksum file.");
+            self.upd_show("failed", &format!("Driftwave {}", shown(&current())), "Couldn't update: the release has no checksum file.");
             return;
         };
         let Ok(exe) = std::env::current_exe() else { return };
@@ -360,11 +417,11 @@ impl App {
         let dir = self.paths.updates();
         let registry = if self.args.test_run() { String::new() } else { format!(r"HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{}", driftwave_platform::winapp::AUMID) };
         self.updates.busy = true;
-        self.upd_show("downloading", &format!("Downloading Driftwave {}", shown(release.version)), "Starting…");
+        self.upd_show("downloading", &format!("Downloading Driftwave {}", shown(&release.version)), "Starting…");
         if let Some(ui) = self.ui.upgrade() {
             ui.global::<Upd>().set_progress(0.0);
         }
-        let version = shown(release.version);
+        let version = shown(&release.version);
         let _ = std::thread::Builder::new().name("driftwave-update".into()).spawn(move || {
             let work = || -> Result<(), String> {
                 let _ = std::fs::remove_dir_all(&dir);
@@ -424,7 +481,7 @@ impl App {
                 Err(e) => post(move |app| {
                     app.updates.busy = false;
                     log(&format!("update failed: {e}"));
-                    app.upd_show("failed", &format!("Driftwave {}", shown(current())), &format!("Couldn't update: {e}"));
+                    app.upd_show("failed", &format!("Driftwave {}", shown(&current())), &format!("Couldn't update: {e}"));
                 }),
             }
         });
@@ -483,11 +540,25 @@ mod tests {
 
     #[test]
     fn versions_compare_by_number() {
-        assert_eq!(parse_version("1.0.41"), Some([1, 0, 41]));
-        assert_eq!(parse_version("1.0.41-beta.1"), Some([1, 0, 41]));
-        assert_eq!(parse_version("2"), Some([2, 0, 0]));
-        assert!(parse_version("1.0.41").unwrap() > parse_version("1.0.9").unwrap());
+        let v = |s: &str| parse_version(s).unwrap();
+        assert_eq!(v("1.0.41").num, [1, 0, 41]);
+        assert_eq!(v("2").num, [2, 0, 0]);
+        assert!(v("1.0.41") > v("1.0.9"));
         assert_eq!(parse_version("nightly"), None);
+        assert_eq!(v("1.0.0-alpha.2").to_string(), "1.0.0-alpha.2");
+    }
+
+    #[test]
+    fn alphas_come_in_order_and_before_the_release() {
+        let v = |s: &str| parse_version(s).unwrap();
+        // So an alpha's updater offers the next alpha, and then the release.
+        assert!(v("1.0.0-alpha.1") < v("1.0.0-alpha.2"));
+        assert!(v("1.0.0-alpha.2") < v("1.0.0-alpha.10"));
+        assert!(v("1.0.0-alpha.10") < v("1.0.0-beta"));
+        assert!(v("1.0.0-beta") < v("1.0.0-beta.1"));
+        assert!(v("1.0.0-rc.1") < v("1.0.0"));
+        assert!(v("1.0.0") < v("1.0.1-alpha.1"));
+        assert_eq!(v("1.0.0+build.5"), v("1.0.0"));
     }
 
     #[test]
@@ -502,7 +573,7 @@ mod tests {
         ]"#;
         let r = parse_releases(json, false);
         assert_eq!(r.len(), 2);
-        assert_eq!(r[0].version, [1, 2, 0]);
+        assert_eq!(r[0].version.num, [1, 2, 0]);
         assert!(r[0].zip.is_some() && r[0].sha.is_some());
         assert_eq!(r[0].title, "Driftwave 1.2");
         // Another host's zip is never taken.
@@ -515,7 +586,7 @@ mod tests {
             <entry><id>tag:github.com,2008:Repository/1/notes</id><title>x</title></entry></feed>"#;
         let r = parse_atom(xml);
         assert_eq!(r.len(), 1);
-        assert_eq!(r[0].version, [1, 4, 2]);
+        assert_eq!(r[0].version.num, [1, 4, 2]);
         assert_eq!(r[0].zip.as_deref(), Some("https://github.com/Joshspeakman/driftwave/releases/download/v1.4.2/Driftwave-1.4.2-win-x64.zip"));
     }
 }
