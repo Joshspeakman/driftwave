@@ -15,9 +15,10 @@
 //! -swapAt <s>[,<s>…], -still, -search <text>, -details <n>, -double, -shade, -noVis,
 //! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
 //! -screenshotDelay <s>, -quitAfter <s>.
-// A Windows app, not a console program: opened from the Start menu it has no terminal window beside it. (Release
-// builds; a debug build keeps its console for logs. Logs still reach a redirected stderr, as the test scripts use.)
-#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+// A Windows app, not a console program: however it's opened (Start menu, Explorer, a debug build) it has no terminal
+// window beside it. Logs still reach a redirected stderr, as the test scripts use; a debug build run from a terminal
+// (cargo run) also writes them to that terminal (`attach_parent_console`).
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 /// macOS: see `mimalloc` in Cargo.toml.
 #[cfg(target_os = "macos")]
@@ -968,7 +969,20 @@ fn save_bmp(path: &str, buf: &SharedPixelBuffer<slint::Rgba8Pixel>) -> std::io::
     std::fs::write(path, out)
 }
 
+/// Windows debug builds: a GUI-subsystem exe gets no console, so when one is started from a terminal its logs would go
+/// nowhere. Borrow the terminal it was started from, if any. Opened from Explorer there is none and nothing appears.
+/// Handles that are already set (stderr redirected to a file by the test scripts) are left as they are.
+#[cfg(all(windows, debug_assertions))]
+fn attach_parent_console() {
+    use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+    unsafe {
+        AttachConsole(ATTACH_PARENT_PROCESS);
+    }
+}
+
 fn main() -> Result<(), slint::PlatformError> {
+    #[cfg(all(windows, debug_assertions))]
+    attach_parent_console();
     // The software renderer: measured at under half the CPU of the GPU one for this window (it redraws only what
     // changed) and 40 MB instead of 100. SLINT_BACKEND still overrides it.
     if std::env::var_os("SLINT_BACKEND").is_none() {
