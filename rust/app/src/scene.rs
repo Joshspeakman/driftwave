@@ -343,9 +343,7 @@ impl Scene {
     fn draw_user(&mut self, p: &mut Picture) {
         let Some((_, dim)) = self.user.clone() else { return };
         if let Some(img) = self.scaled("\0user", p.w as u32, p.h as u32, true) {
-            for (i, s) in img.as_raw().chunks_exact(4).enumerate() {
-                p.over_pre(i, s, 256);
-            }
+            p.over_pre_run(0, img.as_raw(), 256, 0);
         }
         if dim > 0.0 {
             for i in 0..p.w * p.h {

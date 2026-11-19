@@ -563,6 +563,8 @@ impl App {
                 }
             }
             self.paint_backdrop(ui, &g, scale, still);
+            // The valve's next reading starts after the painting (it isn't what moving costs).
+            self.look.valve.since = None;
             let layers = std::mem::take(&mut self.look.layers);
             self.place_eggs(&layers, &g);
             self.look.layers = layers;
