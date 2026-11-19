@@ -1,9 +1,9 @@
 # Driftwave
 
 Internet radio for Windows and macOS (Linux to follow): find a station, hear what's on, and keep the songs you love.
-One small app, written in Rust, with two looks: a full library app and a Classic player in the spirit of the Winamp
-years. Free and open source under the [GPL-3.0](LICENSE), and based on GNOME's
-[Shortwave](https://gitlab.gnome.org/World/Shortwave).
+One small app with two looks: a full library app and a Classic player in the spirit of the Winamp years. Built in
+Rust with one idea at its core: use as little of your computer as possible, with a tiny footprint. Free and open source
+under the [GPL-3.0](LICENSE), and based on GNOME's [Shortwave](https://gitlab.gnome.org/World/Shortwave).
 
 ![Driftwave: the Full layout in the Night Market theme, with the Classic player over it](docs/screenshots/hero.webp)
 
@@ -37,6 +37,27 @@ ever flashes: moving scenes hold still on a slower computer or when Driftwave is
 | ![Ninety-Five](docs/screenshots/full-ninety-five.webp) | ![Analog 70s](docs/screenshots/full-analog.webp) |
 
 ![Settings, with the theme gallery](docs/screenshots/full-themes.webp)
+
+## Light by design
+
+Driftwave is built in Rust around one idea: take as little of your computer as possible. It's one self-contained
+program with nothing else to install, it downloads in a moment, and while it plays it barely registers.
+
+| Measured on a Windows PC | |
+|---|---|
+| Download | 15.6 MB |
+| Memory | about 46 MB while playing |
+| CPU | under 1% of one core while playing (Default theme); a few percent with Classic's visualizer or a moving scene in front |
+
+How it stays that small:
+- **It draws only what changes,** in software, rather than starting up the graphics card for one window: in this
+  window that measured about half the CPU and less than half the memory (40 MB against 100) of GPU drawing. Moving
+  the visualizers to the graphics card was measured too: it would have cost 31 MB more and saved about 1% of a core.
+- **Out of sight, out of the way:** behind other windows its scenes hold still; minimised or closed to the
+  notification area, nothing draws at all, and only the radio plays.
+- **It knows its limits:** visualizers draw within a fixed pixel budget that shrinks on a slower computer, and moving
+  scenes hold still by themselves if they'd take more than their share.
+- **No needless work:** recordings are copied byte for byte from the stream, never re-encoded.
 
 ## What it does
 
