@@ -43,6 +43,9 @@ impl Visualizer for LiquidFeedback {
     fn blurb(&self) -> &'static str {
         "The music melting into itself: a slow zooming, turning, rippling feedback warp"
     }
+    fn resolution(&self) -> f32 {
+        0.5
+    }
 
     fn render(&mut self, a: &Analysis, c: &mut Canvas) {
         let (i, j, m) = preset_mix(a.time, MOODS.len(), 18.0, 6.0);
@@ -102,10 +105,11 @@ impl Visualizer for LiquidFeedback {
                 }
             };
             // Colour runs round the shape and drifts with time, so the melt carries rainbows of its own history.
-            let col = hsv(hue + f * 0.6 + t * 0.04, 0.85, 0.75);
+            // Line weight follows the picture's size, so a small slot doesn't pile up into white.
+            let col = hsv(hue + f * 0.6 + t * 0.04, 0.9, 0.6);
             if let Some((px, py)) = prev {
                 if ((x - px).powi(2) + (y - py).powi(2)) < (size * 0.2).powi(2) {
-                    c.line(px, py, x, y, col, 0.8, 1.5);
+                    c.line(px, py, x, y, col, 0.45, (size / 160.0).clamp(0.8, 1.5));
                 }
             }
             prev = Some((x, y));
