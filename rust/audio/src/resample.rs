@@ -75,8 +75,11 @@ impl Resampler {
         let mut out = Vec::with_capacity(((frames as f64 / step) as usize + 2) * oc);
         // Sample positions are relative to chans[c][2] (the newest history frame) = index 2.
         // We need p0..p3 = idx-1..idx+2, so idx+2 must exist: idx + 2 < frames + 3.
-        while (self.pos.floor() as usize) + 2 + 2 < frames + 3 {
-            let idx = self.pos.floor() as usize + 2;
+        // The position runs from -1 (a block's leftover from the last) upwards: floor it as a signed number. (Cast
+        // straight to usize, -1 became 0, and every block's first sample was read one input frame late: a click at
+        // every decoded frame.)
+        while (self.pos.floor() as i64) + 2 + 2 < (frames + 3) as i64 {
+            let idx = (self.pos.floor() as i64 + 2) as usize;
             let t = (self.pos - self.pos.floor()) as f32;
             for ch in &chans {
                 let (p0, p1, p2, p3) = (ch[idx - 1], ch[idx], ch[idx + 1], ch[idx + 2]);
@@ -121,5 +124,22 @@ mod tests {
         assert!((secs - 2.0).abs() < 0.01, "length {secs}");
         assert!((crossings_hz(&left, 48000) - 440.0).abs() < 2.0);
         assert_eq!(out.chunks(2).filter(|f| f[0] != f[1]).count(), 0, "mono goes to both sides");
+    }
+
+    #[test]
+    fn block_joins_are_seamless() {
+        // The same tone in one block and in decoder-sized blocks must come out the same, sample for sample.
+        for (rate, block) in [(44100u32, 1152usize), (44100, 1024), (32000, 1152), (22050, 576)] {
+            let input = tone(440.0, rate, 1.0);
+            let whole = Resampler::new(rate, 1, 48000, 1).process(&input);
+            let mut r = Resampler::new(rate, 1, 48000, 1);
+            let mut parts = Vec::new();
+            for b in input.chunks(block) {
+                parts.extend(r.process(b));
+            }
+            let n = whole.len().min(parts.len());
+            let worst = whole[..n].iter().zip(&parts[..n]).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
+            assert!(worst < 1e-5, "{rate} Hz in {block}-frame blocks: off by {worst} somewhere");
+        }
     }
 }
