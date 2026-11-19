@@ -82,6 +82,8 @@ public sealed class Theme
         ("vu", "VU meter (decorative)"),
         ("scene", "Theme scene and easter eggs"),
         ("windowTitle", "Window title style"),
+        ("drips", "Rain running down the glass"),
+        ("neonEdges", "Neon tubes round the panels"),
     ];
 
     public Color? Get(string token) => Colors.TryGetValue(token, out var c) ? c : null;
