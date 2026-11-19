@@ -1624,9 +1624,15 @@ fn main() -> Result<(), slint::PlatformError> {
     timer.start(slint::TimerMode::Repeated, Duration::from_micros(41_667), move || a.borrow_mut().tick());
 
     // Test runs: play at once, take a snapshot, quit after a while.
+    // (Read before playing: a borrow in an if-let's condition lasts through its body.)
+    let play_index = app.borrow().args.num("playIndex").map(|n| n as usize);
     if app.borrow().args.get("playURL").is_some() {
         let i = app.borrow().stations.iter().position(|s| s.id == "test-url").unwrap_or(0);
         app.borrow_mut().play(i);
+    } else if let Some(n) = play_index {
+        // Test runs: -playIndex <n> plays the library's station n.
+        let n = n.min(app.borrow().stations.len().saturating_sub(1));
+        app.borrow_mut().play(n);
     }
     if let Some(path) = app.borrow().args.get("screenshot").map(String::from) {
         let delay = app.borrow().args.num("screenshotDelay").unwrap_or(4.0);
