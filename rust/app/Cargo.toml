@@ -31,6 +31,13 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "accessibility", "backend-winit", "renderer-software", "unstable-winit-030"] }
 
 # The process's own CPU time: a moving scene steps back to still if it costs too much on this computer.
+[target.'cfg(target_os = "macos")'.dependencies]
+# The allocator: macOS's own keeps freed large blocks (a backdrop's window-sized scratch pictures) dirty in
+# a reclaim cache, about 100 MB more footprint with a scene theme on a Retina screen; mimalloc returns them.
+mimalloc = { version = "0.1", default-features = false }
+# The patched softbuffer (vendor/), for its see-through switch under the scene layers.
+softbuffer = { version = "0.4", default-features = false }
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }
 [target.'cfg(unix)'.dependencies]

@@ -14,6 +14,8 @@ use crate::fullpal::FullPalette;
 use crate::scene::{self, Geometry, Scene};
 use driftwave_core::theme::{Color, Theme};
 use serde_json::{Map, Value};
+use driftwave_platform::layers::SceneLayers;
+use slint::winit_030::{winit, WinitWindowAccessor};
 use slint::{ComponentHandle, Image, ModelRc, Rgb8Pixel, Rgba8Pixel, SharedPixelBuffer, VecModel};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -104,6 +106,13 @@ pub struct Look {
     /// The last motion frames' cost, for DRIFTWAVE_LOG.
     motion_ms: f64,
     motion_frames: u32,
+    /// macOS: the scene's backdrop and motion as layers beneath the UI (see `driftwave_platform::layers`),
+    /// once made; whether making them is settled; whether the UI is drawn see-through over them now;
+    /// and a hide left for the next tick (after the UI has gone opaque again, so nothing shows through).
+    layers: Option<SceneLayers>,
+    layers_settled: bool,
+    native_on: bool,
+    hide_layers: bool,
 }
 
 type Key = (u32, u32, bool, bool, i32);
@@ -304,6 +313,65 @@ impl App {
     }
 
     /// Paints the scene when it needs it, and what moves when it's due. Called every tick in the Full layout.
+    /// The scene's layers, made the first time they're needed. None off the Mac, for `-screenshot` (which
+    /// captures only what Slint draws), with DRIFTWAVE_SLINT_SCENE set, or if they couldn't be made.
+    fn scene_layers(&mut self, ui: &MainWindow) -> Option<&mut SceneLayers> {
+        if !self.look.layers_settled {
+            let wanted = cfg!(target_os = "macos") && self.args.get("screenshot").is_none() && std::env::var_os("DRIFTWAVE_SLINT_SCENE").is_none();
+            // `None` while winit has no window yet: try again on the next backdrop.
+            let made = if wanted {
+                ui.window().with_winit_window(|w: &winit::window::Window| {
+                    use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+                    match w.window_handle().map(|h| h.as_raw()) {
+                        Ok(RawWindowHandle::AppKit(h)) => SceneLayers::new(h.ns_view.as_ptr()),
+                        _ => None,
+                    }
+                })
+            } else {
+                Some(None)
+            };
+            if let Some(layers) = made {
+                self.look.layers_settled = true;
+                self.look.layers = layers;
+                if wanted {
+                    log(&format!("scene layers: {}", if self.look.layers.is_some() { "native" } else { "unavailable, drawn by the UI" }));
+                }
+            }
+        }
+        self.look.layers.as_mut()
+    }
+
+    /// Draws the UI see-through over the scene's layers (on), or opaque again (off).
+    fn set_native(&mut self, ui: &MainWindow, on: bool) {
+        if self.look.native_on == on {
+            return;
+        }
+        self.look.native_on = on;
+        ui.global::<Scenery>().set_native(on);
+        #[cfg(target_os = "macos")]
+        softbuffer::set_see_through(on);
+        if on {
+            self.look.hide_layers = false;
+            if let Some(l) = self.look.layers.as_mut() {
+                l.set_visible(true);
+            }
+        } else {
+            self.look.hide_layers = true;
+        }
+    }
+
+    /// No scene showing (Classic, or a theme without one): the UI goes opaque, then the layers hide.
+    pub(crate) fn park_look(&mut self, ui: &MainWindow) {
+        if self.look.native_on {
+            self.set_native(ui, false);
+        } else if self.look.hide_layers {
+            self.look.hide_layers = false;
+            if let Some(l) = self.look.layers.as_mut() {
+                l.set_visible(false);
+            }
+        }
+    }
+
     pub(crate) fn tick_look(&mut self, ui: &MainWindow, now: Instant, dt: f32, focused: bool) {
         let scenery = ui.global::<Scenery>();
         // Signs that show the time change with the minute.
@@ -347,7 +415,12 @@ impl App {
         }
 
         if self.look.scene.is_none() {
+            self.park_look(ui);
             return;
+        }
+        // Back in the Full layout with the backdrop already on its layer: show it again.
+        if self.look.painted.is_some() && self.look.layers.as_ref().is_some_and(|l| l.ready()) {
+            self.set_native(ui, true);
         }
         let player = ui.get_show_player();
         let title_end = ui.get_title_end();
@@ -403,9 +476,16 @@ impl App {
         let t0 = Instant::now();
         // Soft things (rain, light, colour) scale up smoothly: no finer than 0.6 px a point on dense screens.
         let m = scene.motion(&g, (scale * scene.motion_scale).min(0.6), t, mdt);
-        let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&m.px, m.w as u32, m.h as u32);
-        scenery.set_motion(Image::from_rgba8_premultiplied(buf));
-        scenery.set_moving(true);
+        if self.look.native_on {
+            // The GPU stretches and blends it: nothing in the UI is redrawn.
+            if let Some(l) = self.look.layers.as_mut() {
+                l.set_motion(Some((&m.px, m.w, m.h)));
+            }
+        } else {
+            let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&m.px, m.w as u32, m.h as u32);
+            scenery.set_motion(Image::from_rgba8_premultiplied(buf));
+            scenery.set_moving(true);
+        }
         self.look.motion_ms += t0.elapsed().as_secs_f64() * 1000.0;
         self.look.motion_frames += 1;
         if self.look.motion_frames == 120 {
@@ -420,6 +500,8 @@ impl App {
         let t0 = Instant::now();
         let back = scene.backdrop(g, scale, still);
         let front = scene.front(g, scale);
+        // The full-window scaled art isn't needed until the next backdrop (motion's pictures are smaller).
+        scene.forget_large((back.w * back.h / 2) as u64);
         // See-through panels: as see-through as the theme asks, unless the picture behind would drown their text.
         // With motion, a little more (lights pass behind them).
         if let Some(p) = self.look.panels {
@@ -436,13 +518,26 @@ impl App {
             }
             th.set_pane(lift(p.pane, scene::readable_alpha(&back, px(g.region(Some("pane"))), p.pane, p.pane_text, target)));
         }
-        // Opaque, so it goes to the UI as RGB: drawn by copying, not blending.
-        let mut buf = SharedPixelBuffer::<Rgb8Pixel>::new(back.w as u32, back.h as u32);
-        for (d, s) in buf.make_mut_bytes().chunks_exact_mut(3).zip(back.px.chunks_exact(4)) {
-            d.copy_from_slice(&s[..3]);
+        let native = if let Some(layers) = self.scene_layers(ui) {
+            // macOS: onto its layer beneath the UI, which then draws see-through over it.
+            layers.set_backdrop(&back.px, back.w, back.h);
+            if still {
+                layers.set_motion(None);
+            }
+            true
+        } else {
+            // Opaque, so it goes to the UI as RGB: drawn by copying, not blending.
+            let mut buf = SharedPixelBuffer::<Rgb8Pixel>::new(back.w as u32, back.h as u32);
+            for (d, s) in buf.make_mut_bytes().chunks_exact_mut(3).zip(back.px.chunks_exact(4)) {
+                d.copy_from_slice(&s[..3]);
+            }
+            ui.global::<Scenery>().set_back(Image::from_rgb8(buf));
+            false
+        };
+        if native {
+            self.set_native(ui, true);
         }
         let scenery = ui.global::<Scenery>();
-        scenery.set_back(Image::from_rgb8(buf));
         match front {
             Some(f) => {
                 scenery.set_front(Image::from_rgba8_premultiplied(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&f.px, f.w as u32, f.h as u32)));
@@ -454,6 +549,6 @@ impl App {
             scenery.set_moving(false);
         }
         self.look.last_motion = None;
-        log(&format!("scene backdrop {}×{} {}in {:.1} ms", back.w, back.h, if still { "(still) " } else { "" }, t0.elapsed().as_secs_f64() * 1000.0));
+        log(&format!("scene backdrop {}×{} {}in {:.1} ms{}", back.w, back.h, if still { "(still) " } else { "" }, t0.elapsed().as_secs_f64() * 1000.0, if native { " (layer)" } else { "" }));
     }
 }

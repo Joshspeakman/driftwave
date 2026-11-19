@@ -12,9 +12,14 @@
 //! has settled, nothing draws at all. Visualizers draw within a pixel budget and the UI scales them smoothly.
 //!
 //! Flags: -layout full|classic, -page <page>, -playURL <url>, -muted, -audible, -theme <id>, -vis <id>, -library <file>,
-//! -swapAt <s>, -still, -search <text>, -details <n>, -double, -shade, -noVis,
+//! -swapAt <s>[,<s>…], -still, -search <text>, -details <n>, -double, -shade, -noVis,
 //! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
 //! -screenshotDelay <s>, -quitAfter <s>.
+
+/// macOS: see `mimalloc` in Cargo.toml.
+#[cfg(target_os = "macos")]
+#[global_allocator]
+static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod covers;
 mod effects;
@@ -25,6 +30,7 @@ mod paint;
 mod scene;
 mod fullpal;
 mod palette;
+mod resources;
 
 use driftwave_audio::{Engine, EngineConfig, Event, PlayState};
 use driftwave_core::radio_browser::USER_AGENT;
@@ -106,20 +112,16 @@ fn to_slint(c: Color) -> slint::Color {
     slint::Color::from_argb_u8(c.a, c.r, c.g, c.b)
 }
 
-/// The built-in themes: next to the program, or (while developing) the repository's `themes` folder.
+/// The built-in themes (see `resources::find` for where they're looked for).
 fn built_in_themes() -> Vec<Theme> {
-    let exe = std::env::current_exe().unwrap_or_default();
-    let mut dir = exe.parent().map(Path::to_path_buf);
-    while let Some(d) = dir {
-        let candidate = d.join("themes");
-        if candidate.join("night-market.json").exists() {
-            let mut t = load_folder(&candidate, true);
-            t.sort_by_key(|a| a.name.to_lowercase());
-            return t;
-        }
-        dir = d.parent().map(Path::to_path_buf);
-    }
-    Vec::new()
+    let Some(dir) = resources::find("themes", "night-market.json") else {
+        log("no themes folder found");
+        return Vec::new();
+    };
+    log(&format!("themes from {}", dir.display()));
+    let mut t = load_folder(&dir, true);
+    t.sort_by_key(|a| a.name.to_lowercase());
+    t
 }
 
 struct Player {
@@ -725,6 +727,8 @@ impl App {
             let focused = !self.args.flag("inactive")
                 && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
             self.tick_look(&ui, now, dt, focused);
+        } else {
+            self.park_look(&ui);
         }
         // Minimised, shaded or in the Full layout: nothing else moves but the clock.
         if ui.window().is_minimized() || ui.get_shaded() || !classic {
@@ -1370,8 +1374,10 @@ fn main() -> Result<(), slint::PlatformError> {
             let _ = slint::quit_event_loop();
         });
     }
-    // Test runs: -swapAt <s> swaps the layout mid-run (with the engine playing), to check the swap.
-    if let Some(at) = app.borrow().args.num("swapAt") {
+    // Test runs: -swapAt <s>[,<s>…] swaps the layout mid-run (with the engine playing), to check the swap
+    // (and swapping back).
+    let swaps: Vec<f64> = app.borrow().args.get("swapAt").map(|v| v.split(',').filter_map(|t| t.trim().parse().ok()).collect()).unwrap_or_default();
+    for at in swaps {
         let a = app.clone();
         slint::Timer::single_shot(Duration::from_secs_f64(at), move || {
             let other = a.borrow().ui.upgrade().map(|u| if u.get_layout() == "classic" { "full" } else { "classic" }).unwrap_or("full");

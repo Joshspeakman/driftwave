@@ -21,7 +21,7 @@ has it. Don't propose bridges, hybrids or a second program.
 | `rust/vis` (driftwave-vis) | Visualizers: analysis, six originals, the flash guard at the output stage |
 | `rust/app` (driftwave) | The app: Slint UI (software renderer), layouts, palettes |
 | `rust/platform` (driftwave-platform) | OS integration: Now Playing and media keys (souvlaki), notifications, single instance, the menu bar / tray icon |
-| `rust/vendor/softbuffer` | softbuffer 0.4.8 with a faster macOS backend (persistent canvas + sRGB IOSurfaces), via `[patch.crates-io]` |
+| `rust/vendor/softbuffer` | softbuffer 0.4.8 with a faster macOS backend (persistent canvas + sRGB IOSurfaces, and a see-through mode for the scene layers), via `[patch.crates-io]` |
 
 - **Plan and progress:** `docs/RUST-SCOPE.md`. The rebuild order is: Full layout and the Classic swap; finding
   stations; settings and themes with their effects; OS integration (tray, media keys, notifications, single

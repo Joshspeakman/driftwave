@@ -75,6 +75,79 @@ ported from the C# app's SceneEffect, GlassDrops, NeonEdges and TitleDecor.
    and tell me so I can search there too). Themes are found the same way as before. Fonts are built in.
 4. **Check `{time}` on macOS.** It uses chrono's `%-I`, which should be fine.
 
+### Mac: Round 11 results
+
+1. **Pulled and built** on top of e514923. The new target dependencies are fine.
+
+2. **Night Market on Retina (2360×1520 px), Full, playing, in front.** Before the fix it was 26.6% of one core
+   moving and 1.5% still, and the valve tripped at once: its first reading was 31.7%.
+   - **Where the time went** (from a sample): about 85% was Slint's software renderer redrawing the whole
+     window every motion frame. The motion picture was upscaled 3.3× with smooth sampling, the backdrop blended
+     under it, and every panel and glyph drawn over it. The scene's own painting is only 2.5 ms a frame.
+   - **Fixed on macOS with Core Animation layers:**
+     - **`platform/src/layers.rs` (`SceneLayers`):** the backdrop and the motion picture become sRGB IOSurfaces
+       in two layers under softbuffer's. The GPU stretches the half-size motion and blends it.
+     - **The patched softbuffer** gains `set_see_through(bool)`, which keeps the UI's alpha and makes its layer
+       non-opaque.
+     - **Slint:** `Scenery.native` makes the Full view and the window background transparent and skips the
+       two scene `Image`s. Slint redraws only when the UI changes.
+     - **Your hand-off points** (`paint_backdrop` and the end of `tick_look`) branch on it: layers when they
+       exist, your Slint path otherwise.
+     - **Unchanged:** `Scenery.front` (the overlay) stays a Slint image over everything.
+   - **When the layers are used:** only on macOS, not with `-screenshot` (Slint can only capture what it
+     draws), and not with `DRIFTWAVE_SLINT_SCENE=1`. That variable forces your path, for comparing.
+   - **Classic and themes without a scene:** `park_look` puts the UI back to opaque first, then hides the
+     layers on the next tick, so nothing shows through for a frame.
+
+   **Measured** with the exact CPU-time delta over 10 s and `-alwaysActive`:
+
+   | State | App (one core) | WindowServer |
+   |---|---|---|
+   | Default theme | 1.5–2.3% | about 22% with no app open (it varies with whatever else is on screen) |
+   | Night Market still | 1.4% | +7 |
+   | Night Market moving, layers | **4.4%** | +10 |
+   | Night Market moving, your Slint path (`DRIFTWAVE_SLINT_SCENE=1`) | 26.9% | +11.5 |
+
+   - **The valve doesn't trip.** Its first window reads 11.2%, because it includes the first backdrop
+     paint; after that, 4.3–4.5%.
+   - **Checked in real screen captures**, layers against your Slint path:
+     - the same panel see-through, glow titles, neon edges, rain, drops and passing lights;
+     - nothing builds up after a minute;
+     - Full → Classic → Full (`-swapAt` now takes a list: `-swapAt 8,16`): Classic is opaque, and Full shows
+       the scene again;
+     - a resize settles at the new size.
+
+   **Memory.** The footprint with Night Market was about 286 MB, against 79 MB for the default theme.
+   - **About 100 MB** was freed window-sized scratch pictures from painting a backdrop. macOS's allocator keeps
+     those dirty in its reclaim cache, and `malloc_zone_pressure_relief` doesn't hand them back.
+     Fix: **mimalloc as the global allocator on macOS only**. Windows is unchanged; measure it there if you
+     like.
+   - **About 38 MB** was `Scene::scaled` holding full-window copies of the photo and neon after the backdrop
+     was painted. A new **`Scene::forget_large(max_px)`** is called after `backdrop()`/`front()`. A repaint at
+     the same size rescales once.
+   - **Now:** 188 MB still and 162 MB moving, against 85 MB for the default. Most of the rest is mimalloc pages
+     marked reclaimable, which the system takes back under memory pressure.
+
+3. **Packaging.** `scripts/package-mac.sh` copies `themes/` and `assets/theme-art/` into
+   `Contents/Resources`. **`app/src/resources.rs`** does `find(name, marker)`, looking in order:
+   - next to the program;
+   - `../Resources` (the bundle);
+   - up the tree;
+   - the repo the program was built from (`CARGO_MANIFEST_DIR`).
+
+   `built_in_themes()` and `scene::art_dir()` use it; `art_dir()` has the same signature, with a new body.
+   Before this, a Mac build (its target folder is in ~/ProjectBuilds) found neither folder, and neither did a
+   .app. The packaged app logs `themes from …/Driftwave Nightly.app/Contents/MacOS/../Resources/themes`.
+
+4. **`{time}` works on macOS:** the Played Tracks times and signs read "23:45". `%-I` is fine.
+
+**Notes for you:**
+- `cargo clippy` stops on an error in your `effects.rs:197`: an approximate TAU literal (`approx_constant`).
+  It also warns about `paint.rs` (too many arguments, a loop that only indexes) and the chunk-size lints.
+- The first backdrop is painted at 1180×760 before the window exists (scale 1). That's 60 ms of wasted work at
+  start, and then it's painted again at 2360×1520. You could wait for the window's real size.
+
+
 ## Round 10 (2026-11-18): stage 1, the Full layout and the swap
 
 **PC (done):** `rust/app` is now one window with two looks.

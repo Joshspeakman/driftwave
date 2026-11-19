@@ -29,7 +29,8 @@ opt-level = 3
 [profile.dev.package.rustfft]
 opt-level = 3
 
-# softbuffer 0.4.8 with one change for the Mac: frames tagged sRGB instead of device RGB, so macOS
-# doesn't colour-match each one on the CPU. See vendor/softbuffer/src/backends/cg.rs ("Driftwave").
+# softbuffer 0.4.8 with a faster Mac backend: one persistent canvas, changed rectangles copied into IOSurfaces
+# tagged sRGB (colour-matched on the GPU), and a see-through switch so the theme's scene layers
+# (platform/src/layers.rs) show beneath the UI. See vendor/softbuffer/src/backends/cg.rs ("Driftwave").
 [patch.crates-io]
 softbuffer = { path = "vendor/softbuffer" }

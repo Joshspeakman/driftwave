@@ -18,7 +18,7 @@ import "../../../assets/fonts/VT323-Regular.ttf";
 export component MainWindow inherits Window {
     title: "Driftwave";
     no-frame: true;
-    background: layout == "classic" ? Pal.face.darker(20%) : Th.background;
+    background: layout == "classic" ? Pal.face.darker(20%) : Scenery.on && Scenery.native ? transparent : Th.background;
     default-font-family: layout == "classic" ? Pal.body-font : Th.body-font;
     preferred-width: 1180px;
     preferred-height: 760px;
