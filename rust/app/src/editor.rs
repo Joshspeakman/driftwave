@@ -13,6 +13,7 @@ use std::rc::Rc;
 const OWN_FONTS: [&str; 6] = ["Orbitron", "Press Start 2P", "Share Tech Mono", "Shrikhand", "Space Mono", "VT323"];
 
 /// A font file's registry name ("Segoe UI Semibold Italic (TrueType)") as its family ("Segoe UI").
+#[cfg(any(windows, test))]
 fn family(name: &str) -> String {
     const STYLES: [&str; 22] = [
         "Regular", "Bold", "Italic", "Oblique", "Light", "Semilight", "SemiLight", "Semibold", "SemiBold", "Demibold", "Black", "Heavy", "Thin",
@@ -34,9 +35,9 @@ fn family(name: &str) -> String {
     }
 }
 
-/// The installed font families (Windows: the machine's and this user's font lists), sorted.
+/// The installed font families (Windows: the machine's and this user's font lists; the Mac: Core Text's), sorted.
 fn installed_fonts() -> Vec<String> {
-    let mut names: Vec<String> = Vec::new();
+    let mut names: Vec<String> = driftwave_platform::system::font_families();
     #[cfg(windows)]
     {
         use windows_sys::Win32::System::Registry::{RegCloseKey, RegEnumValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};

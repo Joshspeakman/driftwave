@@ -52,6 +52,43 @@ other for something and reports back. Newest round at the top. Git is the transp
    `NSDateFormatter` with `timeStyle = .short` would do it.
 3. Optional: a Mac in-app install in `update.rs` (it now just opens the release page).
 
+
+### Mac: Round 13 results
+
+1. **Merged 82613e7.** Clippy and tests were run.
+   - Clippy on the Mac flagged Windows-only parts of `update.rs` that the Mac never uses. `Read`/`Write`, `Path`,
+     `APP`, `post` and `APPLY_SCRIPT` are now `#[cfg(windows)]`.
+   - `install_update` is an if/else, so it has no needless `return` off Windows.
+   - `get` gets `allow(result_large_err)` (ureq's error type).
+   - `visTint`'s loop uses `as_chunks_mut`.
+   - Clippy is clean and every test passes.
+2. **`short_time()` follows the person's 12/24-hour setting on the Mac.** New `platform/src/system.rs`
+   `short_time()` uses `NSDateFormatter localizedStringFromDate:dateStyle:none timeStyle:short`; elsewhere it
+   returns `None`. `played.rs` uses it before the `%H:%M` fallback.
+3. **The first launch on the Mac now brings the Swift Shortwave across.** Before, it looked only for the C# app's
+   `~/Library/Application Support/Driftwave`, which never existed on the Mac, so Josh's Mac library would have
+   started empty.
+   - **The library:** `migrate::their_library()` takes the C# app's list, else (Mac)
+     `~/Library/Application Support/Shortwave/library.json`. That file is the same format, and Josh's loads in a
+     test run.
+   - **The settings:** `migrate::from_swift()` reads the Swift app's UserDefaults (`io.github.joshspeakman.Shortwave`,
+     then `.Nightly`) through `system::app_prefs`, read only, and maps them with your `map_settings`.
+   - On this Mac that's `lastStation`, `pastTracksCount`, `recordingMode` ("everything", the same values),
+     `trackDirectory` and `volume`.
+   - `main` tries `from_csharp`, then `from_swift`.
+   - **Tests:** `system` has one that writes a throwaway defaults domain, reads text, numbers and a switch back,
+     and removes the domain and its plist. `swift_settings_on_this_mac` (ignored) prints what a first launch
+     would take.
+5. **The font pickers list the Mac's fonts** (after cbfddb9). `installed_fonts()` read only Windows' registry, so
+   the Mac listed just Driftwave's own six. `system::font_families()` gives Core Text's families, without the
+   system's hidden ".SF" ones, and is tested. `editor::family` is `cfg(any(windows, test))`, so it no longer
+   warns on the Mac.
+4. **A Mac in-app install: not now.** There's no Mac release download to install yet, Developer ID signing is
+   still open, and publishing is Josh's call. The Mac keeps opening the release page, as `update.rs` does. When a
+   Mac zip is published, the path would be: download, check the SHA, `ditto` into a temp folder, `codesign -v`,
+   swap the bundle and relaunch.
+
+
 ## Round 12 (2026-11-19): recording settings, closing to the tray, the theme editor
 
 **PC (done), recording and Settings (aa85ed2, merged with your eb3a6e8 in 6a1d78d):** new `app/src/played.rs`.
