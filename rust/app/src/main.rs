@@ -318,7 +318,7 @@ impl App {
                     self.player.title = title;
                     marquee_changed = true;
                 }
-                Event::Recorder(_) | Event::Saved(_) | Event::SaveFailed(_) | Event::Connected { .. } | Event::Info(_) => {}
+                Event::Recorder(_) | Event::Saved(_) | Event::SaveFailed(_) | Event::Connected { .. } | Event::Format(_) | Event::Info(_) => {}
             }
         }
         if marquee_changed {

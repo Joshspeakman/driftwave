@@ -124,6 +124,12 @@ fn report(e: Event) {
         Event::Connected { titles, format, kind } => {
             log(&format!("icy connected titles={titles} format={} decoder={kind}", format.map(|f| f.raw_value()).unwrap_or("none")))
         }
+        Event::Format(f) => log(&format!(
+            "format {} Hz {} ch {} kbps",
+            f.rate,
+            f.channels,
+            f.kbps.map(|k| k.to_string()).unwrap_or_else(|| "?".into())
+        )),
         Event::NowPlaying { title, at } => log(&format!("now playing \"{title}\" at {at:.2}s")),
         Event::Recorder(RecorderEvent::Started { title, state, file, .. }) => log(&format!(
             "track started \"{title}\" {} {}",
