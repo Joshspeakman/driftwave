@@ -3,8 +3,17 @@
 // window's size; the same engine keeps playing.
 
 import { ClassicView, Pal, StationRow, Choice } from "classic.slint";
-import { FullView, Th, Dir, Details, StationCard, TrackRow, Swatch } from "full.slint";
-export { Pal, Th, Dir, Details, StationRow, Choice, StationCard, TrackRow, Swatch }
+import { FullView, Th, Dir, Details, StationCard, TrackRow, Swatch, Scenery, SceneText } from "full.slint";
+export { Pal, Th, Dir, Details, StationRow, Choice, StationCard, TrackRow, Swatch, Scenery, SceneText }
+// The themes' own fonts (assets/fonts, each under the SIL Open Font License), built into the program.
+import "../../../assets/fonts/Orbitron.ttf";
+import "../../../assets/fonts/PressStart2P-Regular.ttf";
+import "../../../assets/fonts/ShareTechMono-Regular.ttf";
+import "../../../assets/fonts/Shrikhand-Regular.ttf";
+import "../../../assets/fonts/SpaceMono-Regular.ttf";
+import "../../../assets/fonts/SpaceMono-Bold.ttf";
+import "../../../assets/fonts/VT323-Regular.ttf";
+
 
 export component MainWindow inherits Window {
     title: "Driftwave";

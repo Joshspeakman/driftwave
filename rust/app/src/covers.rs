@@ -36,6 +36,35 @@ fn hash(s: &str) -> String {
 }
 
 /// Two colours for a station's tile, from its name (soft, never saturated red).
+/// What placeholder tiles take from a dark theme: hues between its two accent colours (Night Market's pink and
+/// cyan), deep and rich.
+#[derive(Clone, Copy)]
+pub struct Mood {
+    pub from: f32,
+    pub to: f32,
+}
+
+thread_local! {
+    static MOOD: std::cell::Cell<Option<Mood>> = const { std::cell::Cell::new(None) };
+}
+
+/// Sets the tiles' mood (None: Driftwave's own bright tiles).
+pub fn set_mood(m: Option<Mood>) {
+    MOOD.with(|c| c.set(m));
+}
+
+/// A colour's hue (0–1).
+pub fn hue_of(r: u8, g: u8, b: u8) -> f32 {
+    let (r, g, b) = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+    let (max, min) = (r.max(g).max(b), r.min(g).min(b));
+    let d = max - min;
+    if d < 1e-4 {
+        return 0.0;
+    }
+    let h = if max == r { ((g - b) / d).rem_euclid(6.0) } else if max == g { (b - r) / d + 2.0 } else { (r - g) / d + 4.0 };
+    h / 6.0
+}
+
 pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
     let mut h = DefaultHasher::new();
     name.hash(&mut h);
@@ -54,7 +83,23 @@ pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
         };
         slint::Color::from_rgb_u8((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
     };
-    (rgb(hue, 0.5, 0.55), rgb((hue + 0.09) % 1.0, 0.55, 0.78))
+    match MOOD.with(|c| c.get()) {
+        // Each station lands somewhere on the shorter way round from one accent's hue to the other (a little
+        // either side of the accent when the two are close).
+        Some(m) => {
+            let mut arc = m.to - m.from;
+            if arc > 0.5 {
+                arc -= 1.0;
+            }
+            if arc < -0.5 {
+                arc += 1.0;
+            }
+            let h = if arc.abs() < 0.08 { m.from - 0.09 + hue * 0.18 } else { m.from + arc * hue };
+            let h = h.rem_euclid(1.0);
+            (rgb(h, 0.78, 0.26), rgb((h + 0.03).rem_euclid(1.0), 0.72, 0.55))
+        }
+        None => (rgb(hue, 0.5, 0.55), rgb((hue + 0.09) % 1.0, 0.55, 0.78)),
+    }
 }
 
 impl Covers {

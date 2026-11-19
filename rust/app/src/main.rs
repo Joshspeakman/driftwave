@@ -12,13 +12,15 @@
 //! has settled, nothing draws at all. Visualizers draw within a pixel budget and the UI scales them smoothly.
 //!
 //! Flags: -layout full|classic, -page <page>, -playURL <url>, -muted, -audible, -theme <id>, -vis <id>, -library <file>,
-//! -swapAt <s>, -search <text>, -details <n>, -double, -shade, -noVis,
+//! -swapAt <s>, -still, -search <text>, -details <n>, -double, -shade, -noVis,
 //! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
 //! -screenshotDelay <s>, -quitAfter <s>.
 
 mod covers;
 mod finding;
 mod integration;
+mod look;
+mod scene;
 mod fullpal;
 mod palette;
 
@@ -49,7 +51,7 @@ thread_local! {
 /// The Full layout's window size by default.
 const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
-const FLAGS: [&str; 12] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray"];
+const FLAGS: [&str; 14] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
 const DEFAULT_WIDTH: f32 = 412.0;
 const DEFAULT_LIST_UNITS: f32 = 110.0;
@@ -196,6 +198,7 @@ struct App {
     frame: u64,
     covers: covers::Covers,
     find: finding::Finding,
+    look: look::Look,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -355,6 +358,8 @@ impl App {
         choices.extend(self.themes.iter().map(|t| Choice { id: t.id.clone().into(), name: t.name.clone().into(), on: Some(&t.id) == id.as_ref() }));
         ui.set_themes(ModelRc::new(VecModel::from(choices)));
         self.settings["theme"] = json!(id.clone().unwrap_or_else(|| "default".into()));
+        let owned = id.as_ref().and_then(|id| self.themes.iter().find(|t| &t.id == id)).cloned();
+        self.apply_look(owned.as_ref(), &f, ui_font);
         log(&format!("theme {}", id.unwrap_or_else(|| "default".into())));
     }
 
@@ -713,7 +718,13 @@ impl App {
         ui.set_record_armed(self.player.armed);
         ui.set_recording(self.player.writing && self.player.playing);
 
-        // Minimised, shaded or in the Full layout (nothing there moves yet): nothing moves but the clock.
+        // The Full layout: the theme's scene (painted when needed; what moves only while in front).
+        if !classic && !ui.window().is_minimized() {
+            let focused = !self.args.flag("inactive")
+                && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
+            self.tick_look(&ui, now, focused);
+        }
+        // Minimised, shaded or in the Full layout: nothing else moves but the clock.
         if ui.window().is_minimized() || ui.get_shaded() || !classic {
             return;
         }
@@ -991,6 +1002,7 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         }),
         find: finding::Finding::default(),
+        look: look::Look::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
@@ -999,6 +1011,15 @@ fn main() -> Result<(), slint::PlatformError> {
         theme_id: None,
         system_dark: true,
     }));
+    {
+        // Scenes move unless asked to hold still (-still, or "sceneMotion": false).
+        let mut a = app.borrow_mut();
+        let still = a.args.flag("still") || a.settings.get("sceneMotion").and_then(Value::as_bool) == Some(false);
+        a.look.still = still;
+        ui.global::<Scenery>().set_motion_on(!still);
+        let w = app.clone();
+        ui.global::<Scenery>().on_motion_chosen(move |on| w.borrow_mut().choose_motion(on));
+    }
     APP.with(|a| *a.borrow_mut() = Some(Rc::downgrade(&app)));
     ui.set_cards(ModelRc::from(app.borrow().cards.clone()));
     ui.set_tracks(ModelRc::from(app.borrow().tracks.clone()));
