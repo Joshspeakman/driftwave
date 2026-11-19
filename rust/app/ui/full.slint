@@ -1710,6 +1710,13 @@ export component FullView inherits Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
             content-y <=> Dir.settings-scroll;
             content-height: settings-col.preferred-height + 40px;
+            // Set from outside (a test run's -scroll, GIPHY's Add a Key): never past the end.
+            changed content-y => {
+                if (self.content-y < -max(0px, self.content-height - self.height)) { self.content-y = -max(0px, self.content-height - self.height); }
+            }
+            init => {
+                if (self.content-y < -max(0px, self.content-height - self.height)) { self.content-y = -max(0px, self.content-height - self.height); }
+            }
             settings-col := VerticalLayout {
                 x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
                 HorizontalLayout { alignment: start; PageTitle { text: "Settings"; } }
