@@ -15,6 +15,9 @@ driftwave-core = { path = "../core" }
 driftwave-audio = { path = "../audio" }
 driftwave-vis = { path = "../vis" }
 serde_json.workspace = true
+ureq.workspace = true
+# Station covers: the formats station logos come in (no SVG); decoded small.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "ico", "webp", "bmp"] }
 # Local time for the LCD clock.
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # Royalty-free licence: About says "Made with Slint" (docs/RUST-SCOPE.md).

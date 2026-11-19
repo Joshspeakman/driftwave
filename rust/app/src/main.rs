@@ -1,4 +1,6 @@
-//! Driftwave, in the Rust app's first layout: Classic, an homage to the stacked players of the Winamp years.
+//! Driftwave: one app, one window, two looks. Full is the familiar Driftwave (library, discover, search, settings,
+//! the player card); Classic is an homage to the stacked players of the Winamp years, which you swap into and out of
+//! like a mini player. The same engine plays throughout.
 //!
 //! Until the switch-over (docs/RUST-SCOPE.md, phase 5) this app keeps its own data folder, `DriftwaveRust`, apart
 //! from the Driftwave app people use today. On its first launch it copies that app's station list (reading it, never
@@ -9,30 +11,41 @@
 //! spectrum on every other. Behind other windows everything runs at half that; minimised, or stopped once the picture
 //! has settled, nothing draws at all. Visualizers draw within a pixel budget and the UI scales them smoothly.
 //!
-//! Flags: -playURL <url>, -muted, -audible, -theme <id>, -vis <id>, -library <file>, -double, -shade, -noVis,
+//! Flags: -layout full|classic, -page <page>, -playURL <url>, -muted, -audible, -theme <id>, -vis <id>, -library <file>,
+//! -swapAt <s>, -double, -shade, -noVis,
 //! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
 //! -screenshotDelay <s>, -quitAfter <s>.
 
+mod covers;
+mod fullpal;
 mod palette;
 
 use driftwave_audio::{Engine, EngineConfig, Event, PlayState};
 use driftwave_core::radio_browser::USER_AGENT;
 use driftwave_core::recording::{RecorderConfig, RecorderEvent, RecordingMode, RecordingState};
-use driftwave_core::station::Station;
+use driftwave_core::station::{sorted_by, Station, StationSorting};
 use driftwave_core::storage::{library_file, AppPaths};
 use driftwave_core::theme::{load_folder, Color, Theme};
 use driftwave_vis::{visualizers, VisHost};
 use serde_json::{json, Value};
 use slint::winit_030::{winit, WinitWindowAccessor};
-use slint::{ComponentHandle, ModelRc, SharedPixelBuffer, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedPixelBuffer, VecModel};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
 slint::include_modules!();
+
+thread_local! {
+    /// The app, for work finished on other threads (covers) to reach on the UI thread.
+    static APP: RefCell<Option<Weak<RefCell<App>>>> = const { RefCell::new(None) };
+}
+
+/// The Full layout's window size by default.
+const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
 const FLAGS: [&str; 10] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
@@ -150,7 +163,7 @@ impl Slot {
 }
 
 struct App {
-    ui: slint::Weak<ClassicWindow>,
+    ui: slint::Weak<MainWindow>,
     args: Args,
     paths: AppPaths,
     settings: Value,
@@ -176,6 +189,29 @@ struct App {
     budget: usize,
     ticks: u32,
     frame: u64,
+    covers: covers::Covers,
+    /// The Full layout's cover cards and played songs, updated in place.
+    cards: Rc<VecModel<StationCard>>,
+    tracks: Rc<VecModel<TrackRow>>,
+    sorting: StationSorting,
+    /// The Full layout's window size, kept while Classic is showing.
+    full_size: (f32, f32),
+    /// Light or dark for Default: "system", "light" or "dark"; and the theme chosen (None: Default).
+    appearance: String,
+    theme_id: Option<String>,
+    system_dark: bool,
+}
+
+/// "Artist - Title" as (title, artist); a title without the separator is all title.
+fn split_title(t: &str) -> (String, String) {
+    match t.split_once(" - ") {
+        Some((artist, title)) if !artist.trim().is_empty() && !title.trim().is_empty() => (title.trim().to_string(), artist.trim().to_string()),
+        _ => (t.to_string(), String::new()),
+    }
+}
+
+fn to_slint_full(c: Color) -> slint::Color {
+    slint::Color::from_argb_u8(c.a, c.r, c.g, c.b)
 }
 
 impl App {
@@ -195,11 +231,20 @@ impl App {
         if let Some(ui) = self.ui.upgrade() {
             let mut s = self.settings.clone();
             let size = ui.window().size().to_logical(ui.window().scale_factor());
-            s["layout"] = json!("classic");
+            let classic = ui.get_layout() == "classic";
+            s["layout"] = json!(ui.get_layout().to_string());
             s["visualizer"] = json!(self.big.host.id());
             s["showVisualizer"] = json!(ui.get_show_vis());
             s["showList"] = json!(ui.get_show_list());
-            s["width"] = json!(size.width);
+            let full = if classic || ui.get_maximized() { self.full_size } else { (size.width, size.height) };
+            s["fullWidth"] = json!(full.0);
+            s["fullHeight"] = json!(full.1);
+            s["showPlayer"] = json!(ui.get_show_player());
+            s["appearance"] = json!(self.appearance);
+            s["sorting"] = json!(self.sorting.raw_value());
+            if classic {
+                s["width"] = json!(size.width);
+            }
             s["listUnits"] = json!(self.list_units);
             s["shaded"] = json!(ui.get_shaded());
             s["volume"] = json!(ui.get_volume());
@@ -210,10 +255,70 @@ impl App {
         }
     }
 
+    /// Whether Default should be dark: the person's choice, or the system's.
+    fn default_dark(&self) -> bool {
+        match self.appearance.as_str() {
+            "light" => false,
+            "dark" => true,
+            _ => self.system_dark,
+        }
+    }
+
     fn apply_theme(&mut self, id: Option<String>) {
         let Some(ui) = self.ui.upgrade() else { return };
+        self.theme_id = id.clone();
         let theme = id.as_ref().and_then(|id| self.themes.iter().find(|t| &t.id == id));
-        let p = palette::classic(theme, true);
+        let dark = self.default_dark();
+        // The Full layout.
+        let f = fullpal::full(theme, dark);
+        let th = ui.global::<Th>();
+        th.set_background(to_slint_full(f.background));
+        th.set_pane(to_slint_full(f.pane));
+        th.set_surface(to_slint_full(f.surface));
+        th.set_card(to_slint_full(f.card));
+        th.set_card_stroke(to_slint_full(f.card_stroke));
+        th.set_control(to_slint_full(f.control));
+        th.set_control_stroke(to_slint_full(f.control_stroke));
+        th.set_subtle(to_slint_full(f.subtle));
+        th.set_divider(to_slint_full(f.divider));
+        th.set_text(to_slint_full(f.text));
+        th.set_text2(to_slint_full(f.text2));
+        th.set_text3(to_slint_full(f.text3));
+        th.set_card_text(to_slint_full(f.card_text));
+        th.set_card_text2(to_slint_full(f.card_text2));
+        th.set_pane_text(to_slint_full(f.pane_text));
+        th.set_title_text(to_slint_full(f.title_text));
+        th.set_control_text(to_slint_full(f.control_text));
+        th.set_accent(to_slint_full(f.accent));
+        th.set_accent_text(to_slint_full(f.accent_text));
+        th.set_on_accent(to_slint_full(f.on_accent));
+        th.set_dialog(to_slint_full(f.dialog));
+        let ui_font = if cfg!(target_os = "macos") { "Helvetica Neue" } else { "Segoe UI" };
+        th.set_body_font(theme.and_then(|t| t.fonts.body.clone()).unwrap_or(ui_font.into()).into());
+        th.set_title_font(theme.and_then(|t| t.fonts.title.clone()).unwrap_or(ui_font.into()).into());
+        th.set_title_size(theme.and_then(|t| t.fonts.title_size).unwrap_or(28.0) as f32);
+        th.set_title_weight(match theme.and_then(|t| t.fonts.title_weight.clone()).as_deref() {
+            Some("Bold") | Some("bold") => 700,
+            Some("Black") | Some("black") => 900,
+            Some("Normal") | Some("normal") | Some("Regular") => 400,
+            _ => 600,
+        });
+        th.set_radius_card(theme.and_then(|t| t.corners.card).unwrap_or(8.0) as f32);
+        th.set_radius_control(theme.and_then(|t| t.corners.control).unwrap_or(4.0) as f32);
+        let cover = theme.and_then(|t| t.corners.cover).unwrap_or(0.07);
+        th.set_radius_cover((if cover <= 1.0 { cover * 148.0 } else { cover }) as f32);
+        let mut swatches = vec![{
+            let d = fullpal::default(dark);
+            Swatch { id: "default".into(), name: "Default".into(), back: to_slint_full(d.background), card: to_slint_full(d.card), accent: to_slint_full(d.accent), text: to_slint_full(d.text), on: theme.is_none() }
+        }];
+        swatches.extend(self.themes.iter().map(|t| {
+            let p = fullpal::full(Some(t), dark);
+            Swatch { id: t.id.clone().into(), name: t.name.clone().into(), back: to_slint_full(p.background), card: to_slint_full(p.card), accent: to_slint_full(p.accent), text: to_slint_full(p.text), on: Some(&t.id) == id.as_ref() }
+        }));
+        ui.set_swatches(ModelRc::new(VecModel::from(swatches)));
+        ui.set_appearance(self.appearance.clone().into());
+        // The Classic layout.
+        let p = palette::classic(theme, dark);
         let g = ui.global::<Pal>();
         g.set_face(to_slint(p.face));
         g.set_bevel_light(to_slint(p.bevel_light));
@@ -270,6 +375,104 @@ impl App {
             .collect();
         ui.set_list_summary(format!("{} STATION{}", self.stations.len(), if self.stations.len() == 1 { "" } else { "S" }).into());
         ui.set_stations(ModelRc::new(VecModel::from(rows)));
+        let cards: Vec<StationCard> = self.stations.iter().enumerate().map(|(i, s)| self.card(i, s)).collect();
+        self.cards.set_vec(cards);
+        ui.set_sort_name(self.sorting.title().into());
+    }
+
+    fn card(&self, i: usize, s: &Station) -> StationCard {
+        let (c1, c2) = covers::tile_colours(&s.name);
+        let cover = self.covers.get(&s.id);
+        StationCard {
+            name: s.name.clone().into(),
+            detail: s.subtitle().into(),
+            playing: self.player.station == Some(i) && self.player.engine.is_some(),
+            has_cover: cover.is_some(),
+            small: cover.as_ref().is_some_and(covers::is_small),
+            cover: cover.unwrap_or_default(),
+            c1,
+            c2,
+        }
+    }
+
+    /// Asks for every station's cover (each once).
+    fn want_covers(&mut self) {
+        for s in self.stations.clone() {
+            self.covers.want(&s.id, s.custom_cover.as_deref().or(s.favicon_url.as_deref()));
+        }
+    }
+
+    /// A cover arrived from a worker: show it on the station's card, and on the player if it's playing.
+    fn cover_arrived(&mut self, key: String, picture: Option<SharedPixelBuffer<slint::Rgba8Pixel>>) {
+        let Some(picture) = picture else { return };
+        self.covers.images.insert(key.clone(), slint::Image::from_rgba8(picture));
+        for (i, s) in self.stations.clone().iter().enumerate() {
+            if s.id == key && i < self.cards.row_count() {
+                self.cards.set_row_data(i, self.card(i, s));
+            }
+        }
+        self.show_now_playing_cover();
+    }
+
+    fn show_now_playing_cover(&self) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        let Some(s) = self.player.station.and_then(|i| self.stations.get(i)) else { return };
+        let (c1, c2) = covers::tile_colours(&s.name);
+        ui.set_cover_c1(c1);
+        ui.set_cover_c2(c2);
+        match self.covers.get(&s.id) {
+            Some(img) => {
+                ui.set_cover_small(covers::is_small(&img));
+                ui.set_cover(img);
+                ui.set_has_cover(true);
+            }
+            None => ui.set_has_cover(false),
+        }
+    }
+
+    /// Sorts the library the next way, keeping the playing and selected stations.
+    fn cycle_sort(&mut self) {
+        let all = StationSorting::ALL;
+        let i = all.iter().position(|&x| x == self.sorting).unwrap_or(0);
+        self.sorting = all[(i + 1) % all.len()];
+        self.resort();
+        self.save_settings();
+    }
+
+    fn resort(&mut self) {
+        let playing = self.player.station.and_then(|i| self.stations.get(i)).map(|s| s.id.clone());
+        let selected = self.ui.upgrade().and_then(|u| usize::try_from(u.get_selected()).ok()).and_then(|i| self.stations.get(i)).map(|s| s.id.clone());
+        self.stations = sorted_by(&self.stations, self.sorting, true);
+        self.player.station = playing.and_then(|id| self.stations.iter().position(|s| s.id == id));
+        if let Some(ui) = self.ui.upgrade() {
+            ui.set_selected(selected.and_then(|id| self.stations.iter().position(|s| s.id == id)).map(|i| i as i32).unwrap_or(-1));
+        }
+        self.refresh_list();
+    }
+
+    /// Swaps between the Full and Classic looks. The engine carries on playing.
+    fn set_layout(&mut self, layout: &str) {
+        let Some(ui) = self.ui.upgrade() else { return };
+        if ui.get_layout() == layout {
+            return;
+        }
+        let scale = ui.window().scale_factor();
+        if layout == "classic" {
+            if !ui.get_maximized() {
+                let size = ui.window().size().to_logical(scale);
+                self.full_size = (size.width, size.height);
+            }
+            ui.window().with_winit_window(|w: &winit::window::Window| w.set_maximized(false));
+            ui.set_layout("classic".into());
+            let width = self.settings.get("width").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_WIDTH).clamp(220.0, 1100.0);
+            // Sized from the width it's going to have (the window still reports the Full size until it resizes).
+            ui.window().set_size(slint::LogicalSize::new(width, self.classic_height(&ui, width)));
+        } else {
+            ui.set_layout("full".into());
+            ui.window().set_size(slint::LogicalSize::new(self.full_size.0, self.full_size.1));
+        }
+        log(&format!("layout {layout}"));
+        self.save_settings();
     }
 
     fn play(&mut self, index: usize) {
@@ -313,6 +516,12 @@ impl App {
         self.player.writing = false;
         self.player.state = "CONNECTING".into();
         self.settings["lastStation"] = json!(station.id);
+        self.tracks.set_vec(Vec::new());
+        if let Some(ui) = self.ui.upgrade() {
+            ui.set_song("".into());
+            ui.set_artist("".into());
+        }
+        self.show_now_playing_cover();
         self.update_marquee();
         self.refresh_list();
     }
@@ -345,9 +554,19 @@ impl App {
         }
     }
 
+    /// Classic's height at `width`: the player and visualizer (fixed, in units) and the list's remembered height.
+    fn classic_height(&self, ui: &MainWindow, width: f32) -> f32 {
+        let u = width / 275.0;
+        let shaded = ui.get_shaded();
+        let units = if shaded { 13.0 } else { 102.0 }
+            + if ui.get_show_vis() && !shaded { 104.0 } else { 0.0 }
+            + if ui.get_show_list() && !shaded { self.list_units } else { 0.0 };
+        units * u
+    }
+
     /// Keeps the window's height right for the panels shown: the player and visualizer are fixed, the list takes
     /// what the person gave it (and keeps it while hidden).
-    fn fit_window(&mut self, ui: &ClassicWindow, panels_changed: bool) {
+    fn fit_window(&mut self, ui: &MainWindow, panels_changed: bool) {
         let scale = ui.window().scale_factor();
         let size = ui.window().size().to_logical(scale);
         let u = size.width / 275.0;
@@ -379,7 +598,23 @@ impl App {
         let dt = (now - self.last).as_secs_f32().min(0.25);
         self.last = now;
         self.frame += 1;
-        self.fit_window(&ui, false);
+        let classic = ui.get_layout() == "classic";
+        if classic {
+            self.fit_window(&ui, false);
+        }
+        // Default follows the system's light or dark, checked every couple of seconds.
+        if self.frame.is_multiple_of(48) {
+            if let Some(dark) = ui.window().with_winit_window(|w: &winit::window::Window| w.theme().map(|t| t == winit::window::Theme::Dark)).flatten() {
+                if dark != self.system_dark {
+                    self.system_dark = dark;
+                    if self.appearance == "system" {
+                        let id = self.theme_id.clone();
+                        self.apply_theme(id);
+                    }
+                }
+            }
+            ui.set_maximized(ui.window().with_winit_window(|w: &winit::window::Window| w.is_maximized()).unwrap_or(false));
+        }
         // Engine events.
         let mut events = Vec::new();
         if let Some((_, rx)) = &self.player.engine {
@@ -413,6 +648,15 @@ impl App {
                 }
                 Event::NowPlaying { title, .. } => {
                     log(&format!("now playing \"{title}\""));
+                    let (song, artist) = split_title(&title);
+                    ui.set_song(song.into());
+                    ui.set_artist(artist.into());
+                    use chrono::Timelike;
+                    let at = chrono::Local::now();
+                    self.tracks.insert(0, TrackRow { title: title.clone().into(), note: format!("{:02}:{:02}", at.hour(), at.minute()).into() });
+                    if self.tracks.row_count() > 50 {
+                        self.tracks.remove(50);
+                    }
                     self.player.title = title;
                     marquee_changed = true;
                 }
@@ -455,8 +699,8 @@ impl App {
         ui.set_record_armed(self.player.armed);
         ui.set_recording(self.player.writing && self.player.playing);
 
-        // Minimised, or shaded: nothing moves but the clock.
-        if ui.window().is_minimized() || ui.get_shaded() {
+        // Minimised, shaded or in the Full layout (nothing there moves yet): nothing moves but the clock.
+        if ui.window().is_minimized() || ui.get_shaded() || !classic {
             return;
         }
         // Behind other windows the moving parts keep going, at half the rate.
@@ -575,7 +819,7 @@ impl App {
 }
 
 /// The large size: half as big again, or as much as fits on the screen.
-fn large_width(ui: &ClassicWindow, fixed_units: f32) -> f32 {
+fn large_width(ui: &MainWindow, fixed_units: f32) -> f32 {
     let screen = ui
         .window()
         .with_winit_window(|w: &winit::window::Window| {
@@ -649,12 +893,19 @@ fn main() -> Result<(), slint::PlatformError> {
         stations.insert(0, Station::new("test-url", "Test Stream", url));
     }
 
-    let ui = ClassicWindow::new()?;
+    let ui = MainWindow::new()?;
     let vis_ids: Vec<&'static str> = visualizers::all().iter().map(|v| v.id()).collect();
     let vis_id = args.get("vis").map(String::from).or_else(|| settings.get("visualizer").and_then(|v| v.as_str()).map(String::from)).unwrap_or_else(|| "liquid".into());
     let mut themes = built_in_themes();
     themes.extend(load_folder(&paths.themes(), false));
     let list_units = settings.get("listUnits").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_LIST_UNITS).max(62.0);
+    let cache_dir = paths.favicons();
+    let sorting_raw = settings.get("sorting").and_then(Value::as_str).map(String::from);
+    let appearance = settings.get("appearance").and_then(Value::as_str).unwrap_or("system").to_string();
+    let full_size = (
+        settings.get("fullWidth").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(FULL_SIZE.0).max(760.0),
+        settings.get("fullHeight").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(FULL_SIZE.1).max(520.0),
+    );
     let app = Rc::new(RefCell::new(App {
         ui: ui.as_weak(),
         mini: Slot { host: VisHost::with_budget("peak-meter", 120, 22, 1.0, 12_000), pending: None, scale: 1.0 },
@@ -689,7 +940,26 @@ fn main() -> Result<(), slint::PlatformError> {
         budget: driftwave_vis::host::PIXEL_BUDGET,
         ticks: 0,
         frame: 0,
+        covers: covers::Covers::new(cache_dir, |key, picture| {
+            let _ = slint::invoke_from_event_loop(move || {
+                APP.with(|a| {
+                    if let Some(app) = a.borrow().as_ref().and_then(|w| w.upgrade()) {
+                        app.borrow_mut().cover_arrived(key, picture);
+                    }
+                });
+            });
+        }),
+        cards: Rc::new(VecModel::default()),
+        tracks: Rc::new(VecModel::default()),
+        sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
+        full_size,
+        appearance,
+        theme_id: None,
+        system_dark: true,
     }));
+    APP.with(|a| *a.borrow_mut() = Some(Rc::downgrade(&app)));
+    ui.set_cards(ModelRc::from(app.borrow().cards.clone()));
+    ui.set_tracks(ModelRc::from(app.borrow().tracks.clone()));
 
     {
         let mut a = app.borrow_mut();
@@ -708,17 +978,31 @@ fn main() -> Result<(), slint::PlatformError> {
         } else {
             s.get("width").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_WIDTH).clamp(220.0, 1100.0)
         };
-        // The height follows from the width and the panels (fit_window): start with the width only.
-        ui.window().set_size(slint::LogicalSize::new(width, 300.0));
+        ui.set_show_player(s.get("showPlayer").and_then(Value::as_bool).unwrap_or(true));
+        let layout = a.args.get("layout").map(String::from).or_else(|| s.get("layout").and_then(Value::as_str).map(String::from)).unwrap_or_else(|| "full".into());
+        if let Some(page) = a.args.get("page") {
+            ui.set_page(page.into());
+        }
+        if layout == "classic" {
+            ui.set_layout("classic".into());
+            // The height follows from the width and the panels (fit_window): start with the width only.
+            ui.window().set_size(slint::LogicalSize::new(width, 300.0));
+        } else {
+            ui.set_layout("full".into());
+            ui.window().set_size(slint::LogicalSize::new(a.full_size.0, a.full_size.1));
+        }
     }
     let theme_id = {
         let a = app.borrow();
         a.args.get("theme").map(String::from).or_else(|| a.setting_str("theme"))
     };
     app.borrow_mut().apply_theme(theme_id.filter(|t| t != "default"));
-    app.borrow_mut().refresh_list();
+    app.borrow_mut().resort();
+    app.borrow_mut().want_covers();
     app.borrow_mut().update_marquee();
-    app.borrow_mut().fit_window(&ui, true);
+    if ui.get_layout() == "classic" {
+        app.borrow_mut().fit_window(&ui, true);
+    }
 
     // Callbacks.
     let weak = ui.as_weak();
@@ -853,6 +1137,48 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
     let a = app.clone();
+    ui.on_to_classic(move || a.borrow_mut().set_layout("classic"));
+    let a = app.clone();
+    ui.on_to_full(move || a.borrow_mut().set_layout("full"));
+    let weak = ui.as_weak();
+    ui.on_toggle_maximize(move || {
+        if let Some(ui) = weak.upgrade() {
+            let now = ui.window().with_winit_window(|w: &winit::window::Window| {
+                let m = !w.is_maximized();
+                w.set_maximized(m);
+                m
+            });
+            ui.set_maximized(now.unwrap_or(false));
+        }
+    });
+    let weak = ui.as_weak();
+    ui.on_resize_edge(move |edge| {
+        if let Some(ui) = weak.upgrade() {
+            use winit::window::ResizeDirection as D;
+            let dir = match edge.as_str() {
+                "e" => D::East,
+                "w" => D::West,
+                "s" => D::South,
+                _ => D::SouthEast,
+            };
+            ui.window().with_winit_window(|w: &winit::window::Window| {
+                if let Err(e) = w.drag_resize_window(dir) {
+                    log(&format!("resize: {e}"));
+                }
+            });
+        }
+    });
+    let a = app.clone();
+    ui.on_cycle_sort(move || a.borrow_mut().cycle_sort());
+    let a = app.clone();
+    ui.on_choose_appearance(move |which| {
+        let mut app = a.borrow_mut();
+        app.appearance = which.to_string();
+        let id = app.theme_id.clone();
+        app.apply_theme(id);
+        app.save_settings();
+    });
+    let a = app.clone();
     ui.on_choose_theme(move |id| {
         let id = id.to_string();
         a.borrow_mut().apply_theme(if id == "default" { None } else { Some(id) });
@@ -866,7 +1192,8 @@ fn main() -> Result<(), slint::PlatformError> {
 
     // Test runs: play at once, take a snapshot, quit after a while.
     if app.borrow().args.get("playURL").is_some() {
-        app.borrow_mut().play(0);
+        let i = app.borrow().stations.iter().position(|s| s.id == "test-url").unwrap_or(0);
+        app.borrow_mut().play(i);
     }
     if let Some(path) = app.borrow().args.get("screenshot").map(String::from) {
         let delay = app.borrow().args.num("screenshotDelay").unwrap_or(4.0);
@@ -882,6 +1209,14 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
             }
             let _ = slint::quit_event_loop();
+        });
+    }
+    // Test runs: -swapAt <s> swaps the layout mid-run (with the engine playing), to check the swap.
+    if let Some(at) = app.borrow().args.num("swapAt") {
+        let a = app.clone();
+        slint::Timer::single_shot(Duration::from_secs_f64(at), move || {
+            let other = a.borrow().ui.upgrade().map(|u| if u.get_layout() == "classic" { "full" } else { "classic" }).unwrap_or("full");
+            a.borrow_mut().set_layout(other);
         });
     }
     if let Some(s) = app.borrow().args.num("quitAfter") {

@@ -1,0 +1,443 @@
+// Driftwave's Full layout: the familiar look. A title bar of its own, the navigation pane, pages (Library,
+// Discover, Search, Settings) on a content card, and the player card beside them. Coloured from the theme's tokens
+// (fullpal.rs); drawn in vectors throughout.
+
+export global Th {
+    in-out property <color> background: #202020;
+    in-out property <color> pane: #202020;
+    in-out property <color> surface: #282828;
+    in-out property <color> card: #2D2D2D;
+    in-out property <color> card-stroke: #3A3A3A;
+    in-out property <color> control: #353535;
+    in-out property <color> control-stroke: #454545;
+    in-out property <color> subtle: #FFFFFF0F;
+    in-out property <color> divider: #FFFFFF14;
+    // Text on the page; on cards; in the navigation pane and title bar; on buttons.
+    in-out property <color> text: #FFFFFF;
+    in-out property <color> text2: #C5C5C5;
+    in-out property <color> text3: #9A9A9A;
+    in-out property <color> card-text: #FFFFFF;
+    in-out property <color> card-text2: #C5C5C5;
+    in-out property <color> pane-text: #FFFFFF;
+    in-out property <color> title-text: #FFFFFF;
+    in-out property <color> control-text: #FFFFFF;
+    in-out property <color> accent: #4CC2FF;
+    in-out property <color> accent-text: #99EBFF;
+    in-out property <color> on-accent: #000000;
+    in-out property <color> dialog: #2B2B2B;
+    in-out property <string> body-font: "Segoe UI";
+    in-out property <string> title-font: "Segoe UI";
+    in-out property <length> title-size: 28px;
+    in-out property <int> title-weight: 600;
+    in-out property <length> radius-card: 8px;
+    in-out property <length> radius-control: 4px;
+    in-out property <length> radius-cover: 10px;
+}
+
+export struct StationCard {
+    name: string,
+    detail: string,
+    playing: bool,
+    cover: image,
+    has-cover: bool,
+    small: bool,
+    c1: color,
+    c2: color,
+}
+
+export struct TrackRow {
+    title: string,
+    note: string,
+}
+
+export struct Swatch {
+    id: string,
+    name: string,
+    back: color,
+    card: color,
+    accent: color,
+    text: color,
+    on: bool,
+}
+
+// A station's picture: its logo, or a soft two-colour tile with an antenna.
+component Cover inherits Rectangle {
+    in property <image> source;
+    in property <bool> has-source;
+    // A small logo (under 128 px) is shown at a size it can carry, centred on its tile, not blown up.
+    in property <bool> small;
+    in property <color> c1: #6B4EA0;
+    in property <color> c2: #C24F8E;
+    border-radius: Th.radius-cover;
+    clip: true;
+    background: has-source && !small ? #00000000 : @linear-gradient(135deg, c1 0%, c2 100%);
+    if has-source && !small: Image { width: parent.width; height: parent.height; source: root.source; image-fit: cover; image-rendering: smooth; }
+    if has-source && small: Rectangle {
+        width: min(parent.width * 0.62, root.source.width * 1.15px); height: self.width;
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+        border-radius: self.width * 0.12; clip: true; background: #FFFFFF;
+        Image { width: parent.width; height: parent.height; source: root.source; image-fit: contain; image-rendering: smooth; }
+    }
+    if !has-source: Path {
+        x: parent.width * 0.32; y: parent.height * 0.3; width: parent.width * 0.36; height: parent.height * 0.4;
+        viewbox-width: 24; viewbox-height: 26; fill: transparent; stroke: #FFFFFFE0; stroke-width: max(1.5px, parent.width / 70);
+        commands: "M 12 10 L 5 26 M 12 10 L 19 26 M 7.5 20 L 16.5 20 M 6 4 Q 2.5 8 6 12 M 18 4 Q 21.5 8 18 12 M 3 1 Q -2 8 3 15 M 21 1 Q 26 8 21 15 M 12 7 L 12 10";
+    }
+}
+
+// A navigation pane item: icon, label, and the accent pill when selected.
+component NavItem inherits Rectangle {
+    in property <string> label;
+    in property <string> icon;
+    in property <bool> selected;
+    callback clicked();
+    height: 36px;
+    border-radius: Th.radius-control;
+    background: selected ? Th.subtle : (ta.has-hover ? Th.subtle.transparentize(40%) : transparent);
+    ta := TouchArea { clicked => { root.clicked(); } }
+    if selected: Rectangle { x: 0; y: 10px; width: 3px; height: 16px; border-radius: 1.5px; background: Th.accent; }
+    Path {
+        x: 14px; y: 10px; width: 16px; height: 16px; viewbox-width: 16; viewbox-height: 16;
+        fill: transparent; stroke: Th.pane-text; stroke-width: 1.3px; commands: root.icon;
+    }
+    Text { x: 42px; y: (parent.height - self.height) / 2; text: root.label; color: Th.pane-text; font-size: 13px; }
+}
+
+// A plain button in the theme's control colours.
+component Btn inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary;
+    callback clicked();
+    height: 32px;
+    width: max(80px, label.preferred-width + 24px);
+    border-radius: Th.radius-control;
+    background: primary ? (ta.pressed ? Th.accent.darker(15%) : (ta.has-hover ? Th.accent.brighter(8%) : Th.accent))
+        : (ta.pressed ? Th.control.darker(10%) : (ta.has-hover ? Th.control.brighter(6%) : Th.control));
+    border-width: 1px;
+    border-color: primary ? Th.accent.darker(10%) : Th.control-stroke;
+    ta := TouchArea { clicked => { root.clicked(); } }
+    label := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: root.text; color: primary ? Th.on-accent : Th.control-text; font-size: 13px; }
+}
+
+// A round button with a vector glyph (the player's play / stop).
+component RoundButton inherits Rectangle {
+    in property <string> glyph;
+    in property <bool> primary;
+    callback clicked();
+    width: 44px; height: 44px; border-radius: self.width / 2;
+    background: primary ? (ta.pressed ? Th.accent.darker(15%) : (ta.has-hover ? Th.accent.brighter(8%) : Th.accent))
+        : (ta.has-hover ? Th.subtle : transparent);
+    ta := TouchArea { clicked => { root.clicked(); } }
+    Path {
+        x: parent.width * 0.32; y: parent.height * 0.32; width: parent.width * 0.36; height: parent.height * 0.36;
+        viewbox-width: 16; viewbox-height: 16; stroke: transparent; fill: primary ? Th.on-accent : Th.card-text;
+        commands: root.glyph;
+    }
+}
+
+// The window's caption buttons, drawn for the theme.
+component Caption inherits Rectangle {
+    in property <string> glyph; // min, max, restore, close
+    callback clicked();
+    width: 46px; height: 32px;
+    background: ta.has-hover ? (glyph == "close" ? #C42B1C : Th.subtle) : transparent;
+    ta := TouchArea { clicked => { root.clicked(); } }
+    Path {
+        x: (parent.width - 10px) / 2; y: (parent.height - 10px) / 2; width: 10px; height: 10px; viewbox-width: 10; viewbox-height: 10;
+        fill: transparent; stroke: (ta.has-hover && glyph == "close") ? #FFFFFF : Th.title-text; stroke-width: 1px;
+        commands: glyph == "min" ? "M 0 5 L 10 5" : glyph == "max" ? "M 0.5 0.5 L 9.5 0.5 L 9.5 9.5 L 0.5 9.5 Z"
+            : glyph == "restore" ? "M 2.5 2.5 L 9.5 2.5 L 9.5 9.5 L 2.5 9.5 Z M 0.5 2 L 0.5 0.5 L 8 0.5" : "M 0 0 L 10 10 M 10 0 L 0 10";
+    }
+}
+
+// A settings card: a heading, a line of explanation, and its controls.
+component SettingsCard inherits Rectangle {
+    in property <string> heading;
+    in property <string> note;
+    border-radius: Th.radius-card;
+    background: Th.card;
+    border-width: 1px;
+    border-color: Th.card-stroke;
+    VerticalLayout {
+        padding: 16px; spacing: 10px;
+        Text { text: root.heading; color: Th.card-text; font-size: 14px; font-weight: 600; }
+        if root.note != "": Text { text: root.note; color: Th.card-text2; font-size: 12px; wrap: word-wrap; }
+        @children
+    }
+}
+
+export component FullView inherits Rectangle {
+    // Now playing and the library (shared with Classic through the window).
+    in property <[StationCard]> stations;
+    in-out property <int> selected: -1;
+    in property <string> station;
+    in property <string> song;
+    in property <string> artist;
+    in property <image> cover;
+    in property <bool> has-cover;
+    in property <bool> cover-small;
+    in property <color> cover-c1;
+    in property <color> cover-c2;
+    in property <bool> playing;
+    in property <bool> loading;
+    in property <string> status;
+    in-out property <float> volume;
+    in property <[TrackRow]> tracks;
+    in property <bool> recording;
+    in property <bool> record-armed;
+    in property <string> sort-name: "Name";
+    in property <bool> maximized;
+    in property <bool> active: true;
+    in property <string> version;
+
+    // Settings.
+    in property <[Swatch]> themes;
+    in property <string> appearance: "system"; // system, light, dark
+
+    in-out property <string> page: "library";
+    in-out property <bool> show-player: true;
+
+    callback drag();
+    callback minimize();
+    callback toggle-maximize();
+    callback quit();
+    callback resize-edge(string);
+    callback play-station(int);
+    callback play();
+    callback stop();
+    callback volume-changed(float);
+    callback toggle-record();
+    callback to-classic();
+    callback cycle-sort();
+    callback choose-theme(string);
+    callback choose-appearance(string);
+
+    background: Th.background;
+    property <length> pane-w: 220px;
+    property <length> player-w: show-player ? 312px : 0px;
+
+    // ─────────── Title bar ───────────
+    Rectangle {
+        x: 0; y: 0; width: parent.width; height: 40px;
+        TouchArea {
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); } }
+            double-clicked => { root.toggle-maximize(); }
+        }
+        // The Driftwave sun.
+        Rectangle {
+            x: 14px; y: 12px; width: 16px; height: 16px; border-radius: 8px; clip: true;
+            background: @linear-gradient(180deg, #FFD36E 0%, #FF8A70 55%, #FF6FA8 100%);
+            for k in 3: Rectangle { y: (8.5 + k * 2.4) * 1px; height: 1.2px; background: Th.background; }
+        }
+        Text { x: 40px; y: (parent.height - self.height) / 2; text: "Driftwave"; color: root.active ? Th.title-text : Th.title-text.transparentize(40%); font-size: 12px; }
+        Caption { x: parent.width - 138px; y: 0; glyph: "min"; clicked => { root.minimize(); } }
+        Caption { x: parent.width - 92px; y: 0; glyph: root.maximized ? "restore" : "max"; clicked => { root.toggle-maximize(); } }
+        Caption { x: parent.width - 46px; y: 0; glyph: "close"; clicked => { root.quit(); } }
+    }
+
+    // ─────────── Navigation ───────────
+    Rectangle {
+        x: 0; y: 40px; width: pane-w; height: parent.height - 40px; background: Th.pane;
+        VerticalLayout {
+            padding: 6px; spacing: 2px;
+            NavItem { label: "Library"; selected: root.page == "library"; clicked => { root.page = "library"; }
+                icon: "M 2 2 L 2 14 M 5 2 L 5 14 M 8.5 2.5 L 11.5 13.5 M 11 2 L 14 13"; }
+            NavItem { label: "Discover"; selected: root.page == "discover"; clicked => { root.page = "discover"; }
+                icon: "M 8 1.5 A 6.5 6.5 0 1 1 7.99 1.5 Z M 10.5 5.5 L 9 9 L 5.5 10.5 L 7 7 Z"; }
+            NavItem { label: "Search"; selected: root.page == "search"; clicked => { root.page = "search"; }
+                icon: "M 6.5 2 A 4.5 4.5 0 1 1 6.49 2 Z M 9.8 9.8 L 14 14"; }
+            Rectangle { }
+            NavItem { label: root.show-player ? "Hide Player" : "Show Player"; clicked => { root.show-player = !root.show-player; }
+                icon: "M 1.5 2.5 L 14.5 2.5 L 14.5 13.5 L 1.5 13.5 Z M 10 2.5 L 10 13.5"; }
+            NavItem { label: "Classic Mode"; clicked => { root.to-classic(); }
+                icon: "M 2 1.5 L 14 1.5 L 14 6 L 2 6 Z M 2 7.5 L 14 7.5 L 14 10.5 L 2 10.5 Z M 2 12 L 14 12 L 14 14.5 L 2 14.5 Z"; }
+            NavItem { label: "Settings"; selected: root.page == "settings"; clicked => { root.page = "settings"; }
+                icon: "M 8 5 A 3 3 0 1 1 7.99 5 Z M 8 1 L 8 3 M 8 13 L 8 15 M 1 8 L 3 8 M 13 8 L 15 8 M 3 3 L 4.4 4.4 M 11.6 11.6 L 13 13 M 13 3 L 11.6 4.4 M 4.4 11.6 L 3 13"; }
+        }
+    }
+
+    // ─────────── The content card ───────────
+    Rectangle {
+        x: pane-w; y: 40px; width: parent.width - pane-w; height: parent.height - 40px;
+        border-radius: Th.radius-card;
+        background: Th.surface;
+        border-width: 1px;
+        border-color: Th.card-stroke;
+        clip: true;
+
+        // Library.
+        if root.page == "library": Rectangle {
+            x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
+            Text { x: 28px; y: 22px; text: "Library"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            Btn { x: parent.width - self.width - 24px; y: 26px; text: "↕  " + root.sort-name; clicked => { root.cycle-sort(); } }
+            if root.stations.length == 0: VerticalLayout {
+                x: 0; y: 120px; width: parent.width; height: 200px; spacing: 10px; alignment: center;
+                Text { text: "Your Library Is Empty"; color: Th.text; font-size: 20px; font-weight: 600; horizontal-alignment: center; }
+                Text { text: "Discover stations and add the ones you like."; color: Th.text2; font-size: 13px; horizontal-alignment: center; }
+            }
+            grid := Flickable {
+                x: 20px; y: 80px; width: parent.width - 40px; height: parent.height - 92px;
+                property <length> cw: 164px;
+                property <length> ch: 214px;
+                property <length> gap: 8px;
+                property <int> cols: max(1, Math.floor((self.width + gap) / (cw + gap)));
+                content-height: Math.ceil(root.stations.length / cols) * (ch + gap);
+                for s[i] in root.stations: Rectangle {
+                    x: Math.mod(i, grid.cols) * (grid.cw + grid.gap);
+                    y: Math.floor(i / grid.cols) * (grid.ch + grid.gap);
+                    width: grid.cw; height: grid.ch;
+                    border-radius: Th.radius-card;
+                    background: i == root.selected ? Th.subtle : (card-ta.has-hover ? Th.subtle.transparentize(40%) : transparent);
+                    card-ta := TouchArea {
+                        clicked => { root.selected = i; }
+                        double-clicked => { root.selected = i; root.play-station(i); }
+                    }
+                    Cover { x: 8px; y: 8px; width: 148px; height: 148px; source: s.cover; has-source: s.has-cover; small: s.small; c1: s.c1; c2: s.c2; }
+                    if s.playing: Rectangle {
+                        x: 128px; y: 128px; width: 24px; height: 24px; border-radius: 12px; background: Th.accent;
+                        Path { x: 7px; y: 6px; width: 11px; height: 12px; viewbox-width: 11; viewbox-height: 12; stroke: transparent; fill: Th.on-accent;
+                            commands: "M 1 0 L 11 6 L 1 12 Z"; }
+                    }
+                    Text { x: 10px; y: 164px; width: parent.width - 20px; text: s.name; color: Th.text; font-size: 13px; font-weight: 600; overflow: elide; }
+                    Text { x: 10px; y: 184px; width: parent.width - 20px; text: s.detail; color: Th.text2; font-size: 11px; overflow: elide; }
+                }
+            }
+        }
+
+        // Discover and Search arrive in stage 2 of the rebuild.
+        if root.page == "discover" || root.page == "search": Rectangle {
+            x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
+            Text { x: 28px; y: 22px; text: root.page == "discover" ? "Discover" : "Search"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            Text { x: 28px; y: 80px; text: "Being rebuilt in Rust: next up."; color: Th.text2; font-size: 13px; }
+        }
+
+        // Settings.
+        if root.page == "settings": Flickable {
+            x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
+            content-height: settings-col.preferred-height + 40px;
+            settings-col := VerticalLayout {
+                x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
+                Text { text: "Settings"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+                SettingsCard {
+                    heading: "Layout";
+                    note: "Full is everything; Classic is the compact player of the Winamp years. Swap any time: the music carries on.";
+                    HorizontalLayout {
+                        spacing: 10px; alignment: start;
+                        Btn { text: "Full"; primary: true; }
+                        Btn { text: "Classic"; clicked => { root.to-classic(); } }
+                    }
+                }
+                SettingsCard {
+                    heading: "App theme";
+                    note: "Light or dark for the Default theme.";
+                    HorizontalLayout {
+                        spacing: 10px; alignment: start;
+                        Btn { text: "Use system setting"; primary: root.appearance == "system"; clicked => { root.choose-appearance("system"); } }
+                        Btn { text: "Light"; primary: root.appearance == "light"; clicked => { root.choose-appearance("light"); } }
+                        Btn { text: "Dark"; primary: root.appearance == "dark"; clicked => { root.choose-appearance("dark"); } }
+                    }
+                }
+                SettingsCard {
+                    heading: "Theme";
+                    note: "A look for the whole app, in both layouts.";
+                    gallery := Rectangle {
+                        property <int> cols: max(1, Math.floor((self.width + 8px) / 120px));
+                        height: Math.ceil(root.themes.length / cols) * 96px;
+                        for t[i] in root.themes: Rectangle {
+                            x: Math.mod(i, gallery.cols) * 120px; y: Math.floor(i / gallery.cols) * 96px; width: 112px; height: 88px;
+                            border-radius: Th.radius-control;
+                            border-width: t.on ? 2px : 1px;
+                            border-color: t.on ? Th.accent : (sw-ta.has-hover ? Th.text3 : Th.card-stroke);
+                            background: t.back;
+                            clip: true;
+                            sw-ta := TouchArea { clicked => { root.choose-theme(t.id); } }
+                            Rectangle { x: 10px; y: 10px; width: 60px; height: 34px; border-radius: 4px; background: t.card;
+                                Text { x: 8px; y: 6px; text: "Aa"; color: t.text; font-size: 15px; font-weight: 700; } }
+                            Rectangle { x: 76px; y: 12px; width: 26px; height: 8px; border-radius: 4px; background: t.accent; }
+                            Rectangle { x: 76px; y: 26px; width: 18px; height: 8px; border-radius: 4px; background: t.text.transparentize(60%); }
+                            Rectangle { x: 0; y: 54px; width: parent.width; height: 34px; background: #00000066;
+                                Text { x: 8px; y: (parent.height - self.height) / 2; width: parent.width - 16px; text: t.name; color: #FFFFFF; font-size: 11px; overflow: elide; } }
+                        }
+                    }
+                }
+                SettingsCard {
+                    heading: "About";
+                    note: "Driftwave " + root.version + ". Internet radio, one app, written in Rust. Made with Slint.";
+                }
+            }
+        }
+
+        // ─────────── The player card ───────────
+        if root.show-player: Rectangle {
+            x: parent.width - root.player-w; y: 0; width: root.player-w; height: parent.height;
+            Rectangle {
+                x: 4px; y: 8px; width: 300px; height: parent.height - 16px;
+                border-radius: Th.radius-card; background: Th.card; border-width: 1px; border-color: Th.card-stroke; clip: true;
+                if root.station == "": VerticalLayout {
+                    alignment: center; spacing: 8px; padding: 24px;
+                    Text { text: "No Playback"; color: Th.card-text; font-size: 18px; font-weight: 600; horizontal-alignment: center; }
+                    Text { text: "Choose a station from your library."; color: Th.card-text2; font-size: 12px; horizontal-alignment: center; wrap: word-wrap; }
+                }
+                if root.station != "": Rectangle {
+                    Cover { x: 30px; y: 24px; width: 240px; height: 240px; source: root.cover; has-source: root.has-cover; small: root.cover-small; c1: root.cover-c1; c2: root.cover-c2; }
+                    Text { x: 20px; y: 280px; width: parent.width - 40px; text: root.station; color: Th.card-text; font-size: 17px; font-weight: 600;
+                        horizontal-alignment: center; wrap: word-wrap; max-height: 48px; overflow: elide; }
+                    Text { x: 20px; y: 330px; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; color: Th.card-text; font-size: 13px; font-weight: 600;
+                        horizontal-alignment: center; overflow: elide; }
+                    Text { x: 20px; y: 350px; width: parent.width - 40px; text: root.artist; color: Th.card-text2; font-size: 12px; horizontal-alignment: center; overflow: elide; }
+                    RoundButton {
+                        x: 24px; y: 380px; primary: true;
+                        glyph: root.playing || root.loading ? "M 3 3 L 13 3 L 13 13 L 3 13 Z" : "M 4 2 L 14 8 L 4 14 Z";
+                        clicked => { if (root.playing || root.loading) { root.stop(); } else { root.play(); } }
+                    }
+                    // Volume.
+                    Rectangle {
+                        x: 80px; y: 392px; width: 190px; height: 20px;
+                        Rectangle { y: 8px; height: 4px; border-radius: 2px; background: Th.control-stroke; }
+                        Rectangle { y: 8px; height: 4px; width: parent.width * root.volume; border-radius: 2px; background: Th.accent; }
+                        Rectangle { x: parent.width * root.volume - 9px; y: 1px; width: 18px; height: 18px; border-radius: 9px; background: Th.control;
+                            border-width: 1px; border-color: Th.control-stroke;
+                            Rectangle { x: 5px; y: 5px; width: 8px; height: 8px; border-radius: 4px; background: Th.accent; } }
+                        TouchArea {
+                            moved => { if (self.pressed) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
+                            pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
+                        }
+                    }
+                    // Recording.
+                    Rectangle {
+                        x: 16px; y: 440px; width: parent.width - 32px; height: 52px; border-radius: Th.radius-control;
+                        background: Th.control; border-width: 1px; border-color: Th.control-stroke;
+                        rec-ta := TouchArea { clicked => { root.toggle-record(); } }
+                        Rectangle { x: 14px; y: 18px; width: 16px; height: 16px; border-radius: 8px; border-width: 2px;
+                            border-color: root.recording ? #E0573A : Th.control-text.transparentize(45%); background: root.recording ? #E0573A : transparent; }
+                        Text { x: 42px; y: 9px; text: root.recording ? "Recording" : (root.record-armed ? "Recording armed" : "Not Recording");
+                            color: Th.control-text; font-size: 13px; font-weight: 600; }
+                        Text { x: 42px; y: 28px; width: parent.width - 54px; overflow: elide; color: Th.control-text.transparentize(25%); font-size: 11px;
+                            text: root.record-armed ? "Every song is saved as its own file." : "Click to save every song as its own file."; }
+                    }
+                    // Played songs.
+                    Text { x: 18px; y: 508px; text: "Played Tracks"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
+                    Flickable {
+                        x: 12px; y: 530px; width: parent.width - 24px; height: max(0px, parent.height - 540px);
+                        content-height: root.tracks.length * 40px;
+                        for t[i] in root.tracks: Rectangle {
+                            y: i * 40px; height: 38px; border-radius: Th.radius-control; background: Th.subtle;
+                            Text { x: 10px; y: 4px; width: parent.width - 20px; text: t.title; color: Th.card-text; font-size: 12px; overflow: elide; }
+                            Text { x: 10px; y: 21px; width: parent.width - 20px; text: t.note; color: Th.card-text2; font-size: 11px; overflow: elide; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Resize borders (the window has no system frame).
+    if !root.maximized: TouchArea { x: parent.width - 6px; y: 40px; width: 6px; height: parent.height - 52px; mouse-cursor: ew-resize;
+        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("e"); } } }
+    if !root.maximized: TouchArea { x: 0; y: 40px; width: 6px; height: parent.height - 52px; mouse-cursor: ew-resize;
+        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("w"); } } }
+    if !root.maximized: TouchArea { x: 12px; y: parent.height - 6px; width: parent.width - 24px; height: 6px; mouse-cursor: ns-resize;
+        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("s"); } } }
+    if !root.maximized: TouchArea { x: parent.width - 12px; y: parent.height - 12px; width: 12px; height: 12px; mouse-cursor: nwse-resize;
+        pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("se"); } } }
+}
