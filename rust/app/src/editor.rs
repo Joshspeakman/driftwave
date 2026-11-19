@@ -6,7 +6,7 @@
 use super::{fullpal, App, EffectRow, Ed, TokenRow};
 use driftwave_core::theme::{new_custom_id, Color, Theme, EFFECT_KINDS, TOKENS};
 use serde_json::Map;
-use slint::{ComponentHandle, ModelRc, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, VecModel};
 use std::rc::Rc;
 
 fn slint_colour(c: Color) -> slint::Color {
@@ -23,7 +23,9 @@ impl App {
     /// Saves the theme being edited and shows the change.
     fn edited(&mut self) {
         let dir = self.paths.themes();
-        if let Some(t) = self.editing() {
+        // A test run's themes live only as long as it does (it never leaves copies behind).
+        let on_disk = !self.args.test_run();
+        if let Some(t) = self.editing().filter(|_| on_disk) {
             let path = t.source_path.clone().unwrap_or_else(|| dir.join(format!("{}.json", t.id)));
             t.source_path = Some(path.clone());
             let json = t.to_json();
@@ -79,17 +81,27 @@ impl App {
                 TokenRow { key: (*k).into(), label: (*label).into(), hex: c.text().into(), color: slint_colour(c) }
             })
             .collect();
-        ed.set_tokens(ModelRc::from(Rc::new(VecModel::from(tokens))));
+        let model = ed.get_tokens();
+        match model.as_any().downcast_ref::<VecModel<TokenRow>>().filter(|m| m.row_count() == tokens.len()) {
+            Some(m) => {
+                for (i, row) in tokens.into_iter().enumerate() {
+                    if m.row_data(i).as_ref() != Some(&row) {
+                        m.set_row_data(i, row);
+                    }
+                }
+            }
+            None => ed.set_tokens(ModelRc::from(Rc::new(VecModel::from(tokens)))),
+        }
         ed.set_body_font(t.fonts.body.clone().unwrap_or_default().into());
         ed.set_title_font(t.fonts.title.clone().unwrap_or_default().into());
-        ed.set_title_size(format!("{}", t.fonts.title_size.unwrap_or(28.0)).into());
+        ed.set_title_size(t.fonts.title_size.unwrap_or(28.0).round() as i32);
         ed.set_weight(match t.fonts.title_weight.as_deref().map(str::to_lowercase).as_deref() {
             Some("normal") | Some("regular") => 0,
             Some("bold") => 2,
             Some("black") => 3,
             _ => 1,
         });
-        ed.set_spacing(format!("{}", t.fonts.title_spacing.unwrap_or(0)).into());
+        ed.set_spacing(t.fonts.title_spacing.unwrap_or(0));
         ed.set_upper(t.fonts.title_uppercase);
         ed.set_corners((t.corners.card.unwrap_or(8.0) / 20.0).clamp(0.0, 1.0) as f32);
         ed.set_cover((t.corners.cover.unwrap_or(0.07) / 0.5).clamp(0.0, 1.0) as f32);
@@ -132,8 +144,17 @@ impl App {
             }
             t
         });
+        // Your copy of this theme already exists: that's the one to change.
+        let base = current.as_ref().map(|c| c.name.as_str()).unwrap_or("Default");
+        let mine = format!("{base} (Mine)");
+        if let Some(id) = self.themes.iter().find(|x| !x.built_in && x.name == mine).map(|x| x.id.clone()) {
+            self.theme_id = Some(id.clone());
+            self.apply_theme(Some(id));
+            self.save_settings();
+            return;
+        }
         t.id = new_custom_id();
-        t.name = format!("{} (Mine)", current.as_ref().map(|c| c.name.as_str()).unwrap_or("Default"));
+        t.name = mine;
         t.built_in = false;
         t.source_path = Some(self.paths.themes().join(format!("{}.json", t.id)));
         let id = t.id.clone();
@@ -141,7 +162,6 @@ impl App {
         self.theme_id = Some(id);
         self.edited();
         self.save_settings();
-        self.message("This is your own copy: change anything, it's saved as you go.");
     }
 
     pub(crate) fn edit_name(&mut self, name: &str) {
@@ -185,11 +205,9 @@ impl App {
         self.edited();
     }
 
-    pub(crate) fn edit_title_size(&mut self, value: &str) {
-        if let Ok(n) = value.trim().parse::<f64>() {
-            if let Some(t) = self.editing() {
-                t.fonts.title_size = Some(n.clamp(14.0, 72.0));
-            }
+    pub(crate) fn edit_title_size(&mut self, n: i32) {
+        if let Some(t) = self.editing() {
+            t.fonts.title_size = Some((n as f64).clamp(14.0, 72.0));
         }
         self.edited();
     }
@@ -201,11 +219,17 @@ impl App {
         self.edited();
     }
 
-    pub(crate) fn edit_spacing(&mut self, value: &str) {
-        if let Ok(n) = value.trim().parse::<i32>() {
-            if let Some(t) = self.editing() {
-                t.fonts.title_spacing = Some(n.clamp(-100, 800));
-            }
+    pub(crate) fn edit_spacing(&mut self, n: i32) {
+        if let Some(t) = self.editing() {
+            t.fonts.title_spacing = Some(n.clamp(-100, 800));
+        }
+        self.edited();
+    }
+
+    /// From the colour picker.
+    pub(crate) fn edit_token_colour(&mut self, key: &str, c: slint::Color) {
+        if let Some(t) = self.editing() {
+            t.colors.insert(key.to_string(), Color { a: c.alpha(), r: c.red(), g: c.green(), b: c.blue() });
         }
         self.edited();
     }
@@ -274,6 +298,13 @@ impl App {
         }
         t.built_in = false;
         t.source_path = Some(self.paths.themes().join(format!("{}.json", t.id)));
+        // Named like one you have: numbered, so the gallery can tell them apart.
+        let stem = t.name.clone();
+        let mut n = 2;
+        while self.themes.iter().any(|x| x.name == t.name) {
+            t.name = format!("{stem} {n}");
+            n += 1;
+        }
         let id = t.id.clone();
         let name = t.name.clone();
         self.themes.push(t);
@@ -287,7 +318,7 @@ impl App {
         let Some(id) = self.theme_id.clone() else { return };
         let Some(i) = self.themes.iter().position(|t| t.id == id && !t.built_in) else { return };
         let t = self.themes.remove(i);
-        if let Some(p) = &t.source_path {
+        if let Some(p) = t.source_path.as_ref().filter(|_| !self.args.test_run()) {
             let _ = std::fs::remove_file(p);
         }
         self.apply_theme(None);

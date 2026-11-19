@@ -623,7 +623,7 @@ impl App {
         {
             let scenery = ui.global::<Scenery>();
             let page = g.region(Some("content"));
-            match scene.effects().sun_picture(g.width * scale, g.height * scale, (page.x + page.w / 2.0) * scale, scale, 0.4) {
+            match scene.effects().sun_picture(g.width * scale, g.height * scale, (page.x + page.w / 2.0) * scale, scale, 0.7) {
                 Some((p, x, y)) => {
                     scenery.set_sun(Image::from_rgba8_premultiplied(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&p.px, p.w as u32, p.h as u32)));
                     scenery.set_sun_x(x / scale);

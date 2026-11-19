@@ -31,6 +31,7 @@ mod finding;
 mod integration;
 mod look;
 mod paint;
+mod played;
 mod scene;
 mod fullpal;
 mod palette;
@@ -38,7 +39,7 @@ mod resources;
 
 use driftwave_audio::{Engine, EngineConfig, Event, PlayState};
 use driftwave_core::radio_browser::USER_AGENT;
-use driftwave_core::recording::{RecorderConfig, RecorderEvent, RecordingMode, RecordingState};
+use driftwave_core::recording::{RecorderConfig, RecorderEvent, RecordingState};
 use driftwave_core::station::{sorted_by, Station, StationSorting};
 use driftwave_core::storage::{library_file, AppPaths};
 use driftwave_core::theme::{load_folder, Color, Theme};
@@ -63,7 +64,7 @@ thread_local! {
 /// The Full layout's window size by default.
 const FULL_SIZE: (f32, f32) = (1180.0, 760.0);
 
-const FLAGS: [&str; 15] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize"];
+const FLAGS: [&str; 16] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive", "mediaControls", "tray", "still", "noValve", "customize", "giphy"];
 /// The window's width at the normal size, and its station list's height (in units) by default.
 const DEFAULT_WIDTH: f32 = 412.0;
 const DEFAULT_LIST_UNITS: f32 = 110.0;
@@ -212,6 +213,8 @@ struct App {
     /// Your own background, and its playing GIF and GIPHY search.
     bg: Option<bg::Picture>,
     bg_state: bg::State,
+    /// The songs heard, and their recordings.
+    played: played::Tracks,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -513,13 +516,9 @@ impl App {
             silent,
             user_agent: USER_AGENT.to_string(),
             // Nothing touches the disk unless REC is on.
-            recorder: RecorderConfig {
-                mode: if self.player.armed { RecordingMode::Everything } else { RecordingMode::Nothing },
-                minimum_duration: 30.0,
-                maximum_duration: 900.0,
-            },
+            recorder: RecorderConfig { mode: self.record_mode(), minimum_duration: self.min_secs(), maximum_duration: self.max_secs() },
             recording_dir: self.recording_dir(),
-            track_dir: self.paths.support.join("Tracks"),
+            track_dir: self.track_dir(),
             station_name: station.name.clone(),
             probe_playlists: station.is_local,
         };
@@ -549,7 +548,6 @@ impl App {
         self.player.writing = false;
         self.player.state = "CONNECTING".into();
         self.settings["lastStation"] = json!(station.id);
-        self.tracks.set_vec(Vec::new());
         if let Some(ui) = self.ui.upgrade() {
             ui.set_song("".into());
             ui.set_artist("".into());
@@ -566,8 +564,8 @@ impl App {
             engine.stop();
             self.player.stopped = Some(Instant::now());
         }
-        // Temporary recordings live only as long as the stream.
-        let _ = std::fs::remove_dir_all(self.recording_dir());
+        // What was recording won't finish (the songs recorded stay, to be saved, until Driftwave quits).
+        self.played_stream_stopped();
         self.player.playing = false;
         self.player.loading = false;
         self.player.writing = false;
@@ -687,20 +685,20 @@ impl App {
                     let (song, artist) = split_title(&title);
                     ui.set_song(song.into());
                     ui.set_artist(artist.into());
-                    use chrono::Timelike;
-                    let at = chrono::Local::now();
-                    self.tracks.insert(0, TrackRow { title: title.clone().into(), note: format!("{:02}:{:02}", at.hour(), at.minute()).into() });
-                    if self.tracks.row_count() > 50 {
-                        self.tracks.remove(50);
-                    }
+                    self.heard(&title);
                     self.player.title = title;
                     marquee_changed = true;
                 }
-                Event::Recorder(RecorderEvent::Started { state, .. }) => {
+                Event::Recorder(RecorderEvent::Started { id, title, state, file }) => {
                     self.player.writing = state == RecordingState::Recording;
+                    self.recorder_started(id, title, state, file);
                 }
-                Event::Recorder(RecorderEvent::Finished { .. }) => self.player.writing = false,
-                Event::Saved(p) => log(&format!("saved {}", p.display())),
+                Event::Recorder(RecorderEvent::Finished { id, state, .. }) => {
+                    self.player.writing = false;
+                    self.recorder_finished(id, state);
+                }
+                Event::Saved(p) => self.engine_saved(Ok(p)),
+                Event::SaveFailed(e) => self.engine_saved(Err(e)),
                 Event::Format(f) => {
                     // The stream's own format, as decoded (HE-AAC reports its full rate and its stereo).
                     if let Some(ui) = self.ui.upgrade() {
@@ -712,7 +710,7 @@ impl App {
                         }
                     }
                 }
-                Event::SaveFailed(_) | Event::Connected { .. } | Event::Info(_) => {}
+                Event::Connected { .. } | Event::Info(_) => {}
             }
         }
         if marquee_changed {
@@ -943,7 +941,19 @@ fn main() -> Result<(), slint::PlatformError> {
     let _ = std::fs::create_dir_all(&paths.support);
     log(&format!("launch testRun={test} folder={}", paths.support.display()));
     let settings: Value = if test {
-        json!({})
+        // Test runs start from nothing, plus the settings their flags give (scripts/recording-test).
+        let mut s = json!({});
+        for k in ["recordingMode", "trackDirectory"] {
+            if let Some(v) = args.get(k) {
+                s[k] = json!(v);
+            }
+        }
+        for k in ["recordingMinimumDuration", "recordingMaximumDuration", "pastTracksCount"] {
+            if let Some(v) = args.num(k) {
+                s[k] = json!(v as i64);
+            }
+        }
+        s
     } else {
         std::fs::read(paths.support.join("settings.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_else(|| json!({}))
     };
@@ -972,7 +982,10 @@ fn main() -> Result<(), slint::PlatformError> {
     let vis_ids: Vec<&'static str> = visualizers::all().iter().map(|v| v.id()).collect();
     let vis_id = args.get("vis").map(String::from).or_else(|| settings.get("visualizer").and_then(|v| v.as_str()).map(String::from)).unwrap_or_else(|| "liquid".into());
     let mut themes = built_in_themes();
-    themes.extend(load_folder(&paths.themes(), false));
+    // Your own themes (a test run starts with none: its copies are kept in memory).
+    if !test {
+        themes.extend(load_folder(&paths.themes(), false));
+    }
     let list_units = settings.get("listUnits").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_LIST_UNITS).max(62.0);
     let cache_dir = paths.favicons();
     let sorting_raw = settings.get("sorting").and_then(Value::as_str).map(String::from);
@@ -1027,6 +1040,7 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         }),
         find: finding::Finding::default(),
+        played: played::Tracks::default(),
         look: look::Look::default(),
         decor: decor::Decor::default(),
         eggs: eggs::Eggs::default(),
@@ -1118,6 +1132,10 @@ fn main() -> Result<(), slint::PlatformError> {
     APP.with(|a| *a.borrow_mut() = Some(Rc::downgrade(&app)));
     ui.set_cards(ModelRc::from(app.borrow().cards.clone()));
     ui.set_tracks(ModelRc::from(app.borrow().tracks.clone()));
+    // Temporary recordings left by a copy that didn't quit cleanly (only one copy runs per data folder).
+    if !test {
+        let _ = std::fs::remove_dir_all(app.borrow().paths.recording());
+    }
 
     {
         let mut a = app.borrow_mut();
@@ -1128,7 +1146,8 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.set_volume(s.get("volume").and_then(Value::as_f64).unwrap_or(0.8) as f32);
         ui.set_vis_name(visualizers::by_id(a.big.host.id()).map(|v| v.name()).unwrap_or("").into());
         ui.set_version(env!("CARGO_PKG_VERSION").into());
-        a.player.armed = s.get("record").and_then(Value::as_bool).unwrap_or(false);
+        a.player.armed = a.record_armed_setting();
+        a.show_prefs();
         let width = if let Some(w) = a.args.num("width") {
             w as f32
         } else if a.args.flag("double") {
@@ -1209,11 +1228,20 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.window().set_minimized(true);
         }
     });
-    let a = app.clone();
+    // Closing the window (its close button, or Alt+F4): into the notification area when there is one, else quit.
+    let tray_up = Rc::new(std::cell::Cell::new(false));
+    let (a, weak, up) = (app.clone(), ui.as_weak(), tray_up.clone());
     ui.on_quit(move || {
-        a.borrow().save_settings();
-        a.borrow_mut().stop();
-        let _ = slint::quit_event_loop();
+        if let Some(ui) = weak.upgrade() {
+            played::close_window(&a, &ui, up.get());
+        }
+    });
+    let weak = ui.as_weak();
+    ui.window().on_close_requested(move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.invoke_quit();
+        }
+        slint::CloseRequestResponse::KeepWindowShown
     });
     let a = app.clone();
     ui.on_play(move || {
@@ -1258,14 +1286,27 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
     let a = app.clone();
-    ui.on_toggle_record(move || {
-        let mut app = a.borrow_mut();
-        app.player.armed = !app.player.armed;
-        // Recording applies from the start of a stream: restart the station that's playing.
-        if let Some(s) = app.player.current.clone().filter(|_| app.player.engine.is_some()) {
-            app.play_station(s);
-        }
-    });
+    ui.on_toggle_record(move || a.borrow_mut().toggle_record());
+    // Settings: playback and recording; Played Tracks' Save.
+    {
+        let p = ui.global::<Prefs>();
+        let a = app.clone();
+        p.on_background_changed(move |on| a.borrow_mut().set_pref("backgroundPlayback", json!(on)));
+        let a = app.clone();
+        p.on_keep_changed(move |n| a.borrow_mut().set_keep(n));
+        let a = app.clone();
+        p.on_record_mode_chosen(move |m| a.borrow_mut().choose_record_mode(&m));
+        let a = app.clone();
+        p.on_choose_folder(move || a.borrow_mut().choose_track_folder());
+        let a = app.clone();
+        p.on_open_folder(move || a.borrow().open_track_folder());
+        let a = app.clone();
+        p.on_min_changed(move |v| a.borrow_mut().set_pref("recordingMinimumDuration", json!(v.clamp(0, 600))));
+        let a = app.clone();
+        p.on_max_changed(move |v| a.borrow_mut().set_pref("recordingMaximumDuration", json!(v.clamp(60, 7200))));
+        let a = app.clone();
+        p.on_save_track(move |i| a.borrow_mut().save_played(i));
+    }
     let weak = ui.as_weak();
     ui.on_toggle_clock(move || {
         if let Some(ui) = weak.upgrade() {
@@ -1432,11 +1473,13 @@ fn main() -> Result<(), slint::PlatformError> {
         let a = app.clone();
         ed.on_set_font(move |w, v| a.borrow_mut().edit_font(&w, &v));
         let a = app.clone();
-        ed.on_set_size(move |v| a.borrow_mut().edit_title_size(&v));
+        ed.on_set_size(move |v| a.borrow_mut().edit_title_size(v));
         let a = app.clone();
         ed.on_set_weight(move |i| a.borrow_mut().edit_weight(i));
         let a = app.clone();
-        ed.on_set_spacing(move |v| a.borrow_mut().edit_spacing(&v));
+        ed.on_set_spacing(move |v| a.borrow_mut().edit_spacing(v));
+        let a = app.clone();
+        ed.on_set_token_colour(move |k, c| a.borrow_mut().edit_token_colour(&k, c));
         let a = app.clone();
         ed.on_set_upper(move |on| a.borrow_mut().edit_upper(on));
         let a = app.clone();
@@ -1495,6 +1538,10 @@ fn main() -> Result<(), slint::PlatformError> {
         });
         std::mem::forget(timer);
     }
+    // Test runs: -giphy opens the GIPHY search.
+    if app.borrow().args.flag("giphy") {
+        ui.global::<Bg>().set_search_open(true);
+    }
     // Test runs: -customize opens the theme editor (a copy of the theme), -scroll <px> scrolls Settings.
     if app.borrow().args.flag("customize") {
         app.borrow_mut().customize_theme();
@@ -1507,6 +1554,12 @@ fn main() -> Result<(), slint::PlatformError> {
         let at = app.borrow().args.num("eggAt").unwrap_or(3.0);
         let a = app.clone();
         slint::Timer::single_shot(Duration::from_secs_f64(at), move || a.borrow_mut().egg_test(&trigger));
+    }
+    // Test runs: -saveTrack <s>:<row>[,…] presses Played Tracks' Save on a row at a time.
+    let saves: Vec<(f64, i32)> = app.borrow().args.get("saveTrack").map(|v| v.split(',').filter_map(|t| t.split_once(':')).filter_map(|(s, r)| Some((s.trim().parse().ok()?, r.trim().parse().ok()?))).collect()).unwrap_or_default();
+    for (at, row) in saves {
+        let a = app.clone();
+        slint::Timer::single_shot(Duration::from_secs_f64(at), move || a.borrow_mut().save_played(row));
     }
     // Test runs: -swapAt <s>[,<s>…] swaps the layout mid-run (with the engine playing), to check the swap
     // (and swapping back).
@@ -1529,7 +1582,34 @@ fn main() -> Result<(), slint::PlatformError> {
     let integ = Rc::new(RefCell::new(integration::Integration::new(listener)));
     {
         let integ = integ.clone();
-        slint::Timer::single_shot(Duration::from_millis(300), move || integ.borrow_mut().start(with_tray, with_media, tray_icon()));
+        let (weak, up) = (ui.as_weak(), tray_up.clone());
+        slint::Timer::single_shot(Duration::from_millis(300), move || {
+            integ.borrow_mut().start(with_tray, with_media, tray_icon());
+            up.set(integ.borrow().has_tray());
+            if let Some(ui) = weak.upgrade() {
+                ui.global::<Prefs>().set_notifications_available(integ.borrow().notifications_available());
+            }
+        });
+    }
+    {
+        // Notifications on: macOS asks permission first; refused (or unable), the setting goes back off.
+        let (a, i) = (app.clone(), integ.clone());
+        ui.global::<Prefs>().on_notifications_changed(move |on| {
+            a.borrow_mut().set_pref("notifications", json!(on));
+            if on {
+                i.borrow().request_notifications(|granted| {
+                    if !granted {
+                        let _ = slint::invoke_from_event_loop(|| {
+                            APP.with(|a| {
+                                if let Some(app) = a.borrow().as_ref().and_then(|w| w.upgrade()) {
+                                    app.borrow_mut().set_pref("notifications", json!(false));
+                                }
+                            });
+                        });
+                    }
+                });
+            }
+        });
     }
     let integration_timer = slint::Timer::default();
     {
@@ -1569,14 +1649,18 @@ fn main() -> Result<(), slint::PlatformError> {
                         ui.window().with_winit_window(|w: &winit::window::Window| w.focus_window());
                     }
                     integration::Action::MiniPlayer => ui.invoke_to_classic(),
-                    integration::Action::Quit => ui.invoke_quit(),
+                    integration::Action::Quit => played::quit_app(&a),
                 }
             }
         });
     }
-    ui.run()?;
+    // Runs until Quit (closing the window may only hide it).
+    ui.show()?;
+    slint::run_event_loop_until_quit()?;
+    let _ = ui.hide();
     drop(integration_timer);
     app.borrow().save_settings();
     app.borrow_mut().stop();
+    app.borrow().forget_recordings();
     Ok(())
 }
