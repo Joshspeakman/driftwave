@@ -2,17 +2,22 @@
 //!
 //! Until the switch-over (docs/RUST-SCOPE.md, phase 5) this app keeps its own data folder, `DriftwaveRust`, apart
 //! from the Driftwave app people use today. On its first launch it copies that app's station list (reading it, never
-//! writing). Test runs (any flag below, or SHORTWAVE_TEST=1) use `DriftwaveRustTestRun` and stay silent unless
-//! `-audible`.
+//! writing). Test runs (any flag below, or SHORTWAVE_TEST=1) use `DriftwaveRustTestRun`, stay silent unless
+//! `-audible`, and never save settings.
+//!
+//! Light by design: one timer at 24 a second. The big visualizer draws on every tick; the marquee and the mini
+//! spectrum on every other. Behind other windows everything runs at half that; minimised, or stopped once the picture
+//! has settled, nothing draws at all. Visualizers draw within a pixel budget and the UI scales them smoothly.
 //!
 //! Flags: -playURL <url>, -muted, -audible, -theme <id>, -vis <id>, -library <file>, -double, -shade, -noVis,
-//! -noList, -screenshot <file.bmp>, -screenshotDelay <s>, -quitAfter <s>.
+//! -noList, -alwaysActive (keep moving while behind other windows, for measuring), -screenshot <file.bmp>,
+//! -screenshotDelay <s>, -quitAfter <s>.
 
 mod palette;
 
 use driftwave_audio::{Engine, EngineConfig, Event, PlayState};
 use driftwave_core::radio_browser::USER_AGENT;
-use driftwave_core::recording::{RecorderConfig, RecordingMode};
+use driftwave_core::recording::{RecorderConfig, RecorderEvent, RecordingMode, RecordingState};
 use driftwave_core::station::Station;
 use driftwave_core::storage::{library_file, AppPaths};
 use driftwave_core::theme::{load_folder, Color, Theme};
@@ -22,14 +27,17 @@ use slint::winit_030::{winit, WinitWindowAccessor};
 use slint::{ComponentHandle, ModelRc, SharedPixelBuffer, VecModel};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
 slint::include_modules!();
 
-const FLAGS: [&str; 9] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive"];
+const FLAGS: [&str; 10] = ["muted", "audible", "double", "shade", "noVis", "noList", "logLevels", "help", "alwaysActive", "inactive"];
+/// The window's width at the normal size, and its station list's height (in units) by default.
+const DEFAULT_WIDTH: f32 = 412.0;
+const DEFAULT_LIST_UNITS: f32 = 110.0;
 
 fn log(s: &str) {
     if std::env::var_os("SHORTWAVE_LOG").is_some() || std::env::var_os("DRIFTWAVE_LOG").is_some() {
@@ -99,11 +107,46 @@ struct Player {
     engine: Option<(Engine, Receiver<Event>)>,
     station: Option<usize>,
     started: Option<Instant>,
+    stopped: Option<Instant>,
     title: String,
     state: String,
     playing: bool,
     loading: bool,
-    recording: bool,
+    /// REC is on: new streams record every track.
+    armed: bool,
+    /// The recorder is writing a track right now.
+    writing: bool,
+}
+
+/// A visualizer slot whose size waits for a drag to settle before the picture is rebuilt.
+struct Slot {
+    host: VisHost,
+    pending: Option<((usize, usize), Instant)>,
+    scale: f32,
+}
+
+impl Slot {
+    fn track(&mut self, w: usize, h: usize, scale: f32, now: Instant) {
+        let want = (w.max(1), h.max(1));
+        match self.pending {
+            Some((size, since)) if size == want => {
+                if now - since > Duration::from_millis(250) {
+                    self.host.set_slot(want.0, want.1, scale);
+                    self.scale = scale;
+                    self.pending = None;
+                }
+            }
+            _ => {
+                if self.pending.is_none() && self.slot() == want && self.scale == scale {
+                    return;
+                }
+                self.pending = Some((want, now));
+            }
+        }
+    }
+    fn slot(&self) -> (usize, usize) {
+        self.host.slot_size()
+    }
 }
 
 struct App {
@@ -114,22 +157,34 @@ struct App {
     stations: Vec<Station>,
     themes: Vec<Theme>,
     player: Player,
-    mini: VisHost,
-    big: VisHost,
+    mini: Slot,
+    big: Slot,
     vis_ids: Vec<&'static str>,
     last: Instant,
     started: Instant,
     marquee: String,
-    /// With DRIFTWAVE_LOG: time spent in each part of the tick, logged every 150 ticks.
+    marquee_dt: f32,
+    mini_dt: f32,
+    /// The station list's height in units, kept while it's hidden.
+    list_units: f32,
+    /// With DRIFTWAVE_LOG: milliseconds in the mini and big visualizers and in handing their pictures over.
     profile: [f64; 4],
+    profile_since: Instant,
+    /// Adaptive quality: a running average of the big visualizer's milliseconds a frame, and its pixel budget. A
+    /// slow machine gets a smaller picture (scaled up smoothly) instead of a heavier load.
+    big_ms: f64,
+    budget: usize,
     ticks: u32,
-    /// Frames since launch, for pacing the parts that don't need every frame.
     frame: u64,
 }
 
 impl App {
     fn setting_str(&self, k: &str) -> Option<String> {
         self.settings.get(k).and_then(|v| v.as_str()).map(String::from)
+    }
+
+    fn recording_dir(&self) -> PathBuf {
+        self.paths.recording().join(std::process::id().to_string())
     }
 
     fn save_settings(&self) {
@@ -139,14 +194,17 @@ impl App {
         }
         if let Some(ui) = self.ui.upgrade() {
             let mut s = self.settings.clone();
+            let size = ui.window().size().to_logical(ui.window().scale_factor());
             s["layout"] = json!("classic");
-            s["visualizer"] = json!(self.big.id());
+            s["visualizer"] = json!(self.big.host.id());
             s["showVisualizer"] = json!(ui.get_show_vis());
             s["showList"] = json!(ui.get_show_list());
-            s["double"] = json!(ui.get_u() > 2.0);
+            s["width"] = json!(size.width);
+            s["listUnits"] = json!(self.list_units);
             s["shaded"] = json!(ui.get_shaded());
             s["volume"] = json!(ui.get_volume());
             s["onTop"] = json!(ui.get_on_top());
+            s["record"] = json!(self.player.armed);
             let _ = std::fs::create_dir_all(&self.paths.support);
             let _ = std::fs::write(self.paths.support.join("settings.json"), serde_json::to_vec_pretty(&s).unwrap_or_default());
         }
@@ -218,25 +276,29 @@ impl App {
         let Some(station) = self.stations.get(index).cloned() else { return };
         self.stop();
         let silent = self.args.test_run() && !self.args.flag("audible");
-        let recording_dir = self.paths.recording().join(std::process::id().to_string());
         let config = EngineConfig {
             silent,
             user_agent: USER_AGENT.to_string(),
+            // Nothing touches the disk unless REC is on.
             recorder: RecorderConfig {
-                mode: if self.player.recording { RecordingMode::Everything } else { RecordingMode::Decide },
+                mode: if self.player.armed { RecordingMode::Everything } else { RecordingMode::Nothing },
                 minimum_duration: 30.0,
                 maximum_duration: 900.0,
             },
-            recording_dir,
+            recording_dir: self.recording_dir(),
             track_dir: self.paths.support.join("Tracks"),
             station_name: station.name.clone(),
             probe_playlists: station.is_local,
         };
-        log(&format!("play {} silent={silent}", station.name));
+        log(&format!("play {} silent={silent} record={}", station.name, self.player.armed));
         let (engine, events) = Engine::play(&station.stream_url, config);
         if let Some(ui) = self.ui.upgrade() {
             engine.set_volume(ui.get_volume());
             ui.set_kbps(station.bitrate.max(0));
+            // Blank until the engine reports the stream's own format (Event::Format).
+            ui.set_khz(0);
+            ui.set_stereo(false);
+            ui.set_mono(false);
             ui.set_station(station.name.clone().into());
             ui.set_selected(index as i32);
         }
@@ -244,9 +306,11 @@ impl App {
         self.player.engine = Some((engine, events));
         self.player.station = Some(index);
         self.player.started = None;
+        self.player.stopped = None;
         self.player.title.clear();
         self.player.loading = true;
         self.player.playing = false;
+        self.player.writing = false;
         self.player.state = "CONNECTING".into();
         self.settings["lastStation"] = json!(station.id);
         self.update_marquee();
@@ -256,9 +320,13 @@ impl App {
     fn stop(&mut self) {
         if let Some((engine, _)) = self.player.engine.take() {
             engine.stop();
+            self.player.stopped = Some(Instant::now());
         }
+        // Temporary recordings live only as long as the stream.
+        let _ = std::fs::remove_dir_all(self.recording_dir());
         self.player.playing = false;
         self.player.loading = false;
+        self.player.writing = false;
         self.player.started = None;
         self.player.state = "STOPPED".into();
         self.update_marquee();
@@ -277,12 +345,41 @@ impl App {
         }
     }
 
+    /// Keeps the window's height right for the panels shown: the player and visualizer are fixed, the list takes
+    /// what the person gave it (and keeps it while hidden).
+    fn fit_window(&mut self, ui: &ClassicWindow, panels_changed: bool) {
+        let scale = ui.window().scale_factor();
+        let size = ui.window().size().to_logical(scale);
+        let u = size.width / 275.0;
+        let fixed = ui.get_fixed_h();
+        let want = if ui.get_show_list() && !ui.get_shaded() {
+            if panels_changed {
+                fixed + self.list_units * u
+            } else {
+                let list = size.height - fixed;
+                if list < ui.get_min_list_h() - 0.5 {
+                    fixed + ui.get_min_list_h()
+                } else {
+                    self.list_units = list / u;
+                    size.height
+                }
+            }
+        } else {
+            fixed
+        };
+        if (want - size.height).abs() > 0.5 {
+            ui.window().set_size(slint::LogicalSize::new(size.width, want));
+        }
+    }
+
     /// One tick of the clock: engine events, the time, the marquee, the meters and the visualizers.
     fn tick(&mut self) {
         let Some(ui) = self.ui.upgrade() else { return };
         let now = Instant::now();
         let dt = (now - self.last).as_secs_f32().min(0.25);
         self.last = now;
+        self.frame += 1;
+        self.fit_window(&ui, false);
         // Engine events.
         let mut events = Vec::new();
         if let Some((_, rx)) = &self.player.engine {
@@ -311,6 +408,7 @@ impl App {
                     self.player.loading = false;
                     self.player.state = "FAILED".into();
                     self.player.title = why;
+                    self.player.stopped = Some(now);
                     marquee_changed = true;
                 }
                 Event::NowPlaying { title, .. } => {
@@ -318,7 +416,23 @@ impl App {
                     self.player.title = title;
                     marquee_changed = true;
                 }
-                Event::Recorder(_) | Event::Saved(_) | Event::SaveFailed(_) | Event::Connected { .. } | Event::Format(_) | Event::Info(_) => {}
+                Event::Recorder(RecorderEvent::Started { state, .. }) => {
+                    self.player.writing = state == RecordingState::Recording;
+                }
+                Event::Recorder(RecorderEvent::Finished { .. }) => self.player.writing = false,
+                Event::Saved(p) => log(&format!("saved {}", p.display())),
+                Event::Format(f) => {
+                    // The stream's own format, as decoded (HE-AAC reports its full rate and its stereo).
+                    if let Some(ui) = self.ui.upgrade() {
+                        ui.set_khz((f.rate / 1000) as i32);
+                        ui.set_stereo(f.channels >= 2);
+                        ui.set_mono(f.channels == 1);
+                        if let Some(k) = f.kbps {
+                            ui.set_kbps(k as i32);
+                        }
+                    }
+                }
+                Event::SaveFailed(_) | Event::Connected { .. } | Event::Info(_) => {}
             }
         }
         if marquee_changed {
@@ -338,89 +452,121 @@ impl App {
         ui.set_playing(self.player.playing);
         ui.set_loading(self.player.loading);
         ui.set_status(self.player.state.clone().into());
-        ui.set_recording(self.player.recording && self.player.playing);
+        ui.set_record_armed(self.player.armed);
+        ui.set_recording(self.player.writing && self.player.playing);
 
-        // Moving parts rest while the window is minimised or not in front.
-        let minimized = ui.window().is_minimized();
-        let focused = self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true);
+        // Minimised, or shaded: nothing moves but the clock.
+        if ui.window().is_minimized() || ui.get_shaded() {
+            return;
+        }
+        // Behind other windows the moving parts keep going, at half the rate.
+        let focused = !self.args.flag("inactive")
+            && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
         ui.set_active(focused);
-        if minimized || !focused {
+        let step = if focused { 1 } else { 2 };
+        // Stopped: once the picture has faded to rest (2 s), stop drawing it.
+        let settled = !self.player.playing && self.player.stopped.is_none_or(|s| now - s > Duration::from_secs(2));
+        self.marquee_dt += dt;
+        self.mini_dt += dt;
+        let big_on = ui.get_show_vis();
+        let big_tick = big_on && self.frame % step == 0;
+        let small_tick = self.frame % (if big_on { 2 * step } else { step }) == 0;
+
+        // The marquee: a steady pace, wrapping seamlessly (resting once stopped).
+        if self.frame % (2 * step) == 0 && !settled {
+            let u = ui.get_u();
+            let span = ui.get_marquee_width() + 24.0 * u;
+            if span > 24.0 * u + 1.0 {
+                ui.set_marquee_offset((ui.get_marquee_offset() + 16.0 * u * self.marquee_dt) % span);
+            }
+            self.marquee_dt = 0.0;
+            // The buffer gauge eases towards the engine's figure.
+            let target = self.player.engine.as_ref().map(|(e, _)| (e.buffered_seconds() / 12.0).clamp(0.0, 1.0) as f32).unwrap_or(0.0);
+            let shown = ui.get_buffer();
+            let next = shown + (target - shown) * driftwave_vis::analysis::ease(dt * 2.0, 0.3);
+            if (next - shown).abs() > 0.004 {
+                ui.set_buffer(next);
+            }
+        }
+        if settled || !(small_tick || big_tick) {
             return;
         }
-        let t0 = Instant::now();
-        self.frame += 1;
-        let shaded = ui.get_shaded();
-        // Every presented frame costs the most on high-density screens (the Mac colour-matches each one), so only the
-        // big visualizer runs at 30 a second. The marquee and the mini spectrum run at 15, and shaded nothing moves but
-        // the clock.
-        let half = self.frame % 2 == 0;
-        if shaded || (!half && !ui.get_show_vis()) {
-            return;
-        }
-        // The marquee scrolls at a steady pace and wraps seamlessly.
-        let u = ui.get_u();
-        let span = ui.get_marquee_width() + 24.0 * u;
-        if half && span > 24.0 * u + 1.0 {
-            let off = (ui.get_marquee_offset() + 16.0 * u * dt * 2.0) % span;
-            ui.set_marquee_offset(off);
-        }
-        // Real audio for the meters and the visualizers.
+        // Real audio for the visualizers: what's playing, before volume and mute.
         let (samples, channels, rate) = match &self.player.engine {
             Some((engine, _)) if self.player.playing => engine.scope(2048),
             _ => (vec![0.0; 4096], 2, 44100),
         };
-        if self.player.playing && channels >= 2 {
-            ui.set_khz((rate / 1000) as i32);
-            // Stereo: the channels differ.
-            let diff: f32 = samples.chunks(channels).map(|f| (f[0] - f[1]).abs()).sum::<f32>();
-            let total: f32 = samples.chunks(channels).map(|f| f[0].abs() + f[1].abs()).sum::<f32>();
-            ui.set_stereo(total > 1e-3 && diff / total > 0.02);
-        }
-        // The buffer gauge eases towards the engine's figure, in steps fine enough to look continuous.
-        let target = self.player.engine.as_ref().map(|(e, _)| (e.buffered_seconds() / 12.0).clamp(0.0, 1.0) as f32).unwrap_or(0.0);
-        let shown = ui.get_buffer();
-        let next = shown + (target - shown) * driftwave_vis::analysis::ease(dt, 0.3);
-        if (next - shown).abs() > 0.002 {
-            ui.set_buffer(next);
-        }
-        let t1 = Instant::now();
         let scale = ui.window().scale_factor();
         let t = (now - self.started).as_secs_f64();
-        if half {
+        let t0 = Instant::now();
+        let mut handover = 0.0;
+        if small_tick {
             let (w, h) = ((ui.get_mini_width() * scale) as usize, (ui.get_mini_height() * scale) as usize);
-            self.mini.resize(w, h, scale);
-            let px = self.mini.frame(&samples, channels, rate, t, dt * 2.0);
-            ui.set_vis_mini(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, w as u32, h as u32)));
+            self.mini.track(w, h, scale, now);
+            let (dw, dh) = self.mini.host.size();
+            let px = self.mini.host.frame(&samples, channels, rate, t, self.mini_dt);
+            let h0 = Instant::now();
+            ui.set_vis_mini(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, dw as u32, dh as u32)));
+            handover += (Instant::now() - h0).as_secs_f64();
+            self.mini_dt = 0.0;
+        }
+        let t1 = Instant::now();
+        if big_tick {
+            let (w, h) = ((ui.get_big_width() * scale) as usize, (ui.get_big_height() * scale) as usize);
+            self.big.track(w, h, scale, now);
+            let (dw, dh) = self.big.host.size();
+            let b0 = Instant::now();
+            let px = self.big.host.frame(&samples, channels, rate, t, dt * step as f32);
+            let h0 = Instant::now();
+            self.big_ms += ((h0 - b0).as_secs_f64() * 1000.0 - self.big_ms) * 0.05;
+            ui.set_vis_big(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, dw as u32, dh as u32)));
+            handover += (Instant::now() - h0).as_secs_f64();
         }
         let t2 = Instant::now();
-        if ui.get_show_vis() {
-            let (w, h) = ((ui.get_big_width() * scale) as usize, (ui.get_big_height() * scale) as usize);
-            self.big.resize(w, h, scale);
-            let px = self.big.frame(&samples, channels, rate, t, dt);
-            ui.set_vis_big(slint::Image::from_rgba8(SharedPixelBuffer::clone_from_slice(px, w as u32, h as u32)));
+        // Adaptive quality, checked every couple of seconds: keep the big visualizer near a millisecond a frame.
+        if big_tick && self.frame % 48 == 0 {
+            let budget = if self.big_ms > 1.2 && self.budget > 12_000 {
+                (self.budget as f64 * 0.75) as usize
+            } else if self.big_ms < 0.45 && self.budget < driftwave_vis::host::PIXEL_BUDGET {
+                ((self.budget as f64 * 1.25) as usize).min(driftwave_vis::host::PIXEL_BUDGET)
+            } else {
+                self.budget
+            };
+            if budget != self.budget {
+                log(&format!("visualizer budget {} -> {budget} pixels ({:.2} ms a frame)", self.budget, self.big_ms));
+                self.budget = budget;
+                self.big.host.set_budget(budget);
+            }
         }
-        let t3 = Instant::now();
         self.profile[0] += (t1 - t0).as_secs_f64();
         self.profile[1] += (t2 - t1).as_secs_f64();
-        self.profile[2] += (t3 - t2).as_secs_f64();
-        self.profile[3] += dt as f64;
+        self.profile[2] += handover;
         self.ticks += 1;
-        if self.ticks == 150 {
-            let ms = |v: f64| v * 1000.0 / 150.0;
+        if self.ticks == 120 {
+            let ms = |v: f64| v * 1000.0 / 120.0;
             log(&format!(
-                "tick ms: marquee+meters {:.2}, mini vis {:.2}, big vis {:.2}; {:.1} ticks a second",
-                ms(self.profile[0]), ms(self.profile[1]), ms(self.profile[2]), 150.0 / self.profile[3].max(1e-3)
+                "tick ms: mini {:.2} ({}x{}), big {:.2} ({}x{}), handover {:.2}; {:.1} drawing ticks a second; budget {}",
+                ms(self.profile[0]),
+                self.mini.host.size().0,
+                self.mini.host.size().1,
+                ms(self.profile[1]),
+                self.big.host.size().0,
+                self.big.host.size().1,
+                ms(self.profile[2]),
+                120.0 / (now - self.profile_since).as_secs_f64().max(1e-3),
+                self.budget
             ));
             self.profile = [0.0; 4];
+            self.profile_since = now;
             self.ticks = 0;
         }
     }
 
     fn cycle_vis(&mut self, step: i32) {
         let n = self.vis_ids.len() as i32;
-        let cur = self.vis_ids.iter().position(|&v| v == self.big.id()).unwrap_or(0) as i32;
+        let cur = self.vis_ids.iter().position(|&v| v == self.big.host.id()).unwrap_or(0) as i32;
         let next = self.vis_ids[((cur + step).rem_euclid(n)) as usize];
-        self.big.set_visualizer(next);
+        self.big.host.set_visualizer(next);
         if let Some(ui) = self.ui.upgrade() {
             ui.set_vis_name(visualizers::by_id(next).map(|v| v.name()).unwrap_or("").into());
         }
@@ -428,9 +574,8 @@ impl App {
     }
 }
 
-/// The double size: 3 pixels a unit, or less if the whole stack (406 units tall) wouldn't fit on the screen (leaving
-/// room for the menu bar, the dock or the taskbar).
-fn double_size(ui: &ClassicWindow) -> f32 {
+/// The large size: half as big again, or as much as fits on the screen.
+fn large_width(ui: &ClassicWindow, fixed_units: f32) -> f32 {
     let screen = ui
         .window()
         .with_winit_window(|w: &winit::window::Window| {
@@ -440,9 +585,11 @@ fn double_size(ui: &ClassicWindow) -> f32 {
             })
         })
         .flatten();
+    let want = DEFAULT_WIDTH * 1.5;
     match screen {
-        Some((w, h)) => (h * 0.88 / 406.0).min(w * 0.9 / 275.0).clamp(2.0, 3.0),
-        None => 3.0,
+        // The whole stack (player, visualizer, a list) within 88% of the screen's height.
+        Some((w, h)) => want.min(h * 0.88 / (fixed_units + DEFAULT_LIST_UNITS) * 275.0).min(w * 0.9).max(DEFAULT_WIDTH),
+        None => want,
     }
 }
 
@@ -476,10 +623,11 @@ fn main() -> Result<(), slint::PlatformError> {
     let paths = AppPaths::for_app(if test { "DriftwaveRustTestRun" } else { "DriftwaveRust" });
     let _ = std::fs::create_dir_all(&paths.support);
     log(&format!("launch testRun={test} folder={}", paths.support.display()));
-    let settings: Value = std::fs::read(paths.support.join("settings.json"))
-        .ok()
-        .and_then(|b| serde_json::from_slice(&b).ok())
-        .unwrap_or_else(|| json!({}));
+    let settings: Value = if test {
+        json!({})
+    } else {
+        std::fs::read(paths.support.join("settings.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_else(|| json!({}))
+    };
 
     // Stations: a test run's from -library (read only) or a single -playURL; otherwise our own list, first copied
     // from the Driftwave app's (read, never written).
@@ -506,40 +654,71 @@ fn main() -> Result<(), slint::PlatformError> {
     let vis_id = args.get("vis").map(String::from).or_else(|| settings.get("visualizer").and_then(|v| v.as_str()).map(String::from)).unwrap_or_else(|| "liquid".into());
     let mut themes = built_in_themes();
     themes.extend(load_folder(&paths.themes(), false));
+    let list_units = settings.get("listUnits").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_LIST_UNITS).max(62.0);
     let app = Rc::new(RefCell::new(App {
         ui: ui.as_weak(),
-        mini: VisHost::new("peak-meter", 152, 32, 1.0),
-        big: VisHost::new(&vis_id, 526, 200, 1.0),
+        mini: Slot { host: VisHost::with_budget("peak-meter", 120, 22, 1.0, 12_000), pending: None, scale: 1.0 },
+        big: Slot { host: VisHost::new(&vis_id, 394, 125, 1.0), pending: None, scale: 1.0 },
         args,
         paths,
         settings,
         stations,
         themes,
-        player: Player { engine: None, station: None, started: None, title: String::new(), state: "STOPPED".into(), playing: false, loading: false, recording: false },
+        player: Player {
+            engine: None,
+            station: None,
+            started: None,
+            stopped: None,
+            title: String::new(),
+            state: "STOPPED".into(),
+            playing: false,
+            loading: false,
+            armed: false,
+            writing: false,
+        },
         vis_ids,
         last: Instant::now(),
         started: Instant::now(),
         marquee: String::new(),
+        marquee_dt: 0.0,
+        mini_dt: 0.0,
+        list_units,
         profile: [0.0; 4],
+        profile_since: Instant::now(),
+        big_ms: 0.0,
+        budget: driftwave_vis::host::PIXEL_BUDGET,
         ticks: 0,
         frame: 0,
     }));
 
     {
-        let a = app.borrow();
-        let s = &a.settings;
-        ui.set_u(if a.args.flag("double") || s.get("double").and_then(Value::as_bool).unwrap_or(false) { double_size(&ui) } else { 2.0 });
+        let mut a = app.borrow_mut();
+        let s = a.settings.clone();
         ui.set_shaded(a.args.flag("shade") || s.get("shaded").and_then(Value::as_bool).unwrap_or(false));
         ui.set_show_vis(!a.args.flag("noVis") && s.get("showVisualizer").and_then(Value::as_bool).unwrap_or(true));
         ui.set_show_list(!a.args.flag("noList") && s.get("showList").and_then(Value::as_bool).unwrap_or(true));
         ui.set_volume(s.get("volume").and_then(Value::as_f64).unwrap_or(0.8) as f32);
-        ui.set_vis_name(visualizers::by_id(a.big.id()).map(|v| v.name()).unwrap_or("").into());
+        ui.set_vis_name(visualizers::by_id(a.big.host.id()).map(|v| v.name()).unwrap_or("").into());
         ui.set_version(env!("CARGO_PKG_VERSION").into());
+        a.player.armed = s.get("record").and_then(Value::as_bool).unwrap_or(false);
+        let width = if let Some(w) = a.args.num("width") {
+            w as f32
+        } else if a.args.flag("double") {
+            large_width(&ui, 206.0)
+        } else {
+            s.get("width").and_then(Value::as_f64).map(|v| v as f32).unwrap_or(DEFAULT_WIDTH).clamp(220.0, 1100.0)
+        };
+        // The height follows from the width and the panels (fit_window): start with the width only.
+        ui.window().set_size(slint::LogicalSize::new(width, 300.0));
     }
-    let theme_id = { let a = app.borrow(); a.args.get("theme").map(String::from).or_else(|| a.setting_str("theme")) };
+    let theme_id = {
+        let a = app.borrow();
+        a.args.get("theme").map(String::from).or_else(|| a.setting_str("theme"))
+    };
     app.borrow_mut().apply_theme(theme_id.filter(|t| t != "default"));
     app.borrow_mut().refresh_list();
     app.borrow_mut().update_marquee();
+    app.borrow_mut().fit_window(&ui, true);
 
     // Callbacks.
     let weak = ui.as_weak();
@@ -548,6 +727,24 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.window().with_winit_window(|w: &winit::window::Window| {
                 let _ = w.drag_window();
             });
+        }
+    });
+    let weak = ui.as_weak();
+    ui.on_resize(move || {
+        if let Some(ui) = weak.upgrade() {
+            // The OS's own resize from the corner (smooth, and snaps like any window).
+            ui.window().with_winit_window(|w: &winit::window::Window| {
+                if let Err(e) = w.drag_resize_window(winit::window::ResizeDirection::SouthEast) {
+                    log(&format!("resize: {e}"));
+                }
+            });
+        }
+    });
+    let a = app.clone();
+    ui.on_panels_changed(move || {
+        let mut app = a.borrow_mut();
+        if let Some(ui) = app.ui.upgrade() {
+            app.fit_window(&ui, true);
         }
     });
     let weak = ui.as_weak();
@@ -605,7 +802,7 @@ fn main() -> Result<(), slint::PlatformError> {
     let a = app.clone();
     ui.on_toggle_record(move || {
         let mut app = a.borrow_mut();
-        app.player.recording = !app.player.recording;
+        app.player.armed = !app.player.armed;
         // Recording applies from the start of a stream: restart the station that's playing.
         if let Some(i) = app.player.station.filter(|_| app.player.engine.is_some()) {
             app.play(i);
@@ -631,11 +828,14 @@ fn main() -> Result<(), slint::PlatformError> {
             });
         }
     });
-    let weak = ui.as_weak();
+    let a = app.clone();
     ui.on_toggle_double(move || {
-        if let Some(ui) = weak.upgrade() {
-            let next = if ui.get_u() > 2.0 { 2.0 } else { double_size(&ui) };
-            ui.set_u(next);
+        let mut app = a.borrow_mut();
+        if let Some(ui) = app.ui.upgrade() {
+            let size = ui.window().size().to_logical(ui.window().scale_factor());
+            let width = if size.width > DEFAULT_WIDTH * 1.2 { DEFAULT_WIDTH } else { large_width(&ui, 206.0) };
+            ui.window().set_size(slint::LogicalSize::new(width, size.height * width / size.width));
+            app.fit_window(&ui, true);
         }
     });
     let a = app.clone();
@@ -645,10 +845,10 @@ fn main() -> Result<(), slint::PlatformError> {
         a.borrow().save_settings();
     });
 
-    // The clock: 30 frames a second while in front; the tick itself skips the moving parts otherwise.
+    // The clock: 24 a second.
     let timer = slint::Timer::default();
     let a = app.clone();
-    timer.start(slint::TimerMode::Repeated, Duration::from_millis(33), move || a.borrow_mut().tick());
+    timer.start(slint::TimerMode::Repeated, Duration::from_micros(41_667), move || a.borrow_mut().tick());
 
     // Test runs: play at once, take a snapshot, quit after a while.
     if app.borrow().args.get("playURL").is_some() {

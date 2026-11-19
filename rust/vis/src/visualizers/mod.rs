@@ -20,6 +20,11 @@ pub trait Visualizer: Send {
     fn name(&self) -> &'static str;
     /// One line for the picker.
     fn blurb(&self) -> &'static str;
+    /// How much of the slot's resolution it needs (0.25..1). Soft, blurry styles look the same drawn smaller and
+    /// scaled up smoothly, at a fraction of the cost; crisp ones (bars, wireframes) draw at full size.
+    fn resolution(&self) -> f32 {
+        1.0
+    }
     fn render(&mut self, a: &Analysis, c: &mut Canvas);
 }
 

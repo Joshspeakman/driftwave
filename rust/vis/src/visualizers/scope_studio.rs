@@ -25,6 +25,9 @@ impl Visualizer for ScopeStudio {
     fn blurb(&self) -> &'static str {
         "A tumbling 3D ring, a turning spectrum starburst and a stereo Lissajous on a smearing stage"
     }
+    fn resolution(&self) -> f32 {
+        0.6
+    }
 
     fn render(&mut self, a: &Analysis, c: &mut Canvas) {
         let (w, h) = (c.w, c.h);
@@ -53,6 +56,8 @@ impl Visualizer for ScopeStudio {
         let size = w.min(h) as f32;
         let t = a.time as f32;
         let hue = t * 0.015;
+        // Small pictures get lighter lines, or the scopes pile up into white.
+        let lw = (size / 300.0).clamp(0.3, 1.0);
 
         // Scope 1: the spectrum starburst, turning slowly behind everything.
         self.burst += dt * (0.12 + 0.1 * a.mid.min(2.0));
@@ -60,7 +65,7 @@ impl Visualizer for ScopeStudio {
             let ang = b as f32 / BANDS as f32 * std::f32::consts::TAU + self.burst;
             let len = size * (0.12 + 0.42 * a.bands[b]);
             let col = hsv(hue + 0.5 + b as f32 / BANDS as f32 * 0.2, 0.7, 0.35);
-            c.line(cx + ang.cos() * size * 0.1, cy + ang.sin() * size * 0.1, cx + ang.cos() * len, cy + ang.sin() * len, col, 0.6, 1.2);
+            c.line(cx + ang.cos() * size * 0.1, cy + ang.sin() * size * 0.1, cx + ang.cos() * len, cy + ang.sin() * len, col, 0.6 * lw, (1.2 * lw).max(0.9));
         }
 
         // Scope 2: a ring in 3D, pushed by the waveform, tumbling.
@@ -84,7 +89,7 @@ impl Visualizer for ScopeStudio {
             let (px, py) = (cx + x * size * 0.3 * d, cy + y * size * 0.3 * d);
             let col = hsv(hue + f * 0.2, 0.65, 0.5 + 0.4 * d.min(1.2) - 0.2);
             if let Some((qx, qy, _)) = prev {
-                c.line(qx, qy, px, py, col, 0.9, 1.8);
+                c.line(qx, qy, px, py, col, 0.9 * lw, (1.8 * lw).max(1.0));
             }
             if first.is_none() {
                 first = Some((px, py));
@@ -99,7 +104,7 @@ impl Visualizer for ScopeStudio {
             let (l, r) = (a.wave_l[k], a.wave_r[k]);
             let (x, y) = ((l - r) * 0.7, (l + r) * 0.7);
             let (x, y) = (x * rc - y * rs, x * rs + y * rc);
-            c.splat(cx + x * size * 0.3, cy - y * size * 0.3, hsv(hue + 0.15, 0.3, 1.0), 0.5);
+            c.splat(cx + x * size * 0.3, cy - y * size * 0.3, hsv(hue + 0.15, 0.3, 1.0), 0.5 * lw);
         }
     }
 }
