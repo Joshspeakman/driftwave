@@ -9,11 +9,15 @@
 //! The check runs at launch at most once every 20 hours (Settings can turn it off). Test runs never contact GitHub:
 //! they check only an `-updateFeed` (a file or URL with the same JSON) when given one.
 
-use super::{finding, log, App, Upd, APP};
+use super::{finding, log, App, Upd};
+#[cfg(windows)]
+use super::APP;
 use driftwave_core::radio_browser::USER_AGENT;
 use serde_json::{json, Value};
 use slint::ComponentHandle;
+#[cfg(windows)]
 use std::io::{Read, Write};
+#[cfg(windows)]
 use std::path::Path;
 use std::time::Duration;
 
@@ -127,6 +131,7 @@ pub(crate) fn parse_atom(xml: &str) -> Vec<Release> {
         .collect()
 }
 
+#[allow(clippy::result_large_err)] // ureq's own error type
 fn get(url: &str) -> Result<ureq::Response, ureq::Error> {
     ureq::get(url).set("User-Agent", USER_AGENT).set("Accept", "application/vnd.github+json").timeout(Duration::from_secs(30)).call()
 }
@@ -170,6 +175,7 @@ fn fetch_releases(feed: &str, test: bool) -> Result<Vec<Release>, String> {
 }
 
 /// Runs `f` with the app on the UI thread (from a worker).
+#[cfg(windows)]
 fn post(f: impl FnOnce(&mut App) + Send + 'static) {
     let _ = slint::invoke_from_event_loop(move || {
         APP.with(|a| {
@@ -193,6 +199,7 @@ fn sha256(file: &Path) -> Result<String, String> {
 }
 
 /// Runs after Driftwave quits: back up, copy the new files in, restore on failure, start it again.
+#[cfg(windows)]
 const APPLY_SCRIPT: &str = r#"param([int]$WaitPid, [string]$Source, [string]$Dest, [string]$Exe, [string]$Version, [string]$RegistryKey, [string]$Log)
 function Write-Log([string]$m) { Add-Content -LiteralPath $Log -Value ("{0:u} {1}" -f (Get-Date).ToUniversalTime(), $m) }
 Write-Log "update to ${Version}: waiting for ${WaitPid}"
@@ -334,13 +341,12 @@ impl App {
         let Some(release) = self.updates.latest.clone() else { return };
         if !self.can_install() {
             finding::open_url(&release.page);
-            return;
+        } else {
+            #[cfg(windows)]
+            if !self.updates.busy {
+                self.download_and_install(release);
+            }
         }
-        if self.updates.busy {
-            return;
-        }
-        #[cfg(windows)]
-        self.download_and_install(release);
     }
 
     #[cfg(windows)]

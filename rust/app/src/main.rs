@@ -248,7 +248,7 @@ fn tint_table(back: Color, ink: Color) -> Vec<[u8; 3]> {
 fn vis_image(px: &[u8], w: usize, h: usize, tint: Option<&[[u8; 3]]>) -> slint::Image {
     let mut buf = SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(px, w as u32, h as u32);
     if let Some(table) = tint {
-        for p in buf.make_mut_bytes().chunks_exact_mut(4) {
+        for p in buf.make_mut_bytes().as_chunks_mut::<4>().0 {
             // Rec. 709 brightness, in integers.
             let l = ((p[0] as u32 * 54 + p[1] as u32 * 183 + p[2] as u32 * 19) >> 8) as usize;
             let c = table[l.min(255)];
@@ -1030,8 +1030,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let mine = paths.support.join("settings.json");
         match std::fs::read(&mine) {
             Ok(b) => serde_json::from_slice(&b).unwrap_or_else(|_| json!({})),
-            // The first launch: the C# Driftwave's settings, themes and background, if it was used here.
-            Err(_) => match migrate::from_csharp(&paths) {
+            // The first launch: the C# Driftwave's settings, themes and background, if it was used here (on the
+            // Mac, the Swift Shortwave's settings).
+            Err(_) => match migrate::from_csharp(&paths).or_else(migrate::from_swift) {
                 Some(s) => {
                     let _ = std::fs::write(&mine, serde_json::to_vec_pretty(&s).unwrap_or_default());
                     s
@@ -1049,10 +1050,10 @@ fn main() -> Result<(), slint::PlatformError> {
         Vec::new()
     } else {
         if !paths.library().exists() {
-            let theirs = AppPaths::for_app("Driftwave").library();
-            if theirs.exists() {
+            if let Some(theirs) = migrate::their_library() {
+                let _ = std::fs::create_dir_all(&paths.support);
                 let _ = std::fs::copy(&theirs, paths.library());
-                log("copied the station list from Driftwave");
+                log(&format!("copied the station list from {}", theirs.display()));
             }
         }
         library_file::load(&paths.library())
