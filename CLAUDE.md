@@ -8,6 +8,8 @@ on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
 
 - `nightly` is the default and working branch for the Mac app.
 - `windows` is the working branch for the Windows port. Its code goes under `windows/`.
+- `rust` is the working branch for the Rust rebuild (`rust/`, plan in `docs/RUST-SCOPE.md`), which replaces both
+  apps. The Mac session works there too (from Round 5); the Swift and C# apps are frozen, fixes only.
 - The Mac and Windows sessions can't message each other. They coordinate through
   `docs/MAC-WINDOWS-SYNC.md`: read it first, and take the newest round's asks for your side. Each
   side pushes only its own branch and merges the other's before starting (`git merge

@@ -8,6 +8,61 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 5 (2026-11-18): Rust on the Mac
+
+Josh asked for the work to be ready to test on the Mac, and chose **Rust on the Mac** over catching up the Swift app.
+The Swift and C# apps are frozen (fixes only), as `docs/RUST-SCOPE.md` says.
+
+**State on the PC side:**
+- `main` now has everything: the Windows app as Driftwave (logo, 26 themes, GIF backgrounds, in-app updates), the
+  Rust core, and this round. `rust` and `windows` are fast-forwarded to it, and `nightly` is behind it with nothing
+  of its own.
+- Phase 1 (`rust/core`, `driftwave-core`) passes 62 tests on Windows, plus one live test with `--ignored`. This
+  round fixed the theme test for the 26 themes, and added the `windowTitle` effect kind.
+- The core already uses the Mac's folders: `~/Library/Application Support/<folder>` and `~/Library/Caches/<folder>`.
+
+### Asks for the Mac session
+
+Work on the **`rust`** branch: `git fetch && git checkout rust && git merge --ff-only origin/main`. Push `rust`
+only; the PC merges it.
+
+1. **Toolchain.**
+   - Install Rust with rustup if it isn't there: stable, 1.100 or newer. `rust/cargo.ps1` is PC-only; on the Mac
+     run `cargo` in `rust/` directly.
+   - Install `ffmpeg` (Homebrew) if it's missing. The M4A test skips itself without it, and it shouldn't.
+2. **Phase 1 on macOS.**
+   - Run `cargo test`. Expect 62 passed and 1 ignored, including `real_aac_passthrough_with_ffmpeg`, which should
+     actually run.
+   - Run `cargo test -- --ignored`, the live radio-browser test.
+   - Also run `cargo clippy` if it's installed (it isn't on the PC). Fix anything that fails on the Mac, in the
+     core itself.
+3. **Start phase 2 on the Mac: the audio engine and a headless player.** The scope is `docs/RUST-SCOPE.md`, phase 2.
+   - **A new crate, `rust/audio` (`driftwave-audio`):**
+     - HTTP streams with redirects and ICY, using the core's `icy` and `playlist` modules;
+     - symphonia for MP3, AAC-LC and Ogg;
+     - cpal for output;
+     - volume and mute;
+     - reconnecting;
+     - title timing (titles change when the audio gets there, not when the metadata arrives);
+     - levels and an FFT for the meters.
+   - **HE-AAC uses the OS decoder** (Josh's decision): AudioToolbox on the Mac, behind
+     `#[cfg(target_os = "macos")]`. Put the decoder behind a small trait in its own file
+     (`src/decode/macos.rs`), so the PC can add Media Foundation as `src/decode/windows.rs` without touching yours.
+   - **A headless player binary**, `driftwave-player`. Its flags and log lines match what the existing scripts
+     expect: `-playURL`, `-muted`, `-audible`, `-quitAfter`, state lines, and `icy connected titles=true`. That
+     way `scripts/smoke-test.sh`, `behaviour-test.sh` (with `icy-test-server.py`) and `recording-test.sh` can run
+     against it. If it's cleaner, add a `--player rust` switch to those scripts rather than copying them.
+   - **Test runs are silent:** the output stays muted whatever the controls do, unless `-audible` is passed (the
+     Round 4 rule). Use a test data folder; never Josh's real one.
+   - **The gate:** the smoke, behaviour and recording scripts pass against the Rust player on the Mac. Get as far
+     as you can. If HE-AAC through AudioToolbox or live-stream buffering looks like it won't hold up, say so here
+     early; the scope says to stop if phase 2 fails its gate.
+4. Record what you did under "Mac: Round 5 results", and push `rust`.
+
+### Mac: Round 5 results
+
+(waiting for the Mac session)
+
 ## Round 4 (2026-11-18): silent test runs
 
 - **Mac (done):** a test run's audio output is muted whatever the controls do. `Player.isMuted` only
