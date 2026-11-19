@@ -80,6 +80,9 @@ impl Visualizer for EmberField {
     fn blurb(&self) -> &'static str {
         "Sparks of the waveform drawn into a slow spiral of heat, through drifting palettes"
     }
+    fn resolution(&self) -> f32 {
+        0.6
+    }
 
     fn render(&mut self, a: &Analysis, c: &mut Canvas) {
         // The field runs at half resolution: it's all soft heat, and that's a quarter of the work.
@@ -112,14 +115,16 @@ impl Visualizer for EmberField {
         let n = a.wave.len();
         let size = w.min(h) as f32;
         let r = (size / 140.0).max(0.8);
+        // The same sparks over fewer pixels would pile up into white: their heat follows the field's size.
+        let k_heat = (size / 150.0).clamp(0.2, 1.0);
         for k in (0..n).step_by(3) {
             let f = k as f32 / (n - 1) as f32;
             let x = f * w as f32;
             let y = cy + a.wave[k] * size * 0.35;
-            self.add(x, y, 0.22 + a.level * 0.4, r);
+            self.add(x, y, (0.22 + a.level * 0.4) * k_heat, r);
         }
         if a.beat > 0.05 {
-            self.add(cx, cy, a.beat * 0.25, size * 0.08);
+            self.add(cx, cy, a.beat * 0.25 * k_heat, size * 0.08);
         }
         // Colour through the drifting palette.
         let (i, j, m) = preset_mix(a.time, PALETTES.len(), 24.0, 8.0);

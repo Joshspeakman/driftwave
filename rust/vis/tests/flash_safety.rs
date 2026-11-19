@@ -11,7 +11,7 @@ use driftwave_vis::guard::measure;
 use driftwave_vis::{visualizers, VisHost};
 
 const RATE: u32 = 44100;
-const FPS: f64 = 30.0;
+
 
 fn noise(seed: &mut u32) -> f32 {
     *seed ^= *seed << 13;
@@ -61,20 +61,22 @@ fn signals() -> Vec<(&'static str, Vec<f32>)> {
 
 #[test]
 fn no_visualizer_ever_flashes() {
-    let (w, h) = (340usize, 256usize);
     let mut failures = Vec::new();
+    // The big slot at 24 fps, and the mini spectrum's size at 12 (it's drawn every other frame).
+    for (w, h, fps) in [(340usize, 256usize, 24.0f64), (114, 24, 12.0)] {
     for (name, audio) in signals() {
-        let frames = (audio.len() / 2) as f64 / RATE as f64 * FPS;
+        let frames = (audio.len() / 2) as f64 / RATE as f64 * fps;
         for v in visualizers::all() {
             let mut host = VisHost::new(v.id(), w, h, 1.0);
-            let (gx, gy) = (2, 2);
+            let (w, h) = host.size();
+            let (gx, gy) = if w >= 300 { (2, 2) } else { (1, 1) };
             let mut whole = Vec::new();
             let mut cells: Vec<Vec<flash::Frame>> = vec![Vec::new(); gx * gy];
             for f in 0..frames as usize {
-                let end = ((f as f64 / FPS) * RATE as f64) as usize;
+                let end = ((f as f64 / fps) * RATE as f64) as usize;
                 let start = end.saturating_sub(2048);
-                let px = host.frame(&audio[start * 2..end * 2], 2, RATE, f as f64 / FPS, (1.0 / FPS) as f32);
-                let (all, each) = measure(px, w, h, gx, gy, 1.0 / FPS);
+                let px = host.frame(&audio[start * 2..end * 2], 2, RATE, f as f64 / fps, (1.0 / fps) as f32);
+                let (all, each) = measure(px, w, h, gx, gy, 1.0 / fps);
                 whole.push(all);
                 for (c, e) in each.into_iter().enumerate() {
                     cells[c].push(e);
@@ -92,6 +94,7 @@ fn no_visualizer_ever_flashes() {
                 failures.push(format!("{} with {name}: saturated red reached the screen", v.name()));
             }
         }
+    }
     }
     assert!(failures.is_empty(), "{failures:#?}");
 }

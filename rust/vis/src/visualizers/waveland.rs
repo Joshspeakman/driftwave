@@ -15,6 +15,8 @@ const RATE: f32 = 14.0;
 pub struct Waveland {
     rows: Vec<Vec<f32>>,
     since: f32,
+    /// The dusk sky, drawn once per size and copied each frame.
+    sky: Option<Canvas>,
 }
 
 impl Visualizer for Waveland {
@@ -26,6 +28,9 @@ impl Visualizer for Waveland {
     }
     fn blurb(&self) -> &'static str {
         "The spectrum as a neon wireframe landscape rolling in from the horizon"
+    }
+    fn resolution(&self) -> f32 {
+        0.8
     }
 
     fn render(&mut self, a: &Analysis, c: &mut Canvas) {
@@ -50,17 +55,23 @@ impl Visualizer for Waveland {
         }
         let t = a.time as f32;
         let horizon = h * (0.34 + 0.015 * (t * 0.3).sin());
-        c.gradient([0.02, 0.01, 0.06], [0.05, 0.02, 0.09]);
-        // Sky glow along the horizon.
-        for y in 0..(horizon as usize).min(c.h) {
-            let k = (y as f32 / horizon).powi(3) * 0.25;
-            for x in 0..c.w {
-                let p = &mut c.px[y * c.w + x];
-                p[0] += 0.5 * k;
-                p[1] += 0.12 * k;
-                p[2] += 0.45 * k;
+        if self.sky.as_ref().map(|s| (s.w, s.h)) != Some((c.w, c.h)) {
+            let mut s = Canvas::new(c.w, c.h);
+            s.gradient([0.02, 0.01, 0.06], [0.05, 0.02, 0.09]);
+            // Glow along the (resting) horizon.
+            let rest = h * 0.35;
+            for y in 0..(rest as usize).min(c.h) {
+                let k = (y as f32 / rest).powi(3) * 0.25;
+                for x in 0..c.w {
+                    let p = &mut s.px[y * c.w + x];
+                    p[0] += 0.5 * k;
+                    p[1] += 0.12 * k;
+                    p[2] += 0.45 * k;
+                }
             }
+            self.sky = Some(s);
         }
+        c.px.copy_from_slice(&self.sky.as_ref().expect("sky").px);
         let sway = (t * 0.2).sin() * w * 0.03;
         let project = |col: usize, depth: f32, v: f32| -> (f32, f32) {
             let s = 1.0 / depth;
