@@ -20,7 +20,7 @@ public sealed partial class PlaybackControls : UserControl
         Loaded += (_, _) =>
         {
             player = App.Current?.Model.Player;
-            if (player != null) player.PropertyChanged -= OnChanged; player.PropertyChanged += OnChanged;
+            if (player != null) { player.PropertyChanged -= OnChanged; player.PropertyChanged += OnChanged; }
             Refresh();
         };
         Unloaded += (_, _) => { if (player != null) player.PropertyChanged -= OnChanged; };
