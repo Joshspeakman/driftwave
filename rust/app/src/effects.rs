@@ -95,6 +95,14 @@ impl Effects {
         self.grain.is_some() || self.vignette.is_some() || self.scanlines.is_some()
     }
 
+    /// The vignette, painted into a picture (the Classic skin bakes it in, so nothing over the visualizer has to be
+    /// blended every frame).
+    pub fn vignette_into(&self, p: &mut Picture) {
+        if let Some((c, o)) = self.vignette {
+            vignette(p, c, o);
+        }
+    }
+
     /// Paints the effects that sit behind the panels (the aurora only when it holds still: it moves otherwise).
     pub fn behind(&self, p: &mut Picture, scale: f32, still: bool) {
         if self.wood {
@@ -122,9 +130,10 @@ impl Effects {
         self.aurora.is_some()
     }
 
-    /// What lies over everything: grain, vignette and scanlines, as one premultiplied picture (None: nothing).
-    pub fn front(&self, w: usize, h: usize, scale: f32) -> Option<Picture> {
-        if !self.any_in_front() {
+    /// What lies over everything: grain, vignette (unless `vignette` is false) and scanlines, as one premultiplied
+    /// picture (None: nothing).
+    pub fn front(&self, w: usize, h: usize, scale: f32, vignette: bool) -> Option<Picture> {
+        if !(self.grain.is_some() || self.scanlines.is_some() || (vignette && self.vignette.is_some())) {
             return None;
         }
         let mut p = Picture::new(w, h);
@@ -157,18 +166,24 @@ impl Effects {
                 y += pitch;
             }
         }
-        if let Some((c, o)) = self.vignette {
-            let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
-            for y in 0..h {
-                let dy = (y as f32 + 0.5 - cy) / (0.75 * h as f32);
-                for x in 0..w {
-                    let dx = (x as f32 + 0.5 - cx) / (0.75 * w as f32);
-                    let a = ((dx.hypot(dy) - 0.6) / 0.4).clamp(0.0, 1.0) * o;
-                    p.blend(y * w + x, [c[0], c[1], c[2]], a);
-                }
-            }
+        if let (Some((c, o)), true) = (self.vignette, vignette) {
+            self::vignette(&mut p, c, o);
         }
         Some(p)
+    }
+}
+
+/// Darkened edges: clear in the middle 60%, deepening to `o` at the rim of an ellipse 1.5× the picture.
+fn vignette(p: &mut Picture, c: Rgba, o: f32) {
+    let (w, h) = (p.w, p.h);
+    let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
+    for y in 0..h {
+        let dy = (y as f32 + 0.5 - cy) / (0.75 * h as f32);
+        for x in 0..w {
+            let dx = (x as f32 + 0.5 - cx) / (0.75 * w as f32);
+            let a = ((dx.hypot(dy) - 0.6) / 0.4).clamp(0.0, 1.0) * o;
+            p.blend(y * w + x, [c[0], c[1], c[2]], a);
+        }
     }
 }
 
@@ -308,7 +323,7 @@ mod tests {
                 let mut p = Picture::filled(w, h, [0, 0, 0]);
                 e.behind(&mut p, s, true);
                 e.moving(&mut p, s, 12.0);
-                let _ = e.front(w, h, s);
+                let _ = e.front(w, h, s, true);
             }
         }
     }

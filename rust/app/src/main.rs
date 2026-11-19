@@ -729,6 +729,9 @@ impl App {
             self.tick_look(&ui, now, dt, focused);
             self.tick_decor(&ui, dt, focused);
         }
+        if classic && !ui.window().is_minimized() {
+            self.tick_classic_look(&ui, now);
+        }
         // Minimised, shaded or in the Full layout: nothing else moves but the clock.
         if ui.window().is_minimized() || ui.get_shaded() || !classic {
             return;
@@ -1361,18 +1364,34 @@ fn main() -> Result<(), slint::PlatformError> {
     if let Some(path) = app.borrow().args.get("screenshot").map(String::from) {
         let delay = app.borrow().args.num("screenshotDelay").unwrap_or(4.0);
         let weak = ui.as_weak();
+        // -frames <n> [-frameGap <ms>]: a run of snapshots (name_00.bmp, name_01.bmp…), to judge motion frame by frame.
+        let frames = app.borrow().args.num("frames").map(|n| n.clamp(1.0, 240.0) as usize).unwrap_or(1);
+        let gap = app.borrow().args.num("frameGap").unwrap_or(83.0);
+        let timer = Rc::new(slint::Timer::default());
+        let keep = timer.clone();
         slint::Timer::single_shot(Duration::from_secs_f64(delay), move || {
-            if let Some(ui) = weak.upgrade() {
-                match ui.window().take_snapshot() {
-                    Ok(buf) => {
-                        let _ = save_bmp(&path, &buf);
-                        log(&format!("screenshot {}x{} {path}", buf.width(), buf.height()));
+            let taken = Rc::new(RefCell::new(0usize));
+            let (weak, path, t) = (weak.clone(), path.clone(), keep.clone());
+            keep.start(slint::TimerMode::Repeated, Duration::from_secs_f64((gap / 1000.0).max(0.001)), move || {
+                let n = *taken.borrow();
+                if let Some(ui) = weak.upgrade() {
+                    let file = if frames > 1 { path.replace(".bmp", &format!("_{n:02}.bmp")) } else { path.clone() };
+                    match ui.window().take_snapshot() {
+                        Ok(buf) => {
+                            let _ = save_bmp(&file, &buf);
+                            log(&format!("screenshot {}x{} {file}", buf.width(), buf.height()));
+                        }
+                        Err(e) => log(&format!("screenshot failed: {e}")),
                     }
-                    Err(e) => log(&format!("screenshot failed: {e}")),
                 }
-            }
-            let _ = slint::quit_event_loop();
+                *taken.borrow_mut() += 1;
+                if n + 1 >= frames {
+                    t.stop();
+                    let _ = slint::quit_event_loop();
+                }
+            });
         });
+        std::mem::forget(timer);
     }
     // Test runs: -swapAt <s> swaps the layout mid-run (with the engine playing), to check the swap.
     if let Some(at) = app.borrow().args.num("swapAt") {

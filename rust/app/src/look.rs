@@ -101,6 +101,9 @@ pub struct Look {
     /// Where the pointer is over the window (logical px), and where the spotlight has got to.
     pub pointer: Option<(f32, f32)>,
     spot_at: (f32, f32),
+    /// The Classic skin's painted size (px) and theme, and a size waiting to settle.
+    skin_painted: Option<(u32, u32)>,
+    skin_pending: Option<((u32, u32), Instant)>,
     /// The last motion frames' cost, for DRIFTWAVE_LOG.
     motion_ms: f64,
     motion_frames: u32,
@@ -281,6 +284,14 @@ impl App {
         scenery.set_on(self.look.scene.is_some());
         scenery.set_moving(false);
         scenery.set_front_on(false);
+        // The Classic layout: neon on the panels' edges; its skin is painted on its next tick.
+        let pal = ui.global::<super::Pal>();
+        pal.set_edge_on(neon.is_some());
+        pal.set_edge(slint_colour(neon.and_then(|o| colour(o, "player").or_else(|| colour(o, "content"))).unwrap_or(f.accent)));
+        pal.set_skin_on(false);
+        pal.set_skin_front_on(false);
+        self.look.skin_painted = None;
+        self.look.skin_pending = None;
         self.look.painted = None;
         self.look.pending = None;
         self.look.last_motion = None;
@@ -414,6 +425,58 @@ impl App {
             self.look.motion_ms = 0.0;
             self.look.motion_frames = 0;
         }
+    }
+
+    /// The Classic layout's skin, painted once per size (after a resize settles): still, so Classic stays as light
+    /// as it was.
+    pub(crate) fn tick_classic_look(&mut self, ui: &MainWindow, now: Instant) {
+        let Some(scene) = self.look.scene.as_mut() else { return };
+        let size = ui.window().size();
+        if size.width < 8 || size.height < 8 {
+            return;
+        }
+        let key = (size.width, size.height);
+        if self.look.skin_painted == Some(key) {
+            return;
+        }
+        match self.look.skin_pending {
+            Some((k, since)) if k == key => {
+                if self.look.skin_painted.is_some() && now - since < SETTLE {
+                    return;
+                }
+            }
+            _ => {
+                self.look.skin_pending = Some((key, now));
+                if self.look.skin_painted.is_some() {
+                    return;
+                }
+            }
+        }
+        let scale = ui.window().scale_factor();
+        let (w, h) = (size.width as f32 / scale, size.height as f32 / scale);
+        let t0 = Instant::now();
+        let pal = ui.global::<super::Pal>();
+        match scene.skin(w, h, scale) {
+            Some(p) => {
+                let mut buf = SharedPixelBuffer::<Rgb8Pixel>::new(p.w as u32, p.h as u32);
+                for (d, s) in buf.make_mut_bytes().chunks_exact_mut(3).zip(p.px.chunks_exact(4)) {
+                    d.copy_from_slice(&s[..3]);
+                }
+                pal.set_skin(Image::from_rgb8(buf));
+                pal.set_skin_on(true);
+            }
+            None => pal.set_skin_on(false),
+        }
+        match scene.classic_front(w, h, scale) {
+            Some(f) => {
+                pal.set_skin_front(Image::from_rgba8_premultiplied(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&f.px, f.w as u32, f.h as u32)));
+                pal.set_skin_front_on(true);
+            }
+            None => pal.set_skin_front_on(false),
+        }
+        self.look.skin_painted = Some(key);
+        self.look.skin_pending = None;
+        log(&format!("classic skin {}×{} in {:.1} ms", size.width, size.height, t0.elapsed().as_secs_f64() * 1000.0));
     }
 
     fn paint_backdrop(&mut self, ui: &MainWindow, g: &Geometry, scale: f32, still: bool) {

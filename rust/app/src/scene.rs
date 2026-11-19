@@ -436,9 +436,42 @@ impl Scene {
         p
     }
 
+    /// The Classic layout's skin: the theme's whole-window picture and effects (not the Full layout's title-bar and
+    /// panel art), still, at `w`×`h` logical px. None when the theme has no picture of its own.
+    pub fn skin(&mut self, w: f32, h: f32, scale: f32) -> Option<Picture> {
+        let whole = |l: &Map<String, Value>| matches!(str_of(l, "in"), None | Some("window")) && str_of(l, "type") == Some("image");
+        if !self.layers.iter().any(whole) && !self.effects.any_behind() && self.drips.is_none() && self.effects.vignette.is_none() {
+            return None;
+        }
+        let g = Geometry { width: w, height: h, title: 0.0, pane: 0.0, player: 0.0, title_end: 0.0 };
+        let b = self.back;
+        let mut p = Picture::filled((w * scale).round() as usize, (h * scale).round() as usize, [b.r, b.g, b.b]);
+        self.effects.behind(&mut p, scale, true);
+        for l in self.layers.clone().iter().filter(|l| matches!(str_of(l, "in"), None | Some("window"))) {
+            if motion_kind(l) == Some("pass") {
+                continue;
+            }
+            let mode = if motion_kind(l) == Some("breathe") { Mode::Middle } else { Mode::Still };
+            self.draw(&mut p, l, &g, scale, 0.0, mode);
+        }
+        if let Some(density) = self.drips {
+            // A fresh, lived-in moment of the drops at this size.
+            self.drops_size = (0, 0);
+            self.drips(&mut p, scale, density, 0.0);
+            self.drops_size = (0, 0);
+        }
+        self.effects.vignette_into(&mut p);
+        Some(p)
+    }
+
     /// What lies over everything (grain, vignette, scanlines), or None.
     pub fn front(&self, g: &Geometry, scale: f32) -> Option<Picture> {
-        self.effects.front((g.width * scale).round() as usize, (g.height * scale).round() as usize, scale)
+        self.effects.front((g.width * scale).round() as usize, (g.height * scale).round() as usize, scale, true)
+    }
+
+    /// The Classic layout's overlay: grain and scanlines only (its skin holds the vignette).
+    pub fn classic_front(&self, w: f32, h: f32, scale: f32) -> Option<Picture> {
+        self.effects.front((w * scale).round() as usize, (h * scale).round() as usize, scale, false)
     }
 
     fn draw(&mut self, p: &mut Picture, l: &Map<String, Value>, g: &Geometry, scale: f32, t: f64, mode: Mode) {
