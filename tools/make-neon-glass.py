@@ -195,6 +195,5 @@ def rain_tile(name, n, length, width, alpha, blur_px, seed, size=512, angle=-9, 
     tile.save(os.path.join(ART, name), optimize=True)
 
 
-rain_tile('rain-glass-far.png', 1500, (16, 42), (0.6, 1.1), (45, 95), 0.9, 7)
-rain_tile('rain-glass-near.png', 110, (110, 230), (1.6, 2.8), (40, 85), 2.2, 8)
+# The rain tiles are made by make-rain.py (tuned for the scenes' 12 frames a second).
 print('ok', W, H)

@@ -36,21 +36,24 @@ fn hash(s: &str) -> String {
 }
 
 /// Two colours for a station's tile, from its name (soft, never saturated red).
-/// What placeholder tiles take from a dark theme: hues between its two accent colours (Night Market's pink and
-/// cyan), deep and rich.
-#[derive(Clone, Copy)]
+/// What placeholder tiles take from a theme: its own colours (the `tiles` effect), or hues between its two
+/// accents (Night Market's pink and cyan): deep and rich under a dark theme, soft pastels under a light one.
+#[derive(Clone)]
 pub struct Mood {
     pub from: f32,
     pub to: f32,
+    pub light: bool,
+    pub palette: Vec<[u8; 3]>,
+    pub flat: bool,
 }
 
 thread_local! {
-    static MOOD: std::cell::Cell<Option<Mood>> = const { std::cell::Cell::new(None) };
+    static MOOD: std::cell::RefCell<Option<Mood>> = const { std::cell::RefCell::new(None) };
 }
 
 /// Sets the tiles' mood (None: Driftwave's own bright tiles).
 pub fn set_mood(m: Option<Mood>) {
-    MOOD.with(|c| c.set(m));
+    MOOD.with(|c| *c.borrow_mut() = m);
 }
 
 /// A colour's hue (0–1).
@@ -83,7 +86,17 @@ pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
         };
         slint::Color::from_rgb_u8((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
     };
-    match MOOD.with(|c| c.get()) {
+    // A second, independent number from the name, for a little variety in brightness.
+    let vary = ((h.finish() >> 20) % 1000) as f32 / 1000.0;
+    let mood = MOOD.with(|c| c.borrow().clone());
+    match mood {
+        // The theme's own colours: one each, flat or lifted towards white at the bottom right.
+        Some(m) if !m.palette.is_empty() => {
+            let [r, g, b] = m.palette[(hue * m.palette.len() as f32) as usize % m.palette.len()];
+            let base = slint::Color::from_rgb_u8(r, g, b);
+            let lift = |v: u8| (v as f32 + (255.0 - v as f32) * 0.22) as u8;
+            (base, if m.flat { base } else { slint::Color::from_rgb_u8(lift(r), lift(g), lift(b)) })
+        }
         // Each station lands somewhere on the shorter way round from one accent's hue to the other (a little
         // either side of the accent when the two are close).
         Some(m) => {
@@ -94,9 +107,18 @@ pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
             if arc < -0.5 {
                 arc += 1.0;
             }
-            let h = if arc.abs() < 0.08 { m.from - 0.09 + hue * 0.18 } else { m.from + arc * hue };
+            let span = if arc.abs() < 0.08 { 0.24 } else { 0.0 };
+            let h = if span > 0.0 { m.from - 0.12 + hue * span } else { m.from + arc * hue };
             let h = h.rem_euclid(1.0);
-            (rgb(h, 0.78, 0.26), rgb((h + 0.03).rem_euclid(1.0), 0.72, 0.55))
+            if m.light {
+                (rgb(h, 0.35, 0.80 + vary * 0.06), rgb((h + 0.03).rem_euclid(1.0), 0.30, 0.94))
+            } else if (0.11..0.22).contains(&h) {
+                // Deep yellows go olive: pull them to amber, and lighter.
+                let h = 0.07 + (h - 0.11) * 0.25;
+                (rgb(h, 0.8, 0.36 + vary * 0.08), rgb(h + 0.02, 0.75, 0.72))
+            } else {
+                (rgb(h, 0.78, 0.22 + vary * 0.08), rgb((h + 0.03).rem_euclid(1.0), 0.72, 0.50 + vary * 0.1))
+            }
         }
         None => (rgb(hue, 0.5, 0.55), rgb((hue + 0.09) % 1.0, 0.55, 0.78)),
     }

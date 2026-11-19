@@ -258,10 +258,24 @@ impl App {
         self.look.minute = chrono::Local::now().timestamp() / 60;
         scenery.set_texts(ModelRc::from(Rc::new(VecModel::from(shown))));
 
-        // Placeholder tiles: deep tones between the accents under a dark theme; Driftwave's bright ones otherwise.
-        let dark_theme = theme.is_some_and(|t| t.base == "dark");
+        // Placeholder tiles: the theme's own colours, or tones between its accents (deep under a dark theme, soft
+        // under a light one); Driftwave's bright ones for Default. Their antenna picks its own ink unless the theme
+        // gives one, and a theme can outline them.
         let hue = |c: Color| crate::covers::hue_of(c.r, c.g, c.b);
-        crate::covers::set_mood(dark_theme.then(|| crate::covers::Mood { from: hue(f.accent), to: hue(f.accent_text) }));
+        let tiles = fx("tiles");
+        crate::covers::set_mood(theme.map(|t| crate::covers::Mood {
+            from: hue(f.accent),
+            to: hue(f.accent_text),
+            light: t.base == "light",
+            palette: tiles
+                .and_then(|o| o.get("colors"))
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(|c| c.as_str().and_then(Color::parse)).map(|c| [c.r, c.g, c.b]).collect())
+                .unwrap_or_default(),
+            flat: tiles.and_then(|o| o.get("flat")).and_then(Value::as_bool) == Some(true),
+        }));
+        th.set_tile_ink(slint_colour(tiles.and_then(|o| colour(o, "ink")).unwrap_or(Color { a: 0, r: 0, g: 0, b: 0 })));
+        th.set_tile_border(slint_colour(tiles.and_then(|o| colour(o, "border")).unwrap_or(Color { a: 0, r: 0, g: 0, b: 0 })));
 
         // The UI's moving parts.
         let synth = fx("synthwave");
@@ -571,8 +585,14 @@ impl App {
     fn paint_backdrop(&mut self, ui: &MainWindow, g: &Geometry, scale: f32, still: bool) {
         let Some(scene) = self.look.scene.as_mut() else { return };
         let t0 = Instant::now();
-        let back = scene.backdrop(g, scale, still);
+        let mut back = scene.backdrop(g, scale, still);
         let front = scene.front(g, scale);
+        // Glass: under the panels (everything below the title bar), the picture is frosted. Painted once.
+        if scene.glass() {
+            let r = (15.0 * scale).round() as usize;
+            let (bw, bh) = (back.w, back.h);
+            crate::paint::frost(&mut back, 0, (g.title * scale).round() as usize, bw, bh, r);
+        }
         // The full-window scaled art isn't needed until the next backdrop (motion's pictures are smaller).
         scene.forget_large((back.w * back.h / 2) as u64);
         // See-through panels: as see-through as the theme asks, unless the picture behind would drown their text.

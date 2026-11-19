@@ -38,6 +38,7 @@
     "cover": 0
   },
   "effects": {
+    "tiles": {"colors": ["#2A2414", "#3A2E10", "#1C1A16"], "ink": "#D4AF37"},
     "lcd": {
       "color": "#00E000",
       "background": "#050805"
@@ -60,13 +61,30 @@
           "y": 0
         },
         {
-          "type": "image",
-          "src": "llama-gold.jpg",
+          "type": "line",
+          "in": "titlebar",
+          "x": 0,
+          "y": 20,
+          "x2": "100%",
+          "y2": 0,
+          "stroke": "#3A2C10",
+          "repeat": {
+            "n": 3,
+            "dy": 3
+          }
+        },
+        {
+          "type": "line",
           "in": "titlebar",
           "x": 0,
           "y": 19,
-          "h": 10,
-          "fit": "fill",
+          "x2": "100%",
+          "y2": 0,
+          "stroke": "#C8A040",
+          "repeat": {
+            "n": 3,
+            "dy": 3
+          },
           "id": "strip",
           "clickable": true
         }

@@ -265,6 +265,70 @@ impl Picture {
     }
 }
 
+/// Frosts a band of rows (`y0`..`y1`, columns `x0`..`x1`): three box blurs of radius `r` each way (about a
+/// Gaussian of σ ≈ r), the colour only. Running sums, so it's quick even for the whole window.
+pub fn frost(p: &mut Picture, x0: usize, y0: usize, x1: usize, y1: usize, r: usize) {
+    let (x1, y1) = (x1.min(p.w), y1.min(p.h));
+    if r == 0 || x1 <= x0 + 1 || y1 <= y0 + 1 {
+        return;
+    }
+    let (w, h) = (x1 - x0, y1 - y0);
+    let mut buf: Vec<[f32; 3]> = Vec::with_capacity(w * h);
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let i = (y * p.w + x) * 4;
+            buf.push([p.px[i] as f32, p.px[i + 1] as f32, p.px[i + 2] as f32]);
+        }
+    }
+    let pass = |line: &mut [[f32; 3]], tmp: &mut Vec<[f32; 3]>| {
+        let n = line.len();
+        tmp.clear();
+        tmp.extend_from_slice(line);
+        let at = |i: isize| tmp[i.clamp(0, n as isize - 1) as usize];
+        let mut sum = [0.0f32; 3];
+        let ri = r as isize;
+        for i in -ri..=ri {
+            let c = at(i);
+            for k in 0..3 {
+                sum[k] += c[k];
+            }
+        }
+        let div = (2 * r + 1) as f32;
+        for (i, out) in line.iter_mut().enumerate() {
+            *out = [sum[0] / div, sum[1] / div, sum[2] / div];
+            let (add, sub) = (at(i as isize + ri + 1), at(i as isize - ri));
+            for k in 0..3 {
+                sum[k] += add[k] - sub[k];
+            }
+        }
+    };
+    let mut tmp = Vec::new();
+    let mut col = vec![[0.0f32; 3]; h];
+    for _ in 0..3 {
+        for row in buf.chunks_exact_mut(w) {
+            pass(row, &mut tmp);
+        }
+        for x in 0..w {
+            for y in 0..h {
+                col[y] = buf[y * w + x];
+            }
+            pass(&mut col, &mut tmp);
+            for y in 0..h {
+                buf[y * w + x] = col[y];
+            }
+        }
+    }
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let i = (y * p.w + x) * 4;
+            let c = buf[(y - y0) * w + (x - x0)];
+            p.px[i] = c[0].round().clamp(0.0, 255.0) as u8;
+            p.px[i + 1] = c[1].round().clamp(0.0, 255.0) as u8;
+            p.px[i + 2] = c[2].round().clamp(0.0, 255.0) as u8;
+        }
+    }
+}
+
 /// x / 255, rounded, for x up to 255 × 255.
 #[inline]
 pub fn div255(x: u32) -> u32 {

@@ -427,8 +427,8 @@ ART = {
         {'text': '電話', 'x': 0.82, 'y': 0.06, 'color': '#38E8FF'},
         {'text': 'BAR', 'x': 0.44, 'y': 0.38, 'color': '#FF7A3D', 'vertical': False, 'big': False},
     ], {'haze': '#1E2A36', 'fog': '#8FA8C0', 'neon': ['#FFB347', '#38E8FF']}, stall=False), 'noir-city.jpg'),
-    'rain': lambda: (rain_sheet('rain-far.png', 900, (14, 34), [1], (40, 95), -9, 0.5, 1),
-                     rain_sheet('rain-near.png', 140, (60, 150), [1, 2], (60, 150), -9, 0.9, 2)),
+    # The rain tiles are made by make-rain.py (tuned for the scenes' 12 frames a second).
+    'rain': lambda: None,
     'luna': luna,
     'aurora': lambda: ribbons('aurora-glass.jpg', [(0, '#020A12'), (0.6, '#04202A'), (1, '#062A2A')],
                               ['#2FFF9A', '#1BD6C6', '#3F8BFF', '#7DFFB8'], 3, count=7, thickness=(80, 220), blur=(40, 110), core=False, stars=True),

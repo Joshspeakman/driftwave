@@ -37,6 +37,7 @@
     "cover": 0
   },
   "effects": {
+    "tiles": {"colors": ["#000080", "#008080", "#808080"], "flat": true},
     "frame": {
       "color": "#000080",
       "thickness": 4

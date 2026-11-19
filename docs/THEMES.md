@@ -98,6 +98,7 @@ or while Windows' animation effects are off. They also freeze into one fixed fra
 | `dial` | Player pane: a backlit FM tuning dial; each station gets its own spot, and the pointer swings there | `color` |
 | `vu` | Player pane: left and right VU meters | |
 | `scene` | The theme's own decoration and easter eggs (see "Scenes") | `layers`, `eggs` |
+| `tiles` | Placeholder covers in the theme's own colours (one per station, by name) | `colors` (array), `flat`, `ink` (the antenna; else chosen by brightness), `border` |
 
 **Cost.** Moving effects run on one clock at 24 frames a second, setting composition properties
 directly (no layout), so the window redraws only that often. They rest whenever the window isn't the
@@ -106,6 +107,9 @@ active one, and when it's minimised or hidden.
 ### Scenes
 
 A `scene` is a list of `layers` (drawn behind the UI unless `"front": true`) and optional `eggs`.
+
+With `"surfaces": "translucent"` the panels keep their colours' alpha over the scene, and the picture under them is
+frosted (painted once); `"frost": false` keeps it sharp (Luna, Aqua).
 
 **Placing a layer:**
 

@@ -39,6 +39,7 @@
     "cover": 0
   },
   "effects": {
+    "tiles": {"colors": ["#1E5A1E", "#2A4A2A", "#3A3D45", "#24462E"]},
     "lcd": {
       "color": "#00E000",
       "background": "#050805"
