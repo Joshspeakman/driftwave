@@ -9,6 +9,69 @@ use serde_json::Map;
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
 use std::rc::Rc;
 
+/// The fonts Driftwave carries (the font pickers list them first).
+const OWN_FONTS: [&str; 6] = ["Orbitron", "Press Start 2P", "Share Tech Mono", "Shrikhand", "Space Mono", "VT323"];
+
+/// A font file's registry name ("Segoe UI Semibold Italic (TrueType)") as its family ("Segoe UI").
+fn family(name: &str) -> String {
+    const STYLES: [&str; 22] = [
+        "Regular", "Bold", "Italic", "Oblique", "Light", "Semilight", "SemiLight", "Semibold", "SemiBold", "Demibold", "Black", "Heavy", "Thin",
+        "ExtraLight", "ExtraBold", "UltraLight", "UltraBold", "Medium", "Condensed", "Narrow", "Variable", "Book",
+    ];
+    let mut f = name.split(" (").next().unwrap_or(name).trim().to_string();
+    loop {
+        let before = f.len();
+        for s in STYLES {
+            if let Some(rest) = f.strip_suffix(s) {
+                if rest.ends_with(' ') {
+                    f = rest.trim_end().to_string();
+                }
+            }
+        }
+        if f.len() == before {
+            return f;
+        }
+    }
+}
+
+/// The installed font families (Windows: the machine's and this user's font lists), sorted.
+fn installed_fonts() -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Registry::{RegCloseKey, RegEnumValueW, RegOpenKeyExW, HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
+        let path: Vec<u16> = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts\0".encode_utf16().collect();
+        for root in [HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER] {
+            let mut key: HKEY = std::ptr::null_mut();
+            // SAFETY: reading value names into a buffer whose length is passed; the key is closed after.
+            unsafe {
+                if RegOpenKeyExW(root, path.as_ptr(), 0, KEY_READ, &mut key) != 0 {
+                    continue;
+                }
+                let mut i = 0;
+                loop {
+                    let mut buf = [0u16; 512];
+                    let mut len = buf.len() as u32;
+                    let r = RegEnumValueW(key, i, buf.as_mut_ptr(), &mut len, std::ptr::null(), std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut());
+                    if r != 0 {
+                        break;
+                    }
+                    let name = String::from_utf16_lossy(&buf[..len as usize]);
+                    for part in name.split(" & ") {
+                        names.push(family(part));
+                    }
+                    i += 1;
+                }
+                RegCloseKey(key);
+            }
+        }
+    }
+    names.retain(|n| !n.is_empty() && !n.starts_with('@'));
+    names.sort_by_key(|n| n.to_lowercase());
+    names.dedup_by_key(|n| n.to_lowercase());
+    names
+}
+
 fn slint_colour(c: Color) -> slint::Color {
     slint::Color::from_argb_u8(c.a, c.r, c.g, c.b)
 }
@@ -124,6 +187,11 @@ impl App {
         ed.set_effect_counts(ModelRc::from(Rc::new(VecModel::from(slots.to_vec()))));
         ed.set_effects(ModelRc::from(Rc::new(VecModel::from(effects))));
         ed.set_confirm_delete(false);
+        if ed.get_fonts().row_count() == 0 {
+            let mut fonts: Vec<slint::SharedString> = OWN_FONTS.iter().map(|f| (*f).into()).collect();
+            fonts.extend(installed_fonts().into_iter().filter(|f| !OWN_FONTS.contains(&f.as_str())).map(Into::into));
+            ed.set_fonts(ModelRc::from(Rc::new(VecModel::from(fonts))));
+        }
     }
 
     /// Makes the current theme yours to change: a copy of a built-in (or Default), selected.
@@ -341,5 +409,19 @@ impl App {
         self.save_settings();
         self.show_editor();
         self.message(&format!("Deleted {}.", t.name));
+    }
+}
+
+#[cfg(test)]
+mod font_tests {
+    use super::*;
+
+    #[test]
+    fn registry_names_become_families() {
+        assert_eq!(family("Segoe UI Semibold Italic (TrueType)"), "Segoe UI");
+        assert_eq!(family("Arial (TrueType)"), "Arial");
+        assert_eq!(family("Bahnschrift (TrueType)"), "Bahnschrift");
+        assert_eq!(family("Segoe UI Variable (TrueType)"), "Segoe UI");
+        assert_eq!(family("Arial Black (TrueType)"), "Arial");
     }
 }
