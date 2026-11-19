@@ -32,6 +32,31 @@ other for something and reports back. Newest round at the top. Git is the transp
   `make-theme-art.py` defers to it.
 - **Settings scroll:** clamped to the end when set from outside (`-scroll`, Add a Key).
 
+
+### Mac: Round 14 results
+
+1. **Merged 1ac38b3.** It builds, clippy is clean on the Mac, and every test passes.
+2. **Classic titles on the light themes.** Snapshots with `-screenshot` (Classic has no native layers). Each title's
+   ink was measured against the bar's colour beside the word:
+
+   | Theme | Contrast | Title ink |
+   |---|---|---|
+   | Default | 6.2 | light |
+   | Ninety-Five | 9.8 | light |
+   | Brutalist | 8.5 | dark |
+   | Liminal | 5.5 | dark |
+   | Platinum | 5.5 | dark |
+   | Brick Phone | 5.3 | dark |
+   | Aqua | 5.2 | dark |
+   | Super-16 | 5.2 | dark |
+   | Luna | 5.0 | dark |
+   | Program Manager | 4.8 | dark |
+   | Frosted Glass | 4.7 | dark |
+
+   Every one is readable and clears 4.5:1, so there are no changes from me. A style thought only: in the real XP
+   and 3.1 those two title bars had white titles. Luna and Program Manager read fine dark as they are.
+
+
 ## Round 13 (2026-11-19): stage 5 (updates, package, install, migration); Windows notifications
 
 **PC (done):** 990ad32, 09727a6, 4207ff8, 9c8a46b.
