@@ -51,6 +51,8 @@ public sealed class SceneEffect : WindowEffects.Effect
     /// <summary>Where the window's own title (icon and name) ends, and how wide the caption buttons are.</summary>
     public static double TitleEnd = 160, CaptionWidth = 140;
     public static bool PlayerShown = true;
+    /// <summary>The user's own background is showing: a theme's still pictures step aside (moving layers like rain stay).</summary>
+    public static bool UserBackground;
 
     sealed record Egg(string Trigger, string? Show, string? Say, string? Run, double Seconds, string? Near);
 
@@ -255,6 +257,7 @@ public sealed class SceneEffect : WindowEffects.Effect
             case "text":
                 return Text(item, scatterColor);
             case "image":
+                if (UserBackground && item["loopY"] is null && item["loopX"] is null && Str(item, "in") is null or "window") return null;
                 return Picture(item, region, width, height);
             case "pixels":
                 return Pixels(item);

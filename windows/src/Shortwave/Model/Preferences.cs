@@ -44,6 +44,9 @@ public sealed class Preferences : Observable
         effectsEnabled = GetBool("effects") ?? true;
         effectIntensity = Math.Clamp(GetDouble("effectIntensity") ?? 1.0, 0, 1);
         checkForUpdates = GetBool("checkForUpdates") ?? true;
+        backgroundFile = Get("backgroundFile");
+        backgroundDim = Math.Clamp(GetDouble("backgroundDim") ?? 0.35, 0, 0.8);
+        giphyKey = Get("giphyKey");
         lastUpdateCheck = Get("lastUpdateCheck");
         loading = false;
     }
@@ -162,6 +165,18 @@ public sealed class Preferences : Observable
 
     private double effectIntensity;
     public double EffectIntensity { get => effectIntensity; set { if (Set(ref effectIntensity, Math.Clamp(value, 0, 1))) Store("effectIntensity", effectIntensity); } }
+
+    private string? backgroundFile;
+    /// <summary>Your own background (a file in the data folder's Backgrounds folder), or none.</summary>
+    public string? BackgroundFile { get => backgroundFile; set { if (Set(ref backgroundFile, value)) Store("backgroundFile", value); } }
+
+    private double backgroundDim;
+    /// <summary>How much your background is darkened (0 to 0.8), so text stays readable.</summary>
+    public double BackgroundDim { get => backgroundDim; set { if (Set(ref backgroundDim, Math.Clamp(value, 0, 0.8))) Store("backgroundDim", backgroundDim); } }
+
+    private string? giphyKey;
+    /// <summary>Your GIPHY API key for background search (else the app's own, if it was built with one).</summary>
+    public string? GiphyKey { get => giphyKey; set { if (Set(ref giphyKey, string.IsNullOrWhiteSpace(value) ? null : value)) Store("giphyKey", giphyKey); } }
 
     private bool checkForUpdates;
     /// <summary>Look for a new release at launch (at most once a day).</summary>

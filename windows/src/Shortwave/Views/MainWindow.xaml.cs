@@ -55,6 +55,11 @@ public sealed partial class MainWindow : Window
         };
         // Theme animations run only while the window can be seen.
         effects = new WindowEffects(EffectsBack, EffectsFront, Root);
+        // A background GIF plays only while effects move (window shown and active; Windows' animations on).
+        EffectsClock.MovingChanged += moving => DispatcherQueue.TryEnqueue(() =>
+        {
+            if (UserBackground.Source is BitmapImage { IsAnimatedBitmap: true } gif) { if (moving && Motion.Enabled) gif.Play(); else gif.Stop(); }
+        });
         // Theme scenes place things in the pane, content and player areas: keep them told how wide the pane is.
         void PaneChanged()
         {
@@ -291,6 +296,20 @@ public sealed partial class MainWindow : Window
     /// Themes: the pane takes the theme's background (nearly opaque, so window effects don't run under the menu)
     /// and the cards a solid blend of the theme's card colour over its background, so effects stay behind them too.
     /// </summary>
+    /// <summary>Your own background (a looping GIF or a picture), darkened by the Dim setting; it rests when effects do.</summary>
+    void ApplyUserBackground()
+    {
+        var path = app.Backgrounds.CurrentPath;
+        Theming.SceneEffect.UserBackground = path != null;
+        if (path is null) { UserBackground.Source = null; UserDim.Background = null; return; }
+        if (UserBackground.Source is not BitmapImage b || b.UriSource?.LocalPath != path)
+        {
+            var img = new BitmapImage(new Uri(path)) { AutoPlay = Motion.Enabled };
+            UserBackground.Source = img;
+        }
+        UserDim.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb((byte)(app.Settings.BackgroundDim * 255), 0, 0, 0));
+    }
+
     /// <summary>The window title in the theme's style (<c>windowTitle</c>: font, color, size, weight, uppercase).</summary>
     void ApplyWindowTitle(Theme theme)
     {
@@ -325,7 +344,15 @@ public sealed partial class MainWindow : Window
         // Photo themes ("scene": {"surfaces": "translucent"}): smoky glass over the picture, in the theme's own colours.
         bool translucent = !theme.IsDefault && theme.Options("scene")["surfaces"] is System.Text.Json.Nodes.JsonValue sv
             && sv.TryGetValue(out string? surf) && surf == "translucent";
-        if (translucent)
+        if (Theming.SceneEffect.UserBackground)
+        {
+            // Your background shows through every theme: smoky glass in the theme's (or Windows') colours.
+            var bgc = theme.IsDefault ? (Root.ActualTheme == ElementTheme.Light ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black)
+                : theme.Get("background") ?? Microsoft.UI.Colors.Black;
+            paneColor = Theme.WithAlpha(theme.Get("pane") ?? bgc, 0.62);
+            cardBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Theme.WithAlpha(theme.Get("card") ?? bgc, 0.72));
+        }
+        else if (translucent)
         {
             paneColor = theme.Get("pane") ?? Theme.WithAlpha(theme.Get("background") ?? Microsoft.UI.Colors.Black, 0.6);
             if (theme.Get("card") is { } glass) cardBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(glass);
@@ -352,6 +379,7 @@ public sealed partial class MainWindow : Window
         bool fx = app.Settings.EffectsEnabled;
         double intensity = app.Settings.EffectIntensity;
         ThemeManager.ApplyWindow(this, theme, look, BackdropFill, "mica");
+        ApplyUserBackground();
         ApplySurfaces(theme);
         ApplyWindowTitle(theme);
         if (currentDialog != null) currentDialog.RequestedTheme = look;
