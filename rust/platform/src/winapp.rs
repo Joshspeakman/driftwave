@@ -93,6 +93,11 @@ pub fn create_shortcut(lnk: &Path, exe: &Path, icon: Option<&Path>) -> Result<()
 
 /// A notification under the app's name (replacing the last one with the same tag), without a sound.
 pub fn toast(title: &str, lines: &[&str], tag: &str) -> Result<(), String> {
+    toast_as(AUMID, title, lines, tag)
+}
+
+/// A notification under another app id (a test run checks the toast itself under one Windows already knows).
+pub fn toast_as(app_id: &str, title: &str, lines: &[&str], tag: &str) -> Result<(), String> {
     use windows::core::HSTRING;
     use windows::Data::Xml::Dom::XmlDocument;
     use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
@@ -108,7 +113,7 @@ pub fn toast(title: &str, lines: &[&str], tag: &str) -> Result<(), String> {
         let t = ToastNotification::CreateToastNotification(&doc)?;
         t.SetTag(&HSTRING::from(tag))?;
         t.SetGroup(&HSTRING::from("driftwave"))?;
-        ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(AUMID))?.Show(&t)
+        ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(app_id))?.Show(&t)
     };
     run().map_err(|e| e.to_string())
 }
