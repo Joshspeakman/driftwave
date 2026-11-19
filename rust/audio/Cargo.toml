@@ -20,5 +20,4 @@ url.workspace = true
 uuid.workspace = true
 symphonia = { version = "0.6", default-features = false, features = ["mp3", "aac", "ogg", "vorbis"] }
 cpal = "0.18"
-rubato = "5"
 rustfft = "6"

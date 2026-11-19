@@ -6,7 +6,7 @@ changes every --interval seconds ("Test Artist - Song 1", "... Song 2", ...).
 Usage: icy-test-server.py --port 8765 --interval 20 --media DIR   (DIR holds tone.mp3 / tone.aac)
 
 Test options:
-  --drop-icy-after N   close the app's title connection (ICY metadata, User-Agent "Shortwave…")
+  --drop-icy-after N   close the app's title connection (ICY metadata, User-Agent "Shortwave…" or "Driftwave…")
                        after N seconds; the player's audio connection keeps going. Tests the reconnect.
   /playlist            a .pls pointing at /mp3, served as audio/x-scpls at a URL with no
                        extension (the local-station content-type probe).
@@ -64,7 +64,7 @@ class Handler(BaseHTTPRequestHandler):
         pos, sent, t0 = 0, 0, time.time()
         # Only the app's own title connection (User-Agent "Shortwave…"): players such as AVPlayer
         # also ask for ICY metadata on the audio connection, which must keep going.
-        title_conn = icy and self.headers.get("User-Agent", "").startswith("Shortwave")
+        title_conn = icy and self.headers.get("User-Agent", "").startswith(("Shortwave", "Driftwave"))
         drop_at = t0 + args.drop_icy_after if title_conn and args.drop_icy_after > 0 else None
         last_title = None
         try:

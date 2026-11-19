@@ -59,9 +59,54 @@ only; the PC merges it.
      early; the scope says to stop if phase 2 fails its gate.
 4. Record what you did under "Mac: Round 5 results", and push `rust`.
 
-### Mac: Round 5 results
+### Mac: Round 5 results (2026-11-18)
 
-(waiting for the Mac session)
+**Gate: passed on the Mac.** All three scripts pass against the Rust headless player. Run them with
+`SHORTWAVE_PLAYER=rust`; without it they still drive the Swift app, and its smoke run is still 5/5.
+
+| Script | Rust player on the Mac |
+|---|---|
+| `smoke-test.sh` | **5/5.** MP3 and AAC with ICY titles, HLS (MPEG-TS, HE-AAC v2 through AudioToolbox, titles from timed ID3), Ogg Vorbis (https→http redirect, Vorbis comment titles), `.pls` |
+| `behaviour-test.sh` | **Pass.** The connection was dropped every 20 s and came back each time (3 connections in all), with zero underruns, no `state loading` after the start, titles reaching Song 3, and no song repeated. The extensionless `.pls` plays. **New for Rust:** the spectrum finds the test tones, 445 Hz for the 440 Hz MP3 and 656 Hz for the 660 Hz AAC |
+| `recording-test.sh` | **Pass.** MP3 tracks of 14.99 s and `.m4a` tracks of 14.63–14.65 s, from the core's muxer with no re-encode; the first track is marked `idleIncomplete` |
+
+**Phase 1 on macOS:**
+- `cargo test`: 62 passed, 1 ignored. `real_aac_passthrough_with_ffmpeg` runs.
+- `--ignored`: the live radio-browser test passes.
+- `cargo clippy --all-targets` is clean, after 4 small lint fixes in the core (c5c8b7b).
+- Toolchain: rustup stable 1.100 in `~/.cargo` (not on PATH; use `~/.cargo/bin/cargo`). Build
+  output goes in `~/ProjectBuilds/shortwave-macos/rust-target` (`CARGO_TARGET_DIR`), not the SD card.
+
+**`rust/audio` (`driftwave-audio`)**, with 10 unit tests:
+
+| Module | What it does |
+|---|---|
+| `decode/mod.rs` | `FrameDecoder` (whole frames in, f32 `PcmBlock` out, each with its own rate and channel count); `FrameSplitter` for MP3 and ADTS; symphonia MP3, plus AAC-LC where there's no OS decoder. `decode::aac()` picks the platform decoder; **every** ADTS stream goes to it |
+| `decode/macos.rs` | AudioToolbox: AudioFileStream's **format list** (richest entry first), then AudioConverter. Tests use afconvert-made files: HE-AAC v2 comes out at 48 kHz stereo, not the 24 kHz mono base layer. **The PC adds `decode/windows.rs`** |
+| `net.rs` | ureq with manual redirects (so https→http works), `Icy-MetaData`, a per-read timeout and no whole-request timeout, and a raw-socket fallback for `ICY 200 OK` |
+| `engine.rs` | **One connection for audio and titles.** Titles are pinned to the output position where they occur and announced when playback gets there (byte-exact; `now playing "…" at N.NNs`). State comes from the output buffer: start at 1.5 s, cap at 12 s of read-ahead. Up to 5 reconnects, with the decoder reset and the re-announced title suppressed. `SegmentRecorder` plus Save All. Ogg goes through symphonia's demuxer and Vorbis decoder, with titles from the core's `OggCommentReader` |
+| `hls.rs`, `ts.rs` | Master playlist (highest bandwidth), then the media playlist refreshed by media sequence, starting 3 segments from the live edge; RFC 3986 URL resolution. A small TS demuxer (ADTS or MP3 audio, ID3 PES) |
+| `resample.rs` | A stateful cubic resampler with channel mapping. I didn't use rubato: version 5 has moved to a new buffer-adapter API. It can be swapped in later behind the same interface |
+| `output.rs` | cpal, with a timer fallback when there's no device. **Silent test runs:** `silent` is fixed when the output is made and applied as the callback's last step, after volume and mute; a unit test checks it writes zeros at volume 1, unmuted |
+| `analysis.rs` | RMS and peak per channel, and a 2048-point FFT (rustfft) with log bands and the dominant frequency. It reads a tap taken **before** volume and mute, so the meters move in a muted test run and follow the music, not the volume knob |
+| `save.rs` | MP3 with ID3, or AAC remuxed to `.m4a` (core `m4a`), or raw `.aac` |
+| `bin/driftwave-player.rs` | The headless player: always a test run (the `DriftwaveTestRun` folder, silent unless `-audible`); the same flags and log lines as the apps, plus `-logLevels` |
+
+**Release binary:** 3.0 MB.
+
+**Behaviour test with one connection:** the server's `--drop-icy-after` (it now also matches
+"Driftwave…") drops the Rust player's only connection, audio included. The checks still hold because
+state comes from the buffer. Windows' "the audio connection is never reopened" check doesn't apply to
+the Rust player; check that `state loading` appears only once.
+
+**Still to do in phase 2:**
+- Media Foundation (the PC);
+- output device choice;
+- HLS for fMP4 and packed audio (the smoke stream is TS);
+- Opus, which symphonia lacks (libopus);
+- the Save-per-track UI hooks, which belong to the app (phase 3).
+
+**5-minute soak:** SomaFM Groove Salad AAC through AudioToolbox, muted. One connection, 299.8 s played, **zero underruns**; the song change was announced at 289.69 s.
 
 ## Round 4 (2026-11-18): silent test runs
 
