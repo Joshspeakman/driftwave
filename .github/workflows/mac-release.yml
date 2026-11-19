@@ -11,8 +11,6 @@ on:
         description: Release tag to build and attach to
         required: true
         default: v1.0.0-alpha.1
-  push:
-    branches: [ci/mac-release]
 
 permissions:
   contents: write
