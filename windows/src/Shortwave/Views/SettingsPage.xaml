@@ -126,6 +126,7 @@
                         <TextBlock Style="{StaticResource CaptionSecondaryStyle}" TextWrapping="Wrap"
                                    Text="Internet radio for Windows, inspired by GNOME Shortwave by Felix Häcker and contributors. It contains none of Shortwave’s code or artwork." />
                         <HyperlinkButton Content="Station data: radio-browser.info" NavigateUri="https://www.radio-browser.info" Padding="0" />
+                        <HyperlinkButton Content="Credits and licences (theme photos, fonts)" NavigateUri="https://github.com/Joshspeakman/driftwave/blob/main/THIRD-PARTY-NOTICES.md" Padding="0" />
                     </StackPanel>
                 </Border>
             </StackPanel>
