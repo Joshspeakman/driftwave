@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn reads_library_file_and_bare_array() {
         let s = Station::local("Mine", "http://x", None);
-        assert_eq!(decode(&library_file::encode(&[s.clone()])).unwrap().stations, vec![s.clone()]);
+        assert_eq!(decode(&library_file::encode(std::slice::from_ref(&s))).unwrap().stations, vec![s.clone()]);
         let array = serde_json::to_vec(&Value::Array(vec![s.to_json()])).unwrap();
         assert_eq!(decode(&array).unwrap().stations, vec![s]);
     }

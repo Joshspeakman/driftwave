@@ -214,7 +214,7 @@ pub(crate) mod tests {
             // The last frame can't be confirmed by a following one until more data arrives, but it is counted once
             // the previous frame has locked the format.
             let s = clock.seconds();
-            assert!(s >= 42.0 * 1024.0 / 44100.0 - 1e-9 && s <= 43.0 * 1024.0 / 44100.0 + 1e-9, "chunk {chunk}: {s}");
+            assert!((42.0 * 1024.0 / 44100.0 - 1e-9..=43.0 * 1024.0 / 44100.0 + 1e-9).contains(&s), "chunk {chunk}: {s}");
         }
     }
 
@@ -229,6 +229,6 @@ pub(crate) mod tests {
             clock.feed(&frame);
         }
         let s = clock.seconds();
-        assert!(s >= 99.0 * 1152.0 / 44100.0 - 1e-9 && s <= 100.0 * 1152.0 / 44100.0 + 1e-9);
+        assert!((99.0 * 1152.0 / 44100.0 - 1e-9..=100.0 * 1152.0 / 44100.0 + 1e-9).contains(&s));
     }
 }

@@ -165,7 +165,7 @@ mod tests {
 
     fn block(text: &str) -> Vec<u8> {
         let mut bytes = text.as_bytes().to_vec();
-        while bytes.len() % 16 != 0 {
+        while !bytes.len().is_multiple_of(16) {
             bytes.push(0);
         }
         let mut out = vec![(bytes.len() / 16) as u8];
