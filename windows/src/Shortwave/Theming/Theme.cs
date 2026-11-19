@@ -81,6 +81,7 @@ public sealed class Theme
         ("dial", "Tuning dial"),
         ("vu", "VU meter (decorative)"),
         ("scene", "Theme scene and easter eggs"),
+        ("windowTitle", "Window title style"),
     ];
 
     public Color? Get(string token) => Colors.TryGetValue(token, out var c) ? c : null;

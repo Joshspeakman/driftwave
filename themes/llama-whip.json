@@ -3,13 +3,13 @@
   "version": 1,
   "id": "llama-whip",
   "name": "Llama Whip",
-  "description": "A homage to the classic MP3 player of 1997: a black-and-gold skin, an LCD readout, spectrum bars and a llama.",
+  "description": "A homage to the classic MP3 player of 1997: brushed gunmetal, a gold title strip, an LCD readout and spectrum bars.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
     "background": "#1C1C24",
-    "surface": "#E623232B",
-    "card": "#EE2A2A33",
+    "surface": "#CC23232B",
+    "card": "#E62A2A33",
     "cardStroke": "#55D4AF37",
     "control": "#E6303038",
     "controlStroke": "#66D4AF37",
@@ -22,7 +22,7 @@
     "accentText": "#D4AF37",
     "onAccent": "#000000",
     "dialog": "#24242C",
-    "pane": "#15151B"
+    "pane": "#E615151B"
   },
   "fonts": {
     "body": "Segoe UI",
@@ -43,174 +43,44 @@
       "background": "#050805"
     },
     "analyzer": {},
+    "windowTitle": {
+      "font": "Segoe UI",
+      "size": 12,
+      "weight": "bold",
+      "color": "#D4AF37",
+      "uppercase": true
+    },
     "scene": {
       "layers": [
         {
-          "type": "rect",
+          "type": "image",
+          "src": "llama-metal.jpg",
+          "in": "window",
+          "x": 0,
+          "y": 0
+        },
+        {
+          "type": "image",
+          "src": "llama-gold.jpg",
           "in": "titlebar",
-          "x": 128,
-          "y": 18,
-          "w": -380,
-          "h": 12,
-          "fill": [
-            [
-              "#6E5A1E",
-              0
-            ],
-            [
-              "#D4AF37",
-              0.5
-            ],
-            [
-              "#6E5A1E",
-              1
-            ]
-          ]
-        },
-        {
-          "type": "line",
-          "in": "titlebar",
-          "x": 128,
-          "y": 20,
-          "x2": -380,
-          "y2": 0,
-          "stroke": "#3A2E0C",
-          "repeat": {
-            "n": 4,
-            "dy": 2
-          }
-        },
-        {
-          "type": "rect",
-          "x": "40%",
-          "y": 12,
-          "w": 150,
-          "h": 24,
-          "fill": "#1C1C24",
-          "in": "titlebar"
-        },
-        {
-          "type": "text",
-          "text": "DRIFTWAVE 2.0",
-          "x": "41%",
-          "y": 13,
-          "size": 20,
-          "color": "#D4AF37",
-          "font": "VT323",
-          "in": "titlebar"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "..KK..........",
-            "..KWK.........",
-            "..KWWK........",
-            ".KWWWK........",
-            "KWKWWK........",
-            ".KWWWK........",
-            "..KWWK........",
-            "..KWWK........",
-            "..KWWWKKKKKK..",
-            "..KWWWWWWWWWK.",
-            "..KWWWWWWWWWWK",
-            "..KWWWWWWWWWK.",
-            "..KWWKKKKWWK..",
-            "..KWK....KWK..",
-            "..KWK....KWK..",
-            "..KKK....KKK.."
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF"
-          },
-          "x": -90,
-          "y": -90,
-          "scale": 4,
-          "in": "content",
-          "id": "llama",
+          "x": 0,
+          "y": 19,
+          "h": 10,
+          "fit": "fill",
+          "id": "strip",
           "clickable": true
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "KKKKKKKKKKKKKKKK",
-            "KWWWWWWWWWWWWWWK",
-            "KWRRRRRRRRRRRRWK",
-            "KWWWWWWWWWWWWWWK",
-            "KWWKKKWWWWKKKWWK",
-            "KWKWWWKWWKWWWKWK",
-            "KWWKKKWWWWKKKWWK",
-            "KWWWWWWWWWWWWWWK",
-            "KWWWKKKKKKKKWWWK",
-            "KKKKKKKKKKKKKKKK"
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF",
-            "R": "#D4AF37"
-          },
-          "x": 20,
-          "y": -60,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "128 kbps   44 kHz   stereo",
-          "x": 80,
-          "y": -50,
-          "size": 16,
-          "color": "#00E000",
-          "font": "VT323",
-          "in": "content"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "..KK..........",
-            "..KWK.........",
-            "..KWWK........",
-            ".KWWWK........",
-            "KWKWWK........",
-            ".KWWWK........",
-            "..KWWK........",
-            "..KWWK........",
-            "..KWWWKKKKKK..",
-            "..KWWWWWWWWWK.",
-            "..KWWWWWWWWWWK",
-            "..KWWWWWWWWWK.",
-            "..KWWKKKKWWK..",
-            "..KWK....KWK..",
-            "..KWK....KWK..",
-            "..KKK....KKK.."
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF"
-          },
-          "x": -60,
-          "y": -80,
-          "scale": 3,
-          "in": "content",
-          "id": "walker",
-          "hidden": true
         }
       ],
       "eggs": [
         {
-          "trigger": "click:llama",
+          "trigger": "click:strip",
           "say": "It really whips the llama's... well. You know the rest.",
           "seconds": 6
         },
         {
           "trigger": "type:llama",
-          "run": "walk:walker",
-          "seconds": 8
-        },
-        {
-          "trigger": "konami",
-          "run": "walk:walker",
-          "seconds": 8
+          "say": "It really whips the llama's... well. You know the rest.",
+          "seconds": 6
         }
       ]
     }

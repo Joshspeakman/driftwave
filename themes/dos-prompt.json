@@ -3,7 +3,7 @@
   "version": 1,
   "id": "dos-prompt",
   "name": "C:\\ Prompt",
-  "description": "A homage to DOS: grey text on black, box-drawn frames, a blue setup screen and a prompt that answers back.",
+  "description": "A homage to DOS: grey text on black, a prompt in the title bar and box-drawn borders.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
@@ -43,67 +43,23 @@
     "scanlines": {
       "opacity": 0.08
     },
+    "windowTitle": {
+      "font": "VT323",
+      "size": 20,
+      "color": "#AAAAAA",
+      "uppercase": true
+    },
     "scene": {
       "layers": [
         {
           "type": "text",
-          "text": "C:\\DRIFTWAVE>",
-          "x": 130,
+          "text": "C:\\>_",
+          "x": 6,
           "y": 12,
           "size": 22,
           "color": "#AAAAAA",
-          "font": "VT323",
-          "in": "titlebar"
-        },
-        {
-          "type": "text",
-          "text": "╔══════════════════════════════════════════════════════════╗",
-          "x": 8,
-          "y": -118,
-          "size": 16,
-          "color": "#55FFFF",
-          "font": "Consolas",
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "║  DRIFTWAVE.EXE    640K should be enough for anybody's  ║",
-          "x": 8,
-          "y": -100,
-          "size": 16,
-          "color": "#55FFFF",
-          "font": "Consolas",
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "║  radio. Type DIR, VER or HELP anywhere outside a box.  ║",
-          "x": 8,
-          "y": -82,
-          "size": 16,
-          "color": "#55FFFF",
-          "font": "Consolas",
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "╚══════════════════════════════════════════════════════════╝",
-          "x": 8,
-          "y": -64,
-          "size": 16,
-          "color": "#55FFFF",
-          "font": "Consolas",
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "C:\\>_",
-          "x": 8,
-          "y": -36,
-          "size": 18,
-          "color": "#AAAAAA",
-          "font": "VT323",
-          "in": "content"
+          "in": "titlebar",
+          "font": "VT323"
         },
         {
           "type": "pixels",
@@ -119,14 +75,14 @@
             "KKKKKKKKK"
           ],
           "palette": {
-            "K": "#000000",
-            "W": "#AAAAAA",
+            "K": "#AAAAAA",
+            "W": "#555555",
             "Y": "#55FFFF"
           },
-          "x": -40,
-          "y": -48,
+          "x": 64,
+          "y": 12,
           "scale": 3,
-          "in": "content"
+          "in": "titlebar"
         }
       ],
       "eggs": [
@@ -142,7 +98,7 @@
         },
         {
           "trigger": "type:help",
-          "say": "DIR  VER  HELP  CLS  and one secret involving arrows.",
+          "say": "DIR  VER  HELP  and one secret involving arrows.",
           "seconds": 5
         },
         {

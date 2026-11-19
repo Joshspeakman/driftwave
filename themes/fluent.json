@@ -3,15 +3,15 @@
   "version": 1,
   "id": "fluent",
   "name": "Fluent",
-  "description": "A homage to Windows 11: soft Mica, a blue bloom of petals, rounded corners and a centred taskbar.",
+  "description": "A homage to Windows 11: a soft blue bloom of light behind rounded, gently translucent surfaces.",
   "base": "dark",
-  "backdrop": "mica",
+  "backdrop": "none",
   "colors": {
-    "background": "#2A0B1A33",
-    "surface": "#22000000",
-    "card": "#33FFFFFF",
+    "background": "#071022",
+    "surface": "#59101828",
+    "card": "#801C2438",
     "cardStroke": "#22FFFFFF",
-    "control": "#22FFFFFF",
+    "control": "#33FFFFFF",
     "controlStroke": "#33FFFFFF",
     "subtle": "#1AFFFFFF",
     "divider": "#22FFFFFF",
@@ -21,7 +21,8 @@
     "accent": "#4CC2FF",
     "accentText": "#99DCFF",
     "onAccent": "#002033",
-    "dialog": "#EE1C2233"
+    "dialog": "#EE1C2233",
+    "pane": "#8C0B1426"
   },
   "fonts": {
     "body": "Segoe UI Variable Text",
@@ -36,217 +37,39 @@
     "cover": 0.16
   },
   "effects": {
+    "windowTitle": {
+      "font": "Segoe UI Variable Text",
+      "size": 12,
+      "color": "#FFFFFF"
+    },
     "scene": {
+      "surfaces": "translucent",
       "layers": [
         {
-          "type": "radial",
-          "in": "content",
-          "x": "30%",
-          "y": "20%",
-          "w": "55%",
-          "h": "70%",
-          "fill": [
-            [
-              "#AA9AD8FF",
-              0
-            ],
-            [
-              "#553A7BE8",
-              0.5
-            ],
-            [
-              "#00000000",
-              1
-            ]
-          ],
-          "motion": {
-            "kind": "drift",
-            "x": 12,
-            "y": -8,
-            "seconds": 26
-          }
-        },
-        {
-          "type": "radial",
-          "in": "content",
-          "x": "45%",
-          "y": "30%",
-          "w": "45%",
-          "h": "60%",
-          "fill": [
-            [
-              "#889FC9FF",
-              0
-            ],
-            [
-              "#442D5BD0",
-              0.55
-            ],
-            [
-              "#00000000",
-              1
-            ]
-          ],
-          "motion": {
-            "kind": "drift",
-            "x": -14,
-            "y": 10,
-            "seconds": 31
-          }
-        },
-        {
-          "type": "radial",
-          "in": "content",
-          "x": "20%",
-          "y": "38%",
-          "w": "50%",
-          "h": "50%",
-          "fill": [
-            [
-              "#666CE0FF",
-              0
-            ],
-            [
-              "#22000000",
-              1
-            ]
-          ],
-          "motion": {
-            "kind": "drift",
-            "x": 10,
-            "y": 12,
-            "seconds": 37
-          }
-        },
-        {
-          "type": "rect",
-          "in": "content",
+          "type": "image",
+          "src": "fluent-bloom.jpg",
+          "in": "window",
           "x": 0,
-          "y": -46,
+          "y": 0
+        },
+        {
+          "type": "rect",
+          "in": "titlebar-full",
+          "x": 0,
+          "y": 0,
           "w": "100%",
-          "h": 46,
-          "fill": "#CC1C2233"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "44%",
-          "y": -40,
-          "w": 34,
-          "h": 34,
-          "fill": "#22FFFFFF",
-          "radius": 6,
-          "id": "start",
-          "clickable": true
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "BBB.BBB",
-            "BBB.BBB",
-            "BBB.BBB",
-            ".......",
-            "BBB.BBB",
-            "BBB.BBB",
-            "BBB.BBB"
-          ],
-          "palette": {
-            "B": "#4CC2FF"
-          },
-          "x": "45%",
-          "y": -33,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "50%",
-          "y": -40,
-          "w": 34,
-          "h": 34,
-          "fill": "#33FFFFFF",
-          "radius": 6
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "....KKKK",
-            "....KYYK",
-            "....K..K",
-            "....K..K",
-            "....K..K",
-            "KKKKK..K",
-            "KYYYK..K",
-            "KYYYKKKK",
-            "KKKKKYYK",
-            "....KKKK"
-          ],
-          "palette": {
-            "K": "#000000",
-            "Y": "#4CC2FF"
-          },
-          "x": "51%",
-          "y": -36,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "51%",
-          "y": -5,
-          "w": 14,
-          "h": 3,
-          "fill": "#4CC2FF",
-          "radius": 2
-        },
-        {
-          "type": "text",
-          "text": "{time}",
-          "x": -64,
-          "y": -34,
-          "size": 12,
-          "color": "#FFFFFF",
-          "font": "Segoe UI Variable Text",
-          "in": "content"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "K......K.....",
-            "KK....KK.....",
-            "KWKKKKWK.....",
-            "KWWWWWWK...KK",
-            "KWKWWKWK..KWK",
-            "KWWWWWWKKKKWK",
-            ".KWWWWWWWWWK.",
-            ".KWWWWWWWWWK.",
-            ".KWKKWKKKWK..",
-            ".KK.KK..KK..."
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#9AD8FF"
-          },
-          "x": -60,
-          "y": -90,
-          "scale": 3,
-          "in": "content",
-          "id": "walker",
-          "hidden": true
+          "h": 48,
+          "fill": [
+            "#55000000",
+            "#00000000"
+          ]
         }
       ],
       "eggs": [
         {
-          "trigger": "click:start",
+          "trigger": "konami",
           "say": "Recommended: keep listening.",
           "seconds": 5
-        },
-        {
-          "trigger": "konami",
-          "run": "walk:walker",
-          "seconds": 8
         }
       ]
     }

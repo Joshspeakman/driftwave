@@ -36,18 +36,23 @@
     "cover": 0
   },
   "effects": {
+    "windowTitle": {
+      "font": "VT323",
+      "size": 20,
+      "color": "#2B3627"
+    },
     "scene": {
       "layers": [
         {
           "type": "line",
-          "in": "content",
+          "in": "window",
           "x": 0,
           "y": 0,
           "x2": "100%",
           "y2": 0,
           "stroke": "#1443523D",
           "repeat": {
-            "n": 300,
+            "n": 400,
             "dy": 3
           }
         },
@@ -66,20 +71,12 @@
           "palette": {
             "K": "#2B3627"
           },
-          "x": 132,
-          "y": 14,
+          "x": 4,
+          "y": 15,
           "scale": 2,
-          "in": "titlebar"
-        },
-        {
-          "type": "text",
-          "text": "DRIFTWAVE",
-          "x": 160,
-          "y": 10,
-          "size": 24,
-          "color": "#2B3627",
-          "font": "VT323",
-          "in": "titlebar"
+          "in": "titlebar",
+          "id": "phone",
+          "clickable": true
         },
         {
           "type": "pixels",
@@ -94,71 +91,10 @@
             "K": "#2B3627",
             "G": "#43523D"
           },
-          "x": -232,
+          "x": -34,
           "y": 18,
           "scale": 2,
           "in": "titlebar"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "..KKKKKKKK..",
-            ".KGGGGGGGGK.",
-            ".KGLLLLLLGK.",
-            ".KGLDDDDLGK.",
-            ".KGLDDDDLGK.",
-            ".KGLLLLLLGK.",
-            ".KGGGGGGGGK.",
-            ".KGKKGGKKGK.",
-            ".KGGGGGGGGK.",
-            ".KGKGKGKGGK.",
-            ".KGKGKGKGGK.",
-            ".KGKGKGKGGK.",
-            ".KGGGGGGGGK.",
-            "..KKKKKKKK.."
-          ],
-          "palette": {
-            "K": "#2B3627",
-            "G": "#43523D",
-            "D": "#8FA87A",
-            "L": "#C7F0A8"
-          },
-          "x": -90,
-          "y": -110,
-          "scale": 5,
-          "in": "content",
-          "id": "phone",
-          "clickable": true
-        },
-        {
-          "type": "text",
-          "text": "Menu",
-          "x": 20,
-          "y": -34,
-          "size": 22,
-          "color": "#2B3627",
-          "font": "VT323",
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "Names",
-          "x": -170,
-          "y": -34,
-          "size": 22,
-          "color": "#2B3627",
-          "font": "VT323",
-          "in": "content"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": 0,
-          "y": 0,
-          "w": 380,
-          "h": 230,
-          "id": "board",
-          "fill": "#00000000"
         }
       ],
       "eggs": [

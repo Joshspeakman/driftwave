@@ -291,13 +291,46 @@ public sealed partial class MainWindow : Window
     /// Themes: the pane takes the theme's background (nearly opaque, so window effects don't run under the menu)
     /// and the cards a solid blend of the theme's card colour over its background, so effects stay behind them too.
     /// </summary>
+    /// <summary>The window title in the theme's style (<c>windowTitle</c>: font, color, size, weight, uppercase).</summary>
+    void ApplyWindowTitle(Theme theme)
+    {
+        var o = theme.IsDefault ? null : theme.Options("windowTitle");
+        bool styled = o is { Count: > 0 };
+        TitleText.FontFamily = styled && o!["font"] is System.Text.Json.Nodes.JsonValue f && f.TryGetValue(out string? font)
+            ? ThemeManager.Font(font) : (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["ContentControlThemeFontFamily"];
+        TitleText.FontSize = styled ? WindowEffects.Opt(o!, "size", 12) : 12;
+        TitleText.FontWeight = styled && o!["weight"] is System.Text.Json.Nodes.JsonValue wv && wv.TryGetValue(out string? weight) && weight == "bold"
+            ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal;
+        bool upper = styled && o!["uppercase"] is System.Text.Json.Nodes.JsonValue u && u.TryGetValue(out bool up) && up;
+        TitleText.Text = upper ? Diagnostics.AppName.ToUpperInvariant() : Diagnostics.AppName;
+        if (styled && o!["color"] is not null) TitleText.Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(WindowEffects.Opt(o!, "color", Microsoft.UI.Colors.White));
+        else TitleText.ClearValue(TextBlock.ForegroundProperty);
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, MeasureTitle);
+    }
+
+    /// <summary>Tells theme scenes where the title ends, so nothing is drawn over it.</summary>
+    void MeasureTitle()
+    {
+        if (TitleText.XamlRoot is null) return;
+        double end = TitleText.TransformToVisual(Root).TransformPoint(new Windows.Foundation.Point(TitleText.ActualWidth, 0)).X;
+        if (Math.Abs(end - Theming.SceneEffect.TitleEnd) > 0.5) { Theming.SceneEffect.TitleEnd = end; effects.Relayout(); }
+    }
+
     void ApplySurfaces(Theme theme)
     {
         var paneColor = Microsoft.UI.Colors.Transparent;
         Microsoft.UI.Xaml.Media.Brush cardBrush = Ui.ThemeBrush("CardBackgroundFillColorDefaultBrush");
         // Glass themes (a system backdrop behind the theme) keep their see-through panes and cards: the colour
         // drifting behind the glass is the point. Solid themes get solid surfaces.
-        if (!theme.IsDefault && theme.Backdrop == "none" && theme.Get("background") is { } bg)
+        // Photo themes ("scene": {"surfaces": "translucent"}): smoky glass over the picture, in the theme's own colours.
+        bool translucent = !theme.IsDefault && theme.Options("scene")["surfaces"] is System.Text.Json.Nodes.JsonValue sv
+            && sv.TryGetValue(out string? surf) && surf == "translucent";
+        if (translucent)
+        {
+            paneColor = theme.Get("pane") ?? Theme.WithAlpha(theme.Get("background") ?? Microsoft.UI.Colors.Black, 0.6);
+            if (theme.Get("card") is { } glass) cardBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(glass);
+        }
+        else if (!theme.IsDefault && theme.Backdrop == "none" && theme.Get("background") is { } bg)
         {
             var solid = Theme.WithAlpha(bg, 1);
             paneColor = Theme.WithAlpha(theme.Get("pane") ?? bg, 0.94);
@@ -320,6 +353,7 @@ public sealed partial class MainWindow : Window
         double intensity = app.Settings.EffectIntensity;
         ThemeManager.ApplyWindow(this, theme, look, BackdropFill, "mica");
         ApplySurfaces(theme);
+        ApplyWindowTitle(theme);
         if (currentDialog != null) currentDialog.RequestedTheme = look;
         if (fx && intensity > 0 && !theme.IsDefault && theme.Has("frame"))
         {

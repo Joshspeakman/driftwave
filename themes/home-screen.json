@@ -3,25 +3,26 @@
   "version": 1,
   "id": "home-screen",
   "name": "Home Screen",
-  "description": "A homage to the phone in your pocket: a status bar, a soft gradient wallpaper, rounded glass and a dock.",
+  "description": "A homage to the phone in your pocket: a soft glowing wallpaper behind rounded glass.",
   "base": "dark",
-  "backdrop": "acrylic",
+  "backdrop": "none",
   "colors": {
-    "background": "#18101030",
-    "surface": "#22000000",
-    "card": "#44FFFFFF",
+    "background": "#2A1840",
+    "surface": "#4D10101C",
+    "card": "#73FFFFFF",
     "cardStroke": "#33FFFFFF",
     "control": "#33FFFFFF",
     "controlStroke": "#44FFFFFF",
     "subtle": "#22FFFFFF",
     "divider": "#33FFFFFF",
     "text": "#FFFFFF",
-    "textSecondary": "#E0E0EA",
-    "textTertiary": "#A8A8B8",
+    "textSecondary": "#F0ECF4",
+    "textTertiary": "#C8C0D2",
     "accent": "#0A84FF",
     "accentText": "#64D2FF",
     "onAccent": "#FFFFFF",
-    "dialog": "#EE1C1C2A"
+    "dialog": "#EE1C1C2A",
+    "pane": "#59100A1C"
   },
   "fonts": {
     "body": "Segoe UI Variable Text",
@@ -36,110 +37,39 @@
     "cover": 0.26
   },
   "effects": {
+    "windowTitle": {
+      "font": "Segoe UI Variable Text",
+      "size": 13,
+      "weight": "bold",
+      "color": "#FFFFFF"
+    },
     "scene": {
+      "surfaces": "translucent",
       "layers": [
         {
+          "type": "image",
+          "src": "home-screen.jpg",
+          "in": "window",
+          "x": 0,
+          "y": 0
+        },
+        {
           "type": "rect",
-          "in": "content",
+          "in": "titlebar-full",
           "x": 0,
           "y": 0,
           "w": "100%",
-          "h": "100%",
+          "h": 48,
           "fill": [
-            [
-              "#3A1C71",
-              0
-            ],
-            [
-              "#D76D77",
-              0.6
-            ],
-            [
-              "#FFAF7B",
-              1
-            ]
+            "#55000000",
+            "#00000000"
           ]
-        },
-        {
-          "type": "radial",
-          "in": "content",
-          "x": "-10%",
-          "y": "-10%",
-          "w": "70%",
-          "h": "70%",
-          "fill": [
-            [
-              "#66FFFFFF",
-              0
-            ],
-            [
-              "#00000000",
-              1
-            ]
-          ],
-          "motion": {
-            "kind": "drift",
-            "x": 20,
-            "y": 14,
-            "seconds": 28
-          }
-        },
-        {
-          "type": "text",
-          "text": "{time24}",
-          "x": 136,
-          "y": 14,
-          "size": 15,
-          "color": "#FFFFFF",
-          "font": "Segoe UI Variable Text",
-          "weight": "semibold",
-          "in": "titlebar"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "......KK",
-            "......KK",
-            "....KKKK",
-            "....KKKK",
-            "..KKKKKK",
-            "..KKKKKK",
-            "KKKKKKKK",
-            "KKKKKKKK"
-          ],
-          "palette": {
-            "K": "#FFFFFF"
-          },
-          "x": -250,
-          "y": 16,
-          "scale": 2,
-          "in": "titlebar"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "KKKKKKKKKKKK.",
-            "KGGGGGGGGGGKK",
-            "KGGGGGGGGGGKK",
-            "KGGGGGGGGGGKK",
-            "KKKKKKKKKKKK."
-          ],
-          "palette": {
-            "K": "#FFFFFF",
-            "G": "#34C759"
-          },
-          "x": -226,
-          "y": 18,
-          "scale": 2,
-          "in": "titlebar",
-          "id": "battery",
-          "clickable": true
         },
         {
           "type": "rect",
           "in": "titlebar",
-          "x": "44%",
-          "y": 8,
+          "x": "40%",
+          "y": 9,
           "w": 120,
           "h": 30,
           "fill": "#000000",
@@ -148,131 +78,18 @@
           "clickable": true
         },
         {
-          "type": "rect",
-          "in": "content",
-          "x": "20%",
-          "y": -84,
-          "w": "60%",
-          "h": 72,
-          "fill": "#44FFFFFF",
-          "radius": 28
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "24%",
-          "y": -76,
-          "w": 56,
-          "h": 56,
-          "fill": [
-            [
-              "#34C759",
-              0
-            ],
-            [
-              "#1E9C3F",
-              1
-            ]
-          ],
-          "radius": 14
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "38%",
-          "y": -76,
-          "w": 56,
-          "h": 56,
-          "fill": [
-            [
-              "#0A84FF",
-              0
-            ],
-            [
-              "#0060DF",
-              1
-            ]
-          ],
-          "radius": 14
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "52%",
-          "y": -76,
-          "w": 56,
-          "h": 56,
-          "fill": [
-            [
-              "#FF375F",
-              0
-            ],
-            [
-              "#C71E45",
-              1
-            ]
-          ],
-          "radius": 14
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "66%",
-          "y": -76,
-          "w": 56,
-          "h": 56,
-          "fill": [
-            [
-              "#FFD60A",
-              0
-            ],
-            [
-              "#FF9F0A",
-              1
-            ]
-          ],
-          "radius": 14
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "....KKKK",
-            "....KYYK",
-            "....K..K",
-            "....K..K",
-            "....K..K",
-            "KKKKK..K",
-            "KYYYK..K",
-            "KYYYKKKK",
-            "KKKKKYYK",
-            "....KKKK"
-          ],
-          "palette": {
-            "K": "#FFFFFF",
-            "Y": "#FFFFFF"
-          },
-          "x": "62.5%",
-          "y": -68,
-          "scale": 4,
-          "in": "content"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "42%",
-          "y": -6,
-          "w": "16%",
-          "h": 5,
-          "fill": "#CCFFFFFF",
-          "radius": 3
+          "type": "text",
+          "text": "{time24}",
+          "x": -60,
+          "y": 14,
+          "size": 15,
+          "color": "#FFFFFF",
+          "in": "titlebar",
+          "font": "Segoe UI Variable Text",
+          "weight": "semibold"
         }
       ],
       "eggs": [
-        {
-          "trigger": "click:battery",
-          "say": "Low Power Mode isn't needed: Driftwave barely sips.",
-          "seconds": 5
-        },
         {
           "trigger": "click:island",
           "say": "Now playing lives here too.",

@@ -3,25 +3,26 @@
   "version": 1,
   "id": "big-glass",
   "name": "Big Glass",
-  "description": "A homage to today's Mac: full frosted glass over a soft wallpaper, a menu bar, a floating dock and generous corners.",
-  "base": "light",
-  "backdrop": "acrylic",
+  "description": "A homage to today's Mac: frosted glass over a California coast at sunset (a real photograph).",
+  "base": "dark",
+  "backdrop": "none",
   "colors": {
-    "background": "#10F4F6FB",
-    "surface": "#26FFFFFF",
-    "card": "#55FFFFFF",
-    "cardStroke": "#44FFFFFF",
-    "control": "#44FFFFFF",
-    "controlStroke": "#55FFFFFF",
+    "background": "#1A1420",
+    "surface": "#4D161220",
+    "card": "#73201828",
+    "cardStroke": "#33FFFFFF",
+    "control": "#33FFFFFF",
+    "controlStroke": "#44FFFFFF",
     "subtle": "#22FFFFFF",
-    "divider": "#33000000",
-    "text": "#1D1D1F",
-    "textSecondary": "#3C3C43",
-    "textTertiary": "#6E6E73",
+    "divider": "#33FFFFFF",
+    "text": "#FFFFFF",
+    "textSecondary": "#E6E1EC",
+    "textTertiary": "#B5ADC2",
     "accent": "#0A84FF",
-    "accentText": "#0066CC",
+    "accentText": "#64B5FF",
     "onAccent": "#FFFFFF",
-    "dialog": "#EEF7F7FA"
+    "dialog": "#EE1E1A26",
+    "pane": "#661A1420"
   },
   "fonts": {
     "body": "Segoe UI Variable Text",
@@ -36,199 +37,44 @@
     "cover": 0.22
   },
   "effects": {
-    "aurora": {
-      "colors": [
-        "#FF8FB8",
-        "#8F9BFF",
-        "#7FE0D8"
-      ]
+    "windowTitle": {
+      "font": "Segoe UI Variable Text",
+      "size": 13,
+      "weight": "bold",
+      "color": "#FFFFFF"
     },
     "scene": {
+      "surfaces": "translucent",
       "layers": [
         {
+          "type": "image",
+          "src": "photo-coast.jpg",
+          "in": "window",
+          "x": 0,
+          "y": 0
+        },
+        {
+          "type": "rect",
+          "in": "titlebar-full",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": [
+            "#88000000",
+            "#00000000"
+          ]
+        },
+        {
           "type": "text",
-          "text": "●  Driftwave    File    Edit    View    Station    Window    Help",
-          "x": 128,
+          "text": "File    Edit    View    Station    Window    Help",
+          "x": 4,
           "y": 15,
           "size": 13,
-          "color": "#1D1D1F",
+          "color": "#F2FFFFFF",
+          "in": "titlebar",
           "font": "Segoe UI Variable Text",
-          "weight": "semibold",
-          "in": "titlebar"
-        },
-        {
-          "type": "text",
-          "text": "{date}  {time}",
-          "x": -330,
-          "y": 15,
-          "size": 13,
-          "color": "#1D1D1F",
-          "font": "Segoe UI Variable Text",
-          "in": "titlebar"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "22%",
-          "y": -72,
-          "w": "56%",
-          "h": 60,
-          "fill": "#55FFFFFF",
-          "radius": 20,
-          "stroke": "#88FFFFFF"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "25%",
-          "y": -64,
-          "w": 44,
-          "h": 44,
-          "fill": [
-            [
-              "#FF6CB6",
-              0
-            ],
-            [
-              "#A35CFF",
-              1
-            ]
-          ],
-          "radius": 11
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "....KKKK",
-            "....KYYK",
-            "....K..K",
-            "....K..K",
-            "....K..K",
-            "KKKKK..K",
-            "KYYYK..K",
-            "KYYYKKKK",
-            "KKKKKYYK",
-            "....KKKK"
-          ],
-          "palette": {
-            "K": "#FFFFFF",
-            "Y": "#FFFFFF"
-          },
-          "x": "26.5%",
-          "y": -58,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "36%",
-          "y": -64,
-          "w": 44,
-          "h": 44,
-          "fill": [
-            [
-              "#5AC8FA",
-              0
-            ],
-            [
-              "#007AFF",
-              1
-            ]
-          ],
-          "radius": 11
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "47%",
-          "y": -64,
-          "w": 44,
-          "h": 44,
-          "fill": [
-            [
-              "#FFD60A",
-              0
-            ],
-            [
-              "#FF9F0A",
-              1
-            ]
-          ],
-          "radius": 11
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "58%",
-          "y": -64,
-          "w": 44,
-          "h": 44,
-          "fill": [
-            [
-              "#30D158",
-              0
-            ],
-            [
-              "#0E9F3A",
-              1
-            ]
-          ],
-          "radius": 11
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "69%",
-          "y": -64,
-          "w": 44,
-          "h": 44,
-          "fill": [
-            [
-              "#E5E5EA",
-              0
-            ],
-            [
-              "#AEAEB2",
-              1
-            ]
-          ],
-          "radius": 11,
-          "id": "trash",
-          "clickable": true
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "...KKKKKK...",
-            "KKKKKKKKKKKK",
-            "KWWWWWWWWWWK",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWWWWWWWWK.",
-            "..KKKKKKKK.."
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF",
-            "G": "#C0C0C0"
-          },
-          "x": "70.3%",
-          "y": -59,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "ellipse",
-          "in": "content",
-          "x": "48.7%",
-          "y": -8,
-          "w": 4,
-          "h": 4,
-          "fill": "#1D1D1F"
+          "weight": "semibold"
         },
         {
           "type": "text",
@@ -237,10 +83,10 @@
           "y": "28%",
           "size": 96,
           "color": "#E6FFFFFF",
+          "in": "content",
           "font": "Segoe Script",
           "id": "hello",
-          "hidden": true,
-          "in": "content"
+          "hidden": true
         }
       ],
       "eggs": [
@@ -248,11 +94,6 @@
           "trigger": "type:hello",
           "show": "hello",
           "seconds": 6
-        },
-        {
-          "trigger": "click:trash",
-          "say": "Nothing to empty. Driftwave never throws a song away unless you ask.",
-          "seconds": 5
         },
         {
           "trigger": "konami",
