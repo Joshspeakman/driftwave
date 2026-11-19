@@ -35,7 +35,14 @@
     "cover": 0.22
   },
   "effects": {
-    "tiles": {"colors": ["#7FB8E0", "#A99BDD", "#E08FB8"], "ink": "#FFFFFF"},
+    "tiles": {
+      "colors": [
+        "#7FB8E0",
+        "#A99BDD",
+        "#E08FB8"
+      ],
+      "ink": "#FFFFFF"
+    },
     "aurora": {
       "colors": [
         "#7DD3FC",

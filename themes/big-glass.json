@@ -101,6 +101,10 @@
           "seconds": 5
         }
       ]
+    },
+    "chrome": {
+      "captions": "mac",
+      "center": true
     }
   }
 }

@@ -78,88 +78,19 @@
             "n": 400,
             "dy": 4
           }
-        },
-        {
-          "type": "radial",
-          "in": "titlebar",
-          "x": 0,
-          "y": 16,
-          "w": 16,
-          "h": 16,
-          "fill": [
-            [
-              "#FFC2BC",
-              0
-            ],
-            [
-              "#FF5F57",
-              0.5
-            ],
-            [
-              "#C1342C",
-              1
-            ]
-          ],
-          "id": "red",
-          "clickable": true
-        },
-        {
-          "type": "radial",
-          "in": "titlebar",
-          "x": 22,
-          "y": 16,
-          "w": 16,
-          "h": 16,
-          "fill": [
-            [
-              "#FFE7B3",
-              0
-            ],
-            [
-              "#FEBC2E",
-              0.5
-            ],
-            [
-              "#C08A12",
-              1
-            ]
-          ]
-        },
-        {
-          "type": "radial",
-          "in": "titlebar",
-          "x": 44,
-          "y": 16,
-          "w": 16,
-          "h": 16,
-          "fill": [
-            [
-              "#C9F7C2",
-              0
-            ],
-            [
-              "#28C840",
-              0.5
-            ],
-            [
-              "#178A2A",
-              1
-            ]
-          ]
         }
       ],
       "eggs": [
-        {
-          "trigger": "click:red",
-          "say": "That one's just for looks. The real close button is over on the right.",
-          "seconds": 5
-        },
         {
           "trigger": "type:lick",
           "say": "Lickable. (Please don't.)",
           "seconds": 5
         }
       ]
+    },
+    "chrome": {
+      "captions": "mac",
+      "center": true
     }
   }
 }
