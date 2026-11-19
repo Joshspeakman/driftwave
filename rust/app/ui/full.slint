@@ -46,6 +46,17 @@ export global Th {
     in-out property <color> neon-player: transparent;
     in-out property <length> neon-reach: 16px;
     in-out property <float> neon-opacity: 0.8;
+    in-out property <bool> window-title-upper: false;
+    // A hard shadow behind page titles (titleShadow with no blur), and a block cursor after them.
+    in-out property <bool> title-hard: false;
+    in-out property <length> title-hard-x: 3px;
+    in-out property <length> title-hard-y: 3px;
+    in-out property <bool> title-cursor: false;
+    in-out property <color> title-cursor-color: #FFFFFF;
+    // A thick screen border round the window ("frame").
+    in-out property <bool> frame-on: false;
+    in-out property <color> frame-color: #000080;
+    in-out property <length> frame-thickness: 4px;
     in-out property <length> radius-card: 8px;
     in-out property <length> radius-control: 4px;
     in-out property <length> radius-cover: 10px;
@@ -65,6 +76,7 @@ export struct SceneText {
     ink: color,
     family: string,
     weight: int,
+    italic: bool,
     glows: bool,
     glow: color,
     reach: length,
@@ -77,6 +89,20 @@ export global Scenery {
     in property <bool> moving;
     in property <image> motion;
     in property <[SceneText]> texts;
+    // What lies over everything (grain, vignette, scanlines): one still, mostly clear picture.
+    in property <bool> front-on;
+    in property <image> front;
+    // Synthwave's rows rolling towards you (phase 0–1), the scanlines' slow band, and Stealth's spotlight.
+    in property <bool> synth-on;
+    in property <color> synth-grid: #FF2E97;
+    in property <float> synth-phase;
+    in property <bool> band-on;
+    in property <length> band-y: -400px;
+    in property <bool> spot-on;
+    in property <length> spot-x;
+    in property <length> spot-y;
+    in property <length> spot-radius: 360px;
+    in property <float> spot-opacity: 0.6;
     // The person's choice: scenes that move, or hold still.
     in property <bool> motion-on: true;
     callback motion-chosen(bool);
@@ -94,9 +120,20 @@ component GlowText inherits Rectangle {
     in property <int> weight: 400;
     in property <length> spacing: 0px;
     in property <bool> upper;
+    in property <bool> italic;
+    in property <bool> hard;
+    in property <length> hard-x: 3px;
+    in property <length> hard-y: 3px;
+    in property <bool> cursor;
+    in property <color> cursor-color: root.ink;
     property <string> shown: root.upper ? root.text.to-uppercase() : root.text;
-    width: label.preferred-width;
+    width: label.preferred-width + (root.cursor ? root.size * 0.75 : 0px);
     height: label.preferred-height;
+    if root.hard: Text {
+        x: root.hard-x; y: root.hard-y;
+        text: root.shown; color: root.glow; font-italic: root.italic;
+        font-family: root.family; font-size: root.size; font-weight: root.weight; letter-spacing: root.spacing;
+    }
     if root.glows: Rectangle {
         x: root.size * 0.1; y: root.height * 0.28; width: root.width - root.size * 0.2; height: root.height * 0.5;
         border-radius: self.height / 2;
@@ -111,15 +148,21 @@ component GlowText inherits Rectangle {
             property <length> r: inner ? min(1.2px, root.reach * 0.2) : min(2.8px, root.reach * 0.45);
             x: r * cos(a);
             y: r * sin(a);
-            text: root.shown;
+            text: root.shown; font-italic: root.italic;
             color: root.glow.transparentize(inner ? 0.55 : 0.8);
             font-family: root.family; font-size: root.size; font-weight: root.weight; letter-spacing: root.spacing;
         }
     }
     label := Text {
         x: 0; y: 0;
-        text: root.shown; color: root.ink;
+        text: root.shown; color: root.ink; font-italic: root.italic;
         font-family: root.family; font-size: root.size; font-weight: root.weight; letter-spacing: root.spacing;
+    }
+    // A solid block cursor after the title (never blinking: nothing in Driftwave flashes).
+    if root.cursor: Rectangle {
+        x: label.preferred-width + root.size * 0.18; y: root.height * 0.18;
+        width: root.size * 0.5; height: root.height * 0.66;
+        background: root.cursor-color;
     }
 }
 
@@ -134,6 +177,11 @@ component PageTitle inherits GlowText {
     weight: Th.title-weight;
     spacing: Th.title-spacing;
     upper: Th.title-upper;
+    hard: Th.title-hard;
+    hard-x: Th.title-hard-x;
+    hard-y: Th.title-hard-y;
+    cursor: Th.title-cursor;
+    cursor-color: Th.title-cursor-color;
 }
 
 
@@ -242,7 +290,7 @@ component RoundButton inherits Rectangle {
 component Caption inherits Rectangle {
     in property <string> glyph; // min, max, restore, close
     callback clicked();
-    width: 46px; height: 32px;
+    width: 46px; height: 48px;
     background: ta.has-hover ? (glyph == "close" ? #C42B1C : Th.subtle) : transparent;
     ta := TouchArea { clicked => { root.clicked(); } }
     Path {
@@ -482,6 +530,8 @@ export component FullView inherits Rectangle {
 
     background: Th.background;
     property <length> pane-w: 220px;
+    property <length> title-h: 48px;
+    out property <length> title-end: window-title.x + window-title.width;
 
     if Scenery.on: Image { x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.back; image-fit: fill; }
     if Scenery.on && Scenery.moving: Image {
@@ -489,21 +539,45 @@ export component FullView inherits Rectangle {
     }
     property <length> player-w: show-player ? 312px : 0px;
 
+    // Synthwave's rows, rolling towards you over the floor (the sky, sun and floor are the backdrop's).
+    if Scenery.synth-on: Rectangle {
+        property <length> horizon: root.height * 0.6;
+        for i in 16: Rectangle {
+            property <float> depth: i + 1 - Scenery.synth-phase;
+            property <length> at: parent.horizon + (root.height - parent.horizon) / (1 + 0.55 * self.depth);
+            x: 0; y: self.at - 0.7px; width: root.width; height: 1.4px;
+            background: Scenery.synth-grid.transparentize(1 - clamp((self.at - parent.horizon) / (root.height - parent.horizon) * 3, 0, 1));
+        }
+    }
+
+    // Theme text in the window, the pane or the player's area.
+    for t in Scenery.texts: GlowText {
+        property <length> rx: t.region == "pane" ? 0px : t.region == "player" ? root.width - root.player-w : 0px;
+        property <length> ry: t.region == "window" ? 0px : root.title-h;
+        property <length> rw: t.region == "pane" ? root.pane-w : t.region == "player" ? root.player-w : root.width;
+        property <length> rh: t.region == "window" ? root.height : root.height - root.title-h;
+        visible: t.region == "window" || t.region == "pane" || t.region == "player";
+        x: self.rx + self.rw * t.xf + t.x;
+        y: self.ry + self.rh * t.yf + t.y;
+        text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach; italic: t.italic;
+        family: t.family; size: t.size; weight: t.weight;
+    }
+
     // ─────────── Title bar ───────────
     Rectangle {
-        x: 0; y: 0; width: parent.width; height: 40px;
+        x: 0; y: 0; width: parent.width; height: root.title-h;
         TouchArea {
             pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); } }
             double-clicked => { root.toggle-maximize(); }
         }
         // The Driftwave sun.
         Rectangle {
-            x: 14px; y: 12px; width: 16px; height: 16px; border-radius: 8px; clip: true;
+            x: 14px; y: (parent.height - 16px) / 2; width: 16px; height: 16px; border-radius: 8px; clip: true;
             background: @linear-gradient(180deg, #FFD36E 0%, #FF8A70 55%, #FF6FA8 100%);
             for k in 3: Rectangle { y: (8.5 + k * 2.4) * 1px; height: 1.2px; background: Th.background; }
         }
         window-title := Text {
-            x: 40px; y: (parent.height - self.height) / 2; text: "Driftwave";
+            x: 40px; y: (parent.height - self.height) / 2; text: Th.window-title-upper ? "DRIFTWAVE" : "Driftwave";
             color: root.active ? Th.window-title-color : Th.window-title-color.transparentize(40%);
             font-family: Th.window-title-font; font-size: Th.window-title-size; font-weight: Th.window-title-weight;
         }
@@ -512,7 +586,7 @@ export component FullView inherits Rectangle {
             visible: t.region == "titlebar";
             x: self.x0 + (parent.width - 150px - self.x0) * t.xf + t.x;
             y: parent.height * t.yf + t.y;
-            text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach;
+            text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach; italic: t.italic;
             family: t.family; size: t.size; weight: t.weight;
         }
         Caption { x: parent.width - 138px; y: 0; glyph: "min"; clicked => { root.minimize(); } }
@@ -522,7 +596,7 @@ export component FullView inherits Rectangle {
 
     // ─────────── Navigation ───────────
     Rectangle {
-        x: 0; y: 40px; width: pane-w; height: parent.height - 40px; background: Th.pane;
+        x: 0; y: root.title-h; width: pane-w; height: parent.height - root.title-h; background: Th.pane;
         VerticalLayout {
             padding: 6px; spacing: 2px;
             NavItem { label: "Library"; selected: root.page == "library"; clicked => { root.page = "library"; }
@@ -543,7 +617,7 @@ export component FullView inherits Rectangle {
 
     // ─────────── The content card ───────────
     Rectangle {
-        x: pane-w; y: 40px; width: parent.width - pane-w; height: parent.height - 40px;
+        x: pane-w; y: root.title-h; width: parent.width - pane-w; height: parent.height - root.title-h;
         border-radius: Th.radius-card;
         background: Th.surface;
         border-width: Th.neon-content-on ? 2px : 1px;
@@ -560,7 +634,7 @@ export component FullView inherits Rectangle {
             visible: t.region == "content";
             x: (parent.width - root.player-w) * t.xf + t.x;
             y: parent.height * t.yf + t.y;
-            text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach;
+            text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach; italic: t.italic;
             family: t.family; size: t.size; weight: t.weight;
         }
 
@@ -791,12 +865,33 @@ export component FullView inherits Rectangle {
         }
     }
 
+    // ─────────── Over everything ───────────
+    if Scenery.on && Scenery.front-on: Image { x: 0; y: 0; width: root.width; height: root.height; source: Scenery.front; image-fit: fill; }
+    if Scenery.band-on: Rectangle {
+        x: 0; y: Scenery.band-y; width: root.width; height: 140px;
+        background: @linear-gradient(180deg, #FFFFFF00 0%, #FFFFFF09 50%, #FFFFFF00 100%);
+    }
+    // The spotlight: the dark closes in everywhere but round the pointer.
+    if Scenery.spot-on: Rectangle {
+        property <length> r: Scenery.spot-radius;
+        property <color> dark: #000000.transparentize(1 - Scenery.spot-opacity);
+        Rectangle {
+            x: Scenery.spot-x - parent.r; y: Scenery.spot-y - parent.r; width: parent.r * 2; height: parent.r * 2;
+            background: @radial-gradient(circle, #00000000 0%, #000000.transparentize(1 - Scenery.spot-opacity * 0.45) 60%, parent.dark 100%);
+        }
+        Rectangle { x: 0; y: 0; width: root.width; height: max(0px, Scenery.spot-y - parent.r); background: parent.dark; }
+        Rectangle { x: 0; y: Scenery.spot-y + parent.r; width: root.width; height: max(0px, root.height - Scenery.spot-y - parent.r); background: parent.dark; }
+        Rectangle { x: 0; y: Scenery.spot-y - parent.r; width: max(0px, Scenery.spot-x - parent.r); height: parent.r * 2; background: parent.dark; }
+        Rectangle { x: Scenery.spot-x + parent.r; y: Scenery.spot-y - parent.r; width: max(0px, root.width - Scenery.spot-x - parent.r); height: parent.r * 2; background: parent.dark; }
+    }
+    if Th.frame-on: Rectangle { x: 0; y: 0; width: root.width; height: root.height; border-width: Th.frame-thickness; border-color: Th.frame-color; }
+
     // A message (import results and the like), dismissed with its button.
     if Dir.message != "": Rectangle {
         x: root.pane-w + 24px; y: root.height - 60px; width: min(560px, root.width - root.pane-w - 48px); height: 44px;
         border-radius: Th.radius-card; background: Th.dialog; border-width: 1px; border-color: Th.accent;
         Text { x: 14px; y: (parent.height - self.height) / 2; width: parent.width - 56px; text: Dir.message; color: Th.card-text; font-size: 13px; overflow: elide; }
-        Caption { x: parent.width - 42px; y: 6px; width: 36px; glyph: "close"; clicked => { Dir.dismiss(); } }
+        Caption { x: parent.width - 42px; y: 6px; width: 36px; height: 32px; glyph: "close"; clicked => { Dir.dismiss(); } }
     }
 
     // A station's details.
@@ -861,9 +956,9 @@ export component FullView inherits Rectangle {
     }
 
     // Resize borders (the window has no system frame).
-    if !root.maximized: TouchArea { x: parent.width - 6px; y: 40px; width: 6px; height: parent.height - 52px; mouse-cursor: ew-resize;
+    if !root.maximized: TouchArea { x: parent.width - 6px; y: root.title-h; width: 6px; height: parent.height - root.title-h - 12px; mouse-cursor: ew-resize;
         pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("e"); } } }
-    if !root.maximized: TouchArea { x: 0; y: 40px; width: 6px; height: parent.height - 52px; mouse-cursor: ew-resize;
+    if !root.maximized: TouchArea { x: 0; y: root.title-h; width: 6px; height: parent.height - root.title-h - 12px; mouse-cursor: ew-resize;
         pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("w"); } } }
     if !root.maximized: TouchArea { x: 12px; y: parent.height - 6px; width: parent.width - 24px; height: 6px; mouse-cursor: ns-resize;
         pointer-event(e) => { if (e.kind == PointerEventKind.down) { root.resize-edge("s"); } } }

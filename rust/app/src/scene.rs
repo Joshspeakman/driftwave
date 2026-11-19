@@ -11,6 +11,9 @@
 //! Nothing here flashes: the breathe takes at least 4 s a cycle and passing lights fade in and out over seconds
 //! (the scene_flash test runs Night Market's motion through the flash check).
 
+use crate::effects::Effects;
+use crate::paint::{fixed, premultiply, Paint, Rgba, Rng, Shape};
+pub use crate::paint::{Picture, Rect};
 use driftwave_core::theme::{Color, Theme};
 use image::{imageops, RgbaImage};
 use serde_json::{Map, Value};
@@ -26,14 +29,8 @@ pub struct Geometry {
     pub title: f32,
     pub pane: f32,
     pub player: f32,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Rect {
-    pub x: f32,
-    pub y: f32,
-    pub w: f32,
-    pub h: f32,
+    /// Where the window's own title ends in the title bar.
+    pub title_end: f32,
 }
 
 impl Geometry {
@@ -46,10 +43,16 @@ impl Geometry {
         (self.player > 0.0).then(|| Rect { x: self.width - self.player + 4.0, y: self.title + 8.0, w: self.player - 12.0, h: (self.height - self.title - 16.0).max(0.0) })
     }
 
+    /// A scene's area: `titlebar` (the free stretch between the window's title and its caption buttons),
+    /// `titlebar-full`, `pane`, `content` (between the pane and the player), `player`, or the whole window.
     pub fn region(&self, name: Option<&str>) -> Rect {
         let (w, h) = (self.width, self.height);
         match name {
-            Some("titlebar") | Some("titlebar-full") => Rect { x: 0.0, y: 0.0, w, h: self.title },
+            Some("titlebar") => {
+                let x = self.title_end + 16.0;
+                Rect { x, y: 0.0, w: (w - 150.0 - x).max(0.0), h: self.title }
+            }
+            Some("titlebar-full") => Rect { x: 0.0, y: 0.0, w, h: self.title },
             Some("pane") => Rect { x: 0.0, y: self.title, w: self.pane, h: h - self.title },
             Some("content") => Rect { x: self.pane, y: self.title, w: (w - self.pane - self.player).max(0.0), h: h - self.title },
             Some("player") => Rect { x: (w - self.player).max(0.0), y: self.title, w: self.player, h: h - self.title },
@@ -102,12 +105,12 @@ fn colour(v: Option<&Value>) -> Option<Color> {
     v.and_then(Value::as_str).and_then(Color::parse)
 }
 
-fn rgba(c: Color) -> [f32; 4] {
+fn rgba(c: Color) -> Rgba {
     [c.r as f32 / 255.0, c.g as f32 / 255.0, c.b as f32 / 255.0, c.a as f32 / 255.0]
 }
 
 /// Gradient stops: ["#a", "#b"] evenly, or [["#a", 0], ["#b", 1]].
-fn stops(v: Option<&Value>) -> Vec<(f32, [f32; 4])> {
+fn stops(v: Option<&Value>) -> Vec<(f32, Rgba)> {
     let Some(Value::Array(a)) = v else { return Vec::new() };
     let n = a.len();
     a.iter()
@@ -119,84 +122,123 @@ fn stops(v: Option<&Value>) -> Vec<(f32, [f32; 4])> {
         .collect()
 }
 
-fn sample_stops(s: &[(f32, [f32; 4])], t: f32) -> [f32; 4] {
-    if s.is_empty() {
-        return [0.0; 4];
-    }
-    if t <= s[0].0 {
-        return s[0].1;
-    }
-    for w in s.windows(2) {
-        if t <= w[1].0 {
-            let k = (t - w[0].0) / (w[1].0 - w[0].0).max(1e-6);
-            let (a, b) = (w[0].1, w[1].1);
-            return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k];
-        }
-    }
-    s[s.len() - 1].1
-}
-
-/// An RGBA8 picture, premultiplied (the backdrop is opaque, where that's the same thing).
-pub struct Picture {
-    pub w: usize,
-    pub h: usize,
-    pub px: Vec<u8>,
-}
-
-impl Picture {
-    pub fn new(w: usize, h: usize) -> Picture {
-        Picture { w: w.max(1), h: h.max(1), px: vec![0; w.max(1) * h.max(1) * 4] }
-    }
-
-    /// Lays colour `c` (straight) at coverage `a` over pixel `i`.
-    #[inline]
-    fn blend(&mut self, i: usize, c: [f32; 3], a: f32) {
-        if a <= 0.002 {
-            return;
-        }
-        let a = a.min(1.0);
-        let p = &mut self.px[i * 4..i * 4 + 4];
-        for k in 0..3 {
-            p[k] = (c[k] * 255.0 * a + p[k] as f32 * (1.0 - a) + 0.5) as u8;
-        }
-        p[3] = (a * 255.0 + p[3] as f32 * (1.0 - a) + 0.5) as u8;
-    }
-
-    /// Lays a premultiplied RGBA8 pixel `s` at extra opacity `o` (0–256) over pixel `i`. Integer arithmetic: this
-    /// is the motion layer's inner loop.
-    #[inline]
-    fn over_pre(&mut self, i: usize, s: &[u8], o: u32) {
-        let a = (s[3] as u32 * o) >> 8;
-        if a == 0 {
-            return;
-        }
-        let inv = 255 - a;
-        let p = &mut self.px[i * 4..i * 4 + 4];
-        for k in 0..3 {
-            p[k] = (((s[k] as u32 * o) >> 8) + div255(p[k] as u32 * inv)).min(255) as u8;
-        }
-        p[3] = (a + div255(p[3] as u32 * inv)).min(255) as u8;
+/// A layer's fill (or stroke): a colour, or stops along its `angle`.
+fn paint_of(l: &Map<String, Value>, key: &str) -> Option<Paint> {
+    match l.get(key) {
+        Some(Value::Array(_)) => Some(Paint::Stops(
+            stops(l.get(key)),
+            match str_of(l, "angle") {
+                Some("h") => b'h',
+                Some("d") => b'd',
+                _ => b'v',
+            },
+        )),
+        Some(Value::String(s)) => Color::parse(s).map(|c| Paint::Solid(rgba(c))),
+        _ => None,
     }
 }
 
-/// x / 255, rounded, for x up to 255 × 255.
-#[inline]
-fn div255(x: u32) -> u32 {
-    (x + 128 + ((x + 128) >> 8)) >> 8
+/// Pixel art's rows, each character its palette colour (anything not in the palette is clear).
+fn pixel_rows(l: &Map<String, Value>) -> Vec<Vec<Option<Rgba>>> {
+    let palette: HashMap<char, Rgba> = l
+        .get("palette")
+        .and_then(Value::as_object)
+        .map(|p| {
+            p.iter()
+                .filter_map(|(k, v)| {
+                    let mut chars = k.chars();
+                    let ch = chars.next()?;
+                    if chars.next().is_some() {
+                        return None;
+                    }
+                    Some((ch, rgba(v.as_str().and_then(Color::parse)?)))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    l.get("rows")
+        .and_then(Value::as_array)
+        .map(|rows| rows.iter().map(|r| r.as_str().unwrap_or("").chars().map(|ch| palette.get(&ch).copied()).collect()).collect())
+        .unwrap_or_default()
 }
 
-/// An opacity as a fraction of 256.
-fn fixed(o: f32) -> u32 {
-    (o.clamp(0.0, 1.0) * 256.0).round() as u32
+/// One copy of a layer (`repeat` makes a row of them, `scatter` strews them): how far it's moved, its colour if
+/// scattered, how faded and stretched it is, and its motion's time shift.
+struct Copy {
+    ox: f32,
+    oy: f32,
+    color: Option<Rgba>,
+    fade: f32,
+    jw: f32,
+    jh: f32,
+    offset: f64,
 }
 
-/// Premultiplies a picture's colours by its alpha (once, when it's scaled).
-fn premultiply(img: &mut RgbaImage) {
-    for p in img.pixels_mut() {
-        let a = p.0[3] as u16;
-        for k in 0..3 {
-            p.0[k] = ((p.0[k] as u16 * a + 127) / 255) as u8;
+fn copies(l: &Map<String, Value>, region: Rect) -> Vec<Copy> {
+    let m = l.get("motion").and_then(Value::as_object);
+    let (start, stagger, random) = m.map(|m| (num(m, "start", 0.0), num(m, "offset", 0.0), num(m, "randomOffset", 0.0))).unwrap_or((0.0, 0.0, 0.0));
+    let jitter = l.get("jitter").and_then(Value::as_object);
+    let stretch = |rng: &mut Rng| jitter.map(|j| (1.0 + (rng.next() - 0.5) * num(j, "w", 0.0) as f32, 1.0 + (rng.next() - 0.5) * num(j, "h", 0.0) as f32)).unwrap_or((1.0, 1.0));
+    let mut out = Vec::new();
+    if let Some(sc) = l.get("scatter").and_then(Value::as_object) {
+        let n = (num(sc, "n", 10.0) as usize).clamp(1, 600);
+        let mut rng = Rng::new(num(sc, "seed", 7.0) as u32);
+        let (sw, sh) = (coord(sc.get("w"), region.w, region.w), coord(sc.get("h"), region.h, region.h));
+        let palette: Vec<Rgba> = sc.get("colors").and_then(Value::as_array).map(|a| a.iter().filter_map(|c| colour(Some(c))).map(rgba).collect()).unwrap_or_default();
+        let (skip, fade) = (num(l, "skip", 0.0) as f32, sc.get("fade").is_some());
+        for i in 0..n {
+            let (ox, oy) = (rng.next() * sw, rng.next() * sh);
+            let color = (!palette.is_empty()).then(|| palette[(rng.next() * palette.len() as f32) as usize % palette.len()]);
+            if rng.next() < skip {
+                continue;
+            }
+            let (jw, jh) = stretch(&mut rng);
+            let fade = if fade { 0.4 + 0.6 * rng.next() } else { 1.0 };
+            out.push(Copy { ox, oy, color, fade, jw, jh, offset: start + stagger * i as f64 + rng.next() as f64 * random });
         }
+        return out;
+    }
+    let (n, dx, dy) = l
+        .get("repeat")
+        .and_then(Value::as_object)
+        .map(|r| ((num(r, "n", 1.0) as usize).clamp(1, 600), coord(r.get("dx"), region.w, 0.0), coord(r.get("dy"), region.h, 0.0)))
+        .unwrap_or((1, 0.0, 0.0));
+    for i in 0..n {
+        let mut rng = Rng::new(i as u32 * 7919 + 13);
+        let (jw, jh) = stretch(&mut rng);
+        out.push(Copy { ox: i as f32 * dx, oy: i as f32 * dy, color: None, fade: 1.0, jw, jh, offset: start + stagger * i as f64 });
+    }
+    out
+}
+
+/// Where a moving copy is at time `t`: its offset (logical px) and how visible it is; None while it rests out of
+/// sight. Breathing is an opacity, handled by the caller.
+fn motion_at(m: &Map<String, Value>, t: f64) -> Option<(f32, f32, f32)> {
+    let secs = num(m, "seconds", 12.0).max(2.0);
+    let (x, y) = (num(m, "x", 0.0) as f32, num(m, "y", 0.0) as f32);
+    match str_of(m, "kind") {
+        Some("drift") => {
+            let s = ((1.0 - (t / secs * std::f64::consts::TAU).cos()) / 2.0) as f32;
+            Some((x * s, y * s, 1.0))
+        }
+        Some("scroll") => {
+            let f = (t.rem_euclid(secs) / secs) as f32;
+            Some((x * f, y * f, 1.0))
+        }
+        // Crosses once, fading in and out over the first and last 18%, with a walking bob, then rests out of sight.
+        Some("pass") => {
+            let period = secs + num(m, "pause", 0.0).max(0.0);
+            let f = (t.rem_euclid(period) / secs) as f32;
+            if f >= 1.0 {
+                return None;
+            }
+            let edge = (f.min(1.0 - f) / 0.18).min(1.0);
+            let a = num(m, "max", 1.0) as f32 * edge * edge * (3.0 - 2.0 * edge);
+            let bob = num(m, "bob", 0.0) as f32 * (t as f32 * 1.8 * std::f32::consts::PI).sin().abs();
+            let across = if m.contains_key("x") { x } else { 300.0 };
+            Some((across * f, y * f - bob, a))
+        }
+        _ => Some((0.0, 0.0, 1.0)),
     }
 }
 
@@ -241,8 +283,8 @@ struct Neon {
 pub struct Scene {
     layers: Vec<Map<String, Value>>,
     neon: Option<Neon>,
-    vignette: Option<(Color, f32)>,
     drips: Option<f32>,
+    effects: Effects,
     back: Color,
     art: HashMap<String, Arc<RgbaImage>>,
     /// Pictures scaled (and premultiplied) for a size, by file and fit.
@@ -253,6 +295,10 @@ pub struct Scene {
     drops_size: (usize, usize),
     seed: u32,
     pub has_motion: bool,
+    /// How often what moves is repainted, and at what share of the screen's resolution (rain and lights at half;
+    /// the aurora's huge soft blobs at a quarter).
+    pub motion_fps: f64,
+    pub motion_scale: f32,
 }
 
 fn moving(l: &Map<String, Value>) -> bool {
@@ -274,7 +320,6 @@ impl Scene {
             .and_then(Value::as_array)
             .map(|a| a.iter().filter_map(|l| l.as_object().cloned()).filter(|l| str_of(l, "type") != Some("text")).collect())
             .unwrap_or_default();
-        let vignette = t.effects.get("vignette").map(|o| (colour(o.get("color")).unwrap_or(Color { a: 255, r: 0, g: 0, b: 0 }), num(o, "opacity", 0.4) as f32));
         let drips = t.effects.get("drips").map(|o| num(o, "density", 2.4) as f32);
         let neon = t.effects.get("neonEdges").map(|o| Neon {
             content: colour(o.get("content")),
@@ -283,15 +328,19 @@ impl Scene {
             strength: num(o, "opacity", 0.8) as f32,
             radius: t.corners.card.unwrap_or(8.0) as f32,
         });
-        if layers.is_empty() && vignette.is_none() && drips.is_none() && neon.is_none() {
+        let effects = Effects::for_theme(t);
+        if layers.is_empty() && drips.is_none() && neon.is_none() && !effects.any_behind() && !effects.any_in_front() {
             return None;
         }
-        let has_motion = layers.iter().any(moving) || drips.is_some();
+        let layer_motion = layers.iter().any(moving) || drips.is_some();
         Some(Scene {
+            has_motion: layer_motion || effects.moves(),
+            motion_fps: if layer_motion { 12.0 } else { 6.0 },
+            motion_scale: if layer_motion { 0.5 } else { 0.25 },
             layers,
             neon,
-            vignette,
             drips,
+            effects,
             back: t.colors.get("background").copied().map(|c| Color { a: 255, ..c }).unwrap_or(Color { a: 255, r: 0, g: 0, b: 0 }),
             art: HashMap::new(),
             scaled: HashMap::new(),
@@ -299,8 +348,12 @@ impl Scene {
             drops: Vec::new(),
             drops_size: (0, 0),
             seed: 0x2545_F491,
-            has_motion,
         })
+    }
+
+    /// Whether anything lies behind the panels (then see-through panels show it).
+    pub fn has_backdrop(&self) -> bool {
+        !self.layers.is_empty() || self.drips.is_some() || self.neon.is_some() || self.effects.any_behind()
     }
 
     fn picture(&mut self, name: &str) -> Option<Arc<RgbaImage>> {
@@ -340,11 +393,9 @@ impl Scene {
     /// The still part, at `scale` px per logical px. With `still` (motion off), a moment of what would move too.
     pub fn backdrop(&mut self, g: &Geometry, scale: f32, still: bool) -> Picture {
         let (w, h) = ((g.width * scale).round() as usize, (g.height * scale).round() as usize);
-        let mut p = Picture::new(w, h);
         let b = self.back;
-        for px in p.px.chunks_exact_mut(4) {
-            px.copy_from_slice(&[b.r, b.g, b.b, 255]);
-        }
+        let mut p = Picture::filled(w, h, [b.r, b.g, b.b]);
+        self.effects.behind(&mut p, scale, still);
         for l in self.layers.clone().iter() {
             if !moving(l) {
                 self.draw(&mut p, l, g, scale, 0.0, Mode::Still);
@@ -358,19 +409,6 @@ impl Scene {
         if still {
             if let Some(density) = self.drips {
                 self.drips(&mut p, scale, density, 0.0);
-            }
-        }
-        if let Some((c, o)) = self.vignette {
-            let col = [c.r as f32 / 255.0, c.g as f32 / 255.0, c.b as f32 / 255.0];
-            let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
-            for y in 0..h {
-                let dy = (y as f32 - cy) / cy;
-                for x in 0..w {
-                    let dx = (x as f32 - cx) / cx;
-                    let d = (dx * dx + dy * dy).sqrt() / 1.06;
-                    let a = ((d - 0.6) / 0.4).clamp(0.0, 1.0);
-                    p.blend(y * w + x, col, a * a * (3.0 - 2.0 * a) * o);
-                }
             }
         }
         if let Some(n) = &self.neon {
@@ -388,6 +426,7 @@ impl Scene {
     pub fn motion(&mut self, g: &Geometry, scale: f32, t: f64, dt: f32) -> Picture {
         let (w, h) = ((g.width * scale).round() as usize, (g.height * scale).round() as usize);
         let mut p = Picture::new(w, h);
+        self.effects.moving(&mut p, scale, t);
         for l in self.layers.clone().iter().filter(|l| moving(l)) {
             self.draw(&mut p, l, g, scale, t, Mode::Moving);
         }
@@ -397,18 +436,26 @@ impl Scene {
         p
     }
 
+    /// What lies over everything (grain, vignette, scanlines), or None.
+    pub fn front(&self, g: &Geometry, scale: f32) -> Option<Picture> {
+        self.effects.front((g.width * scale).round() as usize, (g.height * scale).round() as usize, scale)
+    }
+
     fn draw(&mut self, p: &mut Picture, l: &Map<String, Value>, g: &Geometry, scale: f32, t: f64, mode: Mode) {
+        // Hidden layers wait for an easter egg.
+        if l.get("hidden").and_then(Value::as_bool) == Some(true) {
+            return;
+        }
         let region = g.region(str_of(l, "in"));
-        let r = Rect { x: region.x * scale, y: region.y * scale, w: region.w * scale, h: region.h * scale };
         let mut opacity = num(l, "opacity", 1.0) as f32;
         let m = l.get("motion").and_then(Value::as_object);
-        let offset = m.map(|m| num(m, "start", 0.0) + num(m, "offset", 0.0)).unwrap_or(0.0);
         // Breathing: a slow swell of opacity, never under 4 s a cycle. The backdrop holds the low point; the motion
-        // layer lays the same picture again on top, so together they reach the breathe's value.
+        // layer lays the same thing again on top, so together they reach the breathe's value.
         if let Some(m) = m.filter(|m| str_of(m, "kind") == Some("breathe")) {
             let secs = num(m, "seconds", 12.0).max(4.0);
+            let offset = num(m, "start", 0.0) + num(m, "offset", 0.0);
             let (lo, hi) = (num(m, "min", 0.6) as f32, num(m, "max", 1.0) as f32);
-            opacity = match mode {
+            opacity *= match mode {
                 Mode::Low | Mode::Still => lo,
                 Mode::Middle => (lo + hi) / 2.0,
                 Mode::Moving => {
@@ -417,107 +464,118 @@ impl Scene {
                 }
             };
         }
-        match str_of(l, "type").unwrap_or("rect") {
-            "image" => {
-                let Some(src) = str_of(l, "src").map(String::from) else { return };
-                let (lx, ly) = (num(l, "loopX", 0.0), num(l, "loopY", 0.0));
-                if lx > 0.0 || ly > 0.0 {
-                    // A seamless tile, slid along by one tile per loop (down for loopY, left for loopX).
-                    let tile = ((num(l, "tile", 512.0) as f32) * scale).round().max(8.0) as usize;
-                    let Some(img) = self.scaled(&src, tile as u32, tile as u32, false) else { return };
-                    let ts = tile as f32;
-                    let oy = if ly > 0.0 { ((t % ly) / ly) as f32 * ts } else { 0.0 };
-                    let ox = if lx > 0.0 { ((t % lx) / lx) as f32 * ts } else { 0.0 };
-                    let (oy, ox) = (oy as usize % tile, ox as usize % tile);
-                    let raw = img.as_raw();
-                    let o = fixed(opacity);
-                    // Pixels too faint to change anything at this opacity are skipped.
-                    let least = (3 * 256 / o.max(1)).min(255) as u8;
-                    let (x0, y0) = (r.x.max(0.0) as usize, r.y.max(0.0) as usize);
-                    let (x1, y1) = (((r.x + r.w) as usize).min(p.w), ((r.y + r.h) as usize).min(p.h));
-                    for y in y0..y1 {
-                        let row = &raw[((y + tile - oy) % tile) * tile * 4..][..tile * 4];
-                        let mut tx = (x0 + ox) % tile;
-                        let base = y * p.w;
-                        for x in x0..x1 {
-                            let s = &row[tx * 4..tx * 4 + 4];
-                            if s[3] >= least {
-                                p.over_pre(base + x, s, o);
-                            }
-                            tx += 1;
-                            if tx == tile {
-                                tx = 0;
-                            }
-                        }
+        let kind = str_of(l, "type").unwrap_or("rect");
+        if kind == "image" {
+            self.draw_image(p, l, region, scale, t, opacity);
+            return;
+        }
+        let fill = paint_of(l, "fill");
+        for c in copies(l, region) {
+            let (mut dx, mut dy, mut a) = (0.0, 0.0, opacity * c.fade);
+            if let Some(m) = m.filter(|m| str_of(m, "kind") != Some("breathe")) {
+                match motion_at(m, t + c.offset) {
+                    Some((mx, my, ma)) => {
+                        dx = mx;
+                        dy = my;
+                        a *= ma;
                     }
-                } else {
-                    let (iw, ih) = (r.w.round().max(1.0) as u32, r.h.round().max(1.0) as u32);
-                    let Some(img) = self.scaled(&src, iw, ih, str_of(l, "fit") != Some("fill")) else { return };
-                    let raw = img.as_raw();
-                    let o = fixed(opacity);
-                    if o == 0 {
-                        return;
+                    None => continue,
+                }
+            }
+            let (w, h) = (coord(l.get("w"), region.w, 10.0) * c.jw, coord(l.get("h"), region.h, 10.0) * c.jh);
+            let x = region.x + coord(l.get("x"), region.w, 0.0) + c.ox + dx;
+            let mut y = region.y + coord(l.get("y"), region.h, 0.0) + c.oy + dy;
+            if str_of(l, "anchor") == Some("bottom") {
+                y -= h;
+            }
+            let b = Rect { x: x * scale, y: y * scale, w: w * scale, h: h * scale };
+            let paint = c.color.map(Paint::Solid).or_else(|| fill.clone());
+            match kind {
+                "rect" | "ellipse" | "radial" => {
+                    let Some(paint) = paint else { continue };
+                    let shape = match kind {
+                        "ellipse" => Shape::Ellipse,
+                        "radial" => Shape::Radial,
+                        _ => Shape::Rect(num(l, "radius", 0.0) as f32 * scale),
+                    };
+                    p.fill(b, shape, &paint, a);
+                }
+                "bevel" => {
+                    let light = colour(l.get("light")).map(rgba).unwrap_or([1.0; 4]);
+                    let dark = colour(l.get("dark")).map(rgba).unwrap_or([0.5, 0.5, 0.5, 1.0]);
+                    let edge = (num(l, "edge", 2.0) as f32 * scale).round().max(1.0) as usize;
+                    let outline = colour(l.get("outline")).map(rgba);
+                    p.bevel(b, paint.map(|p| p.at(0.5, 0.5)), light, dark, edge, str_of(l, "style") == Some("sunken"), outline, a);
+                }
+                "line" => {
+                    let (x2, y2) = (coord(l.get("x2"), region.w, 0.0), coord(l.get("y2"), region.h, 0.0));
+                    let stroke = c.color.or_else(|| paint_of(l, "stroke").map(|p| p.at(0.5, 0.5))).unwrap_or([1.0; 4]);
+                    p.line(b.x, b.y, b.x + x2 * scale, b.y + y2 * scale, num(l, "strokeWidth", 1.0) as f32 * scale, stroke, a);
+                }
+                "pixels" => p.pixels(b.x, b.y, &pixel_rows(l), num(l, "scale", 4.0) as f32 * scale, a),
+                _ => {}
+            }
+        }
+    }
+
+    /// Rendered art: cover-fit to its box (the region, or `w`/`h`), or with `loopY`/`loopX` (seconds) a seamless
+    /// 512 px tile slid along forever (rain sheets).
+    fn draw_image(&mut self, p: &mut Picture, l: &Map<String, Value>, region: Rect, scale: f32, t: f64, opacity: f32) {
+        let Some(src) = str_of(l, "src").map(String::from) else { return };
+        let o = fixed(opacity);
+        if o == 0 {
+            return;
+        }
+        let (lx, ly) = (num(l, "loopX", 0.0), num(l, "loopY", 0.0));
+        if lx > 0.0 || ly > 0.0 {
+            let tile = ((num(l, "tile", 512.0) as f32) * scale).round().max(8.0) as usize;
+            let Some(img) = self.scaled(&src, tile as u32, tile as u32, false) else { return };
+            let ts = tile as f32;
+            let oy = if ly > 0.0 { ((t % ly) / ly) as f32 * ts } else { 0.0 };
+            let ox = if lx > 0.0 { ((t % lx) / lx) as f32 * ts } else { 0.0 };
+            let (oy, ox) = (oy as usize % tile, ox as usize % tile);
+            let raw = img.as_raw();
+            // Pixels too faint to change anything at this opacity are skipped.
+            let least = (3 * 256 / o.max(1)).min(255) as u8;
+            let (x0, y0) = ((region.x * scale).max(0.0) as usize, (region.y * scale).max(0.0) as usize);
+            let (x1, y1) = ((((region.x + region.w) * scale) as usize).min(p.w), (((region.y + region.h) * scale) as usize).min(p.h));
+            for y in y0..y1 {
+                let row = &raw[((y + tile - oy) % tile) * tile * 4..][..tile * 4];
+                let mut tx = (x0 + ox) % tile;
+                let base = y * p.w;
+                for x in x0..x1 {
+                    let s = &row[tx * 4..tx * 4 + 4];
+                    if s[3] >= least {
+                        p.over_pre(base + x, s, o);
                     }
-                    let (x0, y0) = (r.x.round() as i64, r.y.round() as i64);
-                    for yy in 0..ih as i64 {
-                        let y = y0 + yy;
-                        if y < 0 || y >= p.h as i64 {
-                            continue;
-                        }
-                        for xx in 0..iw as i64 {
-                            let x = x0 + xx;
-                            if x < 0 || x >= p.w as i64 {
-                                continue;
-                            }
-                            let si = ((yy as u32 * iw + xx as u32) * 4) as usize;
-                            p.over_pre(y as usize * p.w + x as usize, &raw[si..si + 4], o);
-                        }
+                    tx += 1;
+                    if tx == tile {
+                        tx = 0;
                     }
                 }
             }
-            "rect" => {
-                let (x, y) = (r.x + coord(l.get("x"), region.w, 0.0) * scale, r.y + coord(l.get("y"), region.h, 0.0) * scale);
-                let (w, h) = (coord(l.get("w"), region.w, region.w) * scale, coord(l.get("h"), region.h, region.h) * scale);
-                let fill = stops(l.get("fill"));
-                let solid = colour(l.get("fill")).map(rgba);
-                let horizontal = str_of(l, "angle") == Some("h");
-                for py in (y.max(0.0) as usize)..((y + h).min(p.h as f32).max(0.0) as usize) {
-                    for px in (x.max(0.0) as usize)..((x + w).min(p.w as f32).max(0.0) as usize) {
-                        let c = solid.unwrap_or_else(|| sample_stops(&fill, if horizontal { (px as f32 - x) / w.max(1.0) } else { (py as f32 - y) / h.max(1.0) }));
-                        p.blend(py * p.w + px, [c[0], c[1], c[2]], c[3] * opacity);
-                    }
-                }
+            return;
+        }
+        let w = l.get("w").map(|v| coord(Some(v), region.w, region.w)).unwrap_or(region.w);
+        let h = l.get("h").map(|v| coord(Some(v), region.h, region.h)).unwrap_or(region.h);
+        let (x, y) = (region.x + coord(l.get("x"), region.w, 0.0), region.y + coord(l.get("y"), region.h, 0.0));
+        let (iw, ih) = ((w * scale).round().max(1.0) as u32, (h * scale).round().max(1.0) as u32);
+        let Some(img) = self.scaled(&src, iw, ih, str_of(l, "fit") != Some("fill")) else { return };
+        let raw = img.as_raw();
+        let (x0, y0) = ((x * scale).round() as i64, (y * scale).round() as i64);
+        for yy in 0..ih as i64 {
+            let py = y0 + yy;
+            if py < 0 || py >= p.h as i64 {
+                continue;
             }
-            "radial" => {
-                let (bw, bh) = (coord(l.get("w"), region.w, 40.0) * scale, coord(l.get("h"), region.h, 40.0) * scale);
-                let (mut cx, mut cy) = (r.x + coord(l.get("x"), region.w, 0.0) * scale + bw / 2.0, r.y + coord(l.get("y"), region.h, 0.0) * scale + bh / 2.0);
-                // Passing by: crosses once, fading in and out, with a walking bob, then rests out of sight.
-                if let Some(m) = m.filter(|m| str_of(m, "kind") == Some("pass")) {
-                    let secs = num(m, "seconds", 12.0).max(2.0);
-                    let period = secs + num(m, "pause", 0.0).max(0.0);
-                    let f = ((((t + offset) % period) + period) % period / secs) as f32;
-                    if f >= 1.0 {
-                        return;
-                    }
-                    let edge = (f.min(1.0 - f) / 0.18).min(1.0);
-                    opacity *= num(m, "max", 1.0) as f32 * edge * edge * (3.0 - 2.0 * edge);
-                    let bob = num(m, "bob", 0.0) as f32 * scale * ((t + offset) as f32 * 1.8 * std::f32::consts::PI).sin().abs();
-                    cx += num(m, "x", 300.0) as f32 * scale * f;
-                    cy += num(m, "y", 0.0) as f32 * scale * f - bob;
+            for xx in 0..iw as i64 {
+                let px = x0 + xx;
+                if px < 0 || px >= p.w as i64 {
+                    continue;
                 }
-                let fill = stops(l.get("fill"));
-                let (rx, ry) = ((bw / 2.0).max(0.5), (bh / 2.0).max(0.5));
-                for py in ((cy - ry).max(0.0) as usize)..((cy + ry).min(p.h as f32).max(0.0) as usize) {
-                    for px in ((cx - rx).max(0.0) as usize)..((cx + rx).min(p.w as f32).max(0.0) as usize) {
-                        let d = (((px as f32 + 0.5 - cx) / rx).powi(2) + ((py as f32 + 0.5 - cy) / ry).powi(2)).sqrt();
-                        if d <= 1.0 {
-                            let c = sample_stops(&fill, d);
-                            p.blend(py * p.w + px, [c[0], c[1], c[2]], c[3] * opacity);
-                        }
-                    }
-                }
+                let si = ((yy as u32 * iw + xx as u32) * 4) as usize;
+                p.over_pre(py as usize * p.w + px as usize, &raw[si..si + 4], o);
             }
-            _ => {}
         }
     }
 
@@ -744,7 +802,7 @@ mod tests {
     fn no_moving_scene_ever_flashes() {
         let fps = 12.0;
         let scale = 0.4;
-        let g = Geometry { width: 1180.0, height: 760.0, title: 40.0, pane: 220.0, player: 312.0 };
+        let g = Geometry { width: 1180.0, height: 760.0, title: 48.0, pane: 220.0, player: 312.0, title_end: 110.0 };
         let mut moving = 0;
         for t in themes() {
             let Some(mut scene) = Scene::for_theme(Some(&t)) else { continue };
