@@ -157,8 +157,22 @@ Josh said "go ahead and rebuild it in rust" and chose:
    - Its packaging is a tarball with a `.desktop` file to start with (an AppImage later).
    - Its system integration uses MPRIS through souvlaki and a StatusNotifier tray icon.
 4. **The old apps: retire them.** The Rust build replaces Driftwave through the normal updater: same
-   exe name, zip and tags, `uninstall.ps1` marker, AUMIDs, data folders and file formats. The last C#
-   release stays on GitHub as a fallback; the C# and Swift code is frozen.
+   exe name, zip and tags, `uninstall.ps1` marker, AUMIDs, data folders and file formats.
+5. **One app, all Rust, no other version (Josh, later on 2026-11-18).**
+   - In Josh's words: "This should be one cohesive app, all built in Rust… There should be no other version at
+     all. Period." He also said "go ahead and wipe the old version and begin the rebuild. I'll listen to music
+     again once it's all rebuilt."
+   - The Winamp-style **Classic** layout is like the mini player: a mode you swap into and out of in the same
+     window, with the same engine playing.
+   - **Done:**
+     - The installed C# Driftwave Nightly was uninstalled from the PC. Josh's library and settings in
+       `%APPDATA%\Driftwave` were kept for the switch-over.
+     - The C# and Swift apps were removed from this branch: `windows/`, `Sources/`, `Tests/`,
+       `Package.swift` and their build scripts.
+     - Shared assets moved to `assets/`, the art generators to `tools/`, and the Windows playback tests to
+       `scripts/`.
+   - **Plan B is gone:** there's no C# fallback release. The public releases of the old app
+     (`Joshspeakman/driftwave`) are removed only when Josh confirms.
 
 **Progress:**
 - **Phase 1 done (2026-11-18).** `driftwave-core` has 13 modules: station, storage, migration, exchange, icy,

@@ -1,81 +1,75 @@
-# Shortwave: notes for Claude sessions
+# Driftwave: notes for Claude sessions
 
-Josh's personal internet radio app, modelled on GNOME Shortwave. The macOS app is native SwiftUI
-(`Sources/`). The Windows version (C# + WinUI 3, under `windows/`) was built from `windows/PLAN.md`;
-on Windows read `windows/README.md` and `windows/DECISIONS.md` first.
+Josh's internet radio app, inspired by GNOME Shortwave (no code taken). **Driftwave is one app, written in Rust,
+for Windows, macOS and Linux.** There is no other version: Josh retired the Swift (Mac) and C# (Windows) apps on
+2026-11-18 ("There should be no other version at all. Period."). Their code is gone from this branch; git history
+has it. Don't propose bridges, hybrids or a second program.
 
-## Branches
+## The app
 
-- `nightly` is the default and working branch for the Mac app.
-- `windows` is the working branch for the Windows port. Its code goes under `windows/`.
-- `rust` is the working branch for the Rust rebuild (`rust/`, plan in `docs/RUST-SCOPE.md`), which replaces both
-  apps. The Mac session works there too (from Round 5); the Swift and C# apps are frozen, fixes only.
-- The Mac and Windows sessions can't message each other. They coordinate through
-  `docs/MAC-WINDOWS-SYNC.md`: read it first, and take the newest round's asks for your side. Each
-  side pushes only its own branch and merges the other's before starting (`git merge
-  origin/nightly` on the PC, `git merge origin/windows` on the Mac).
-- Shared specs: `docs/STATION-EXCHANGE.md` (moving stations between the apps). Shared test files:
-  `fixtures/`.
+- **One window, two looks:**
+  - **Full:** library, discover, search, settings and themes; the rebuild of Driftwave's familiar look.
+  - **Classic:** an homage to the stacked Winamp players, which Josh treats like the mini player.
+  - You swap in and out of Classic in the same window. The same engine keeps playing.
+- `rust/` is the Cargo workspace. Run cargo through `rust/cargo.ps1` on the PC (the toolchain lives in
+  `D:\DevCaches`); on the Mac run `cargo` directly.
+
+| Crate | What it is |
+|---|---|
+| `rust/core` (driftwave-core) | Stations, library, exchange, ICY, playlists, radio-browser, ID3/M4A, recording, themes, the WCAG flash check |
+| `rust/audio` (driftwave-audio) | The engine: HTTP/ICY/HLS, decoders (Media Foundation and AudioToolbox for AAC), output, recording, meters, scope tap; `driftwave-player` (headless, for tests) |
+| `rust/vis` (driftwave-vis) | Visualizers: analysis, six originals, the flash guard at the output stage |
+| `rust/app` (driftwave) | The app: Slint UI (software renderer), layouts, palettes |
+
+- **Plan and progress:** `docs/RUST-SCOPE.md`. The rebuild order is: Full layout and the Classic swap; finding
+  stations; settings and themes with their effects; OS integration (tray, media keys, notifications, single
+  instance); the switch-over (installer, updater, migration).
+- **Shared assets:**
+  - `assets/theme-art/`: photos, credited in `CREDITS.txt`;
+  - `assets/fonts/`: OFL fonts;
+  - `assets/icons/`;
+  - `themes/`: built-in themes;
+  - `tools/`: Python generators for themes, art and the logo.
+
+## Branches and sessions
+
+- `rust` is the working branch. Two sessions work on it, one on the PC and one on the Mac. Fetch and merge
+  `origin/rust` before every push, and stay in your own files where you can.
+- They coordinate through `docs/MAC-WINDOWS-SYNC.md`. Read it first, take the newest round's asks for your
+  side, and write your results there.
 - `main` changes only when Josh says so.
-- The GitHub repo is private. Push with the `Joshspeakman` GitHub account. On the Mac the active
-  `gh` account has no access, so use `GH_TOKEN=$(gh auth token --user Joshspeakman)` per command.
+- The GitHub repo is private. Push with the `Joshspeakman` account (on the Mac:
+  `GH_TOKEN=$(gh auth token --user Joshspeakman)` per command).
+- **The public repo `Joshspeakman/driftwave`** (README, site, wiki, releases) belongs to the public Driftwave.
+  Deleting or changing what's published there needs Josh's say-so.
 
 ## Working with Josh
 
 - Ask decisions in the question dialog, one question at a time, never as a wall of text.
 - Finish the work end to end: fix what you find in the same pass, and don't leave "next steps".
+- **Lightweight is a requirement, not a nicety.** It has to run "on a potato".
+  - Measure CPU in every state (in front, behind, shaded, stopped) before calling anything light.
+  - Cost must not grow with the window or the display: use pixel budgets, and let the UI scale them up.
+- **Nothing ever flashes, flickers or strobes.** Visualizers go through the guard, and themes use still textures
+  and smooth motion.
+- **Nothing looks pixelated** except themes Josh asked to be pixel art. Draw in vectors, and render art
+  supersampled.
 
-## Testing rules (both platforms)
+## Testing rules
 
-- **Test runs are muted and isolated.** Any test flag (`-muted`, `-playURL`, `-page`, ...) or
-  `SHORTWAVE_TEST=1` makes a test run. A test run uses its own data folder (`ShortwaveTestRun`)
-  and its own preferences, stays muted unless `-audible` is passed, and stays off Now Playing and
-  the media keys. The Windows app must work the same way.
-  **Why:** a test once played a tone aloud, and a muted test grabbed Josh's media keys while he
-  was playing YouTube Music. A media key press then stopped a test recording.
-- Never test media keys, Now Playing or the system media overlay while Josh is playing music.
-  Ask him first.
-- A test run's audio output stays muted whatever its controls do (Mac since 2026-11-18): mute, ⌘↑ /
-  Ctrl+Up and the mute toggle only change what the controls show. Only `-audible` makes sound.
-  This came after ⌘↑ unmuted a test copy and it played aloud.
+- **Test runs are muted and isolated.**
+  - Any test flag (`-muted`, `-playURL`, `-library`, ...) or `SHORTWAVE_TEST=1` makes a test run.
+  - A test run uses its own data folder (`DriftwaveRustTestRun` for the app, `DriftwaveTestRun` for the player),
+    never saves settings, and stays silent unless `-audible`, whatever its controls do.
+  - **Why:** a test once played a tone aloud, and another grabbed Josh's media keys while he was playing music.
+- Never test media keys, Now Playing or the system media overlay while Josh is playing music. Ask him first.
 - Never touch the real app's library, settings or track folder from a test.
-- Real-click tests on the Mac: AppleScript's `process whose unix id is …` matches by **name**, and
-  Josh's installed app is also called "Shortwave", so it reaches his real app. Target the test copy
-  by PID instead (Accessibility API plus CGEvent). Check first that he isn't using the machine.
-
-## Mac build
-
-Only the Command Line Tools are needed, not Xcode.
-
-| Command | What it does |
-|---|---|
-| `scripts/test.sh` | Core unit tests (26). Use it instead of a bare `swift test`, which can't find the test macros with only the Swift 6.4 Command Line Tools |
-| `scripts/build-app.sh --nightly` | Builds `~/ProjectBuilds/shortwave-macos/app/Shortwave Nightly.app` |
-| `scripts/install.sh --nightly` | Builds and installs `/Applications/Shortwave Nightly.app` |
-| `scripts/smoke-test.sh` | Real streams, muted |
-| `scripts/recording-test.sh` | Local ICY server plus ffmpeg: checks that tracks are cut and saved |
-| `scripts/exchange-test.sh` | Station import/export in the real app (test runs); `--update-fixture` rewrites `fixtures/exchange/mac-export.json` |
-| `scripts/screenshots.sh` | Every screen, light and dark, into `docs/design/mac/` |
-| `scripts/behaviour-test.sh` | Local server: the title connection drops and must reconnect without repeats; an extensionless `.pls` must play |
-
-## Windows build
-
-Needs the .NET 10 SDK; the tests also need Python 3 and ffmpeg. Run from the repo root in PowerShell.
-
-| Command | What it does |
-|---|---|
-| `windows/scripts/test.ps1` | Core unit tests (31: the 19 Swift ones translated, plus Windows-only ones) |
-| `windows/scripts/build.ps1 -Flavor Nightly` | Builds `windows/out/Nightly/Shortwave.exe` |
-| `windows/scripts/install.ps1 -Flavor Nightly` | Builds and installs `Shortwave Nightly` for the current user (Start menu, Settings > Apps) |
-| `windows/scripts/smoke-test.ps1` | Real streams, muted |
-| `windows/scripts/recording-test.ps1` | Local ICY server plus ffmpeg: checks that tracks are cut, saved and tagged |
-
-- With the displays asleep, newly started GPU-drawn windows (WinUI and WPF alike) came out black in
-  screen captures. `-screenshot <png>` renders the app's XAML instead, dialogs included; use it to
-  check the UI.
-- Test runs save tracks under `ShortwaveTestRun\Tracks` unless given `-trackDirectory`. Never point
-  them at `Music\Shortwave`.
-- Keep `EnableMsixTooling` in `Shortwave.csproj`. Without it, published builds have no `Shortwave.pri`
-  and crash on the first XAML page.
-- Keep a reference to every `DispatcherQueueTimer` until it fires. An unreferenced one can be
-  garbage-collected and never tick.
+- **Playback tests:**
+  - On the Mac: `scripts/*.sh`.
+  - On the PC: `scripts/*.ps1` (smoke, behaviour, recording).
+  - Both drive `driftwave-player`. Build it with
+    `cargo build --release -p driftwave-audio --bin driftwave-player`.
+- **App checks:**
+  - `-screenshot <file.bmp>` snapshots the window.
+  - `-alwaysActive` and `-inactive` force the focus states for measuring.
+  - `DRIFTWAVE_LOG=1` prints per-stage timings.

@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn loads_mac_library() {
         let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../windows/tests/ShortwaveCore.Tests/Fixtures/mac-library.json");
+            .join("../../fixtures/mac-library.json");
         let list = library_file::load(&fixture);
         assert_eq!(list.len(), 2);
         let soma = &list[0];

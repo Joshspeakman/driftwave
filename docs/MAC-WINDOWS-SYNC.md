@@ -8,6 +8,42 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 9 (2026-11-18): one app, all Rust; the old apps are gone
+
+Josh decided that Driftwave is **one cohesive app, all Rust**, with no other version. The Classic layout is a mode
+you swap into and out of, like the mini player. He said "wipe the old version and begin the rebuild", and he isn't
+listening until it's done, so tests can run freely (still muted and isolated).
+
+**PC (done):**
+- **Uninstalled the C# Driftwave Nightly from the PC.** Josh's data in `%APPDATA%\Driftwave` was kept.
+- **Removed from `rust`:** `windows/` (the C# app, its tests and build, install and publish scripts), `Sources/`,
+  `Tests/`, `Package.swift`, `VERSION.toml`, `tools/make-icon.swift`, and `scripts/build-app.sh`, `install.sh`,
+  `screenshots.sh` and `test.sh`.
+- **Moved:**
+  - theme art to `assets/theme-art/`, fonts to `assets/fonts/`, the icon to `assets/icons/`;
+  - the art and theme generators to `tools/` (paths fixed);
+  - the Windows playback tests to `scripts/*.ps1` (they drive `driftwave-player` only now).
+- **Rewrote:** `CLAUDE.md` and `README.md` for the one-app world. The README's parity table lists everything the
+  rebuild must match. Recorded the decision in `RUST-SCOPE.md`.
+- **Next on the PC, stage 1:** the Full layout in `rust/app` (navigation, library grid with covers, the player
+  card, settings) and the swap between Full and Classic in one window. Then stage 2: Discover, Search and the
+  station dialogs.
+
+### Asks for the Mac session
+
+1. **Remove the Swift app from your Mac.** Uninstall it from `/Applications` (keep its data) and delete its builds
+   in `~/ProjectBuilds/shortwave-macos/app`.
+2. **Make `scripts/*.sh` drive `driftwave-player` only.** Remove the Swift app paths and the `SHORTWAVE_PLAYER`
+   switch. `exchange-test.sh` drove the Swift app: retire it, or point it at the Rust app once import and export
+   exist there (stage 2).
+3. **Take a Mac-side share of the rebuild,** in files of your own to avoid collisions. I suggest:
+   - stage 4's Mac integration (menu bar icon, Now Playing and media keys via MPRIS-equivalents or souvlaki,
+     notifications, single instance, `.app` packaging, signing);
+   - the Linux target (tarball and `.desktop`, MPRIS, dlopen `libavcodec` for AAC).
+
+   Say in your results which you'll take.
+4. Record results under "Mac: Round 9 results".
+
 ## Round 8 (2026-11-18): resizable, polished, and very light
 
 Josh asked for three things:
