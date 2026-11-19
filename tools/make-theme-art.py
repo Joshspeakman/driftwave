@@ -436,7 +436,8 @@ ART = {
                                 ['#9AD8FF', '#4FB2FF', '#FFFFFF'], 7, count=4, thickness=(40, 120), blur=(20, 60)),
     'aqua': lambda: ribbons('aqua.jpg', [(0, '#062A6E'), (0.5, '#0E5AC2'), (1, '#1B8FE8')],
                             ['#7FD4FF', '#BFEAFF', '#4FB2FF'], 13, count=5, thickness=(50, 140), blur=(26, 70)),
-    'fluent': lambda: bloom('fluent-bloom.jpg', [(0, '#0B1630'), (1, '#071022')], ['#3D8BFF', '#6FB7FF', '#2F5FD8', '#9ACBFF'], 5),
+    # Fluent's bloom is made by make-fluent-bloom.py (folded, shaded petals; needs numpy).
+    'fluent': lambda: None,
     'big-glass': lambda: save(blobs('big-glass.jpg', [(0, '#F6E9F7'), (1, '#E4EEFB')], ['#FF8FB8', '#8F9BFF', '#7FE0D8', '#FFC07A', '#C59BFF'], 9), 'big-glass.jpg'),
     'home-screen': lambda: save(bokeh(blobs('home-screen.jpg', [(0, '#3A1C71'), (0.6, '#D76D77'), (1, '#FFAF7B')],
                                             ['#FF6FA8', '#7A5CFF', '#FFB86B', '#FF8A5B'], 21, blur=120), 4, 30, ('#FFFFFF', '#FFD7E8')), 'home-screen.jpg'),
