@@ -35,6 +35,8 @@
     <Content Include="Assets\Driftwave.png" CopyToOutputDirectory="PreserveNewest" />
     <!-- Theme fonts (SIL Open Font License; the licence files ship next to them) -->
     <Content Include="Assets\Fonts\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Rendered theme art (windows/tools/make-theme-art.py) -->
+    <Content Include="Assets\ThemeArt\**" CopyToOutputDirectory="PreserveNewest" />
     <!-- Built-in themes, shared with the Mac app's format (docs/THEMES.md) -->
     <Content Include="..\..\..\themes\*.json" Link="Themes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

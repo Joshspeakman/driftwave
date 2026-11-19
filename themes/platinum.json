@@ -3,7 +3,7 @@
   "version": 1,
   "id": "platinum",
   "name": "Platinum",
-  "description": "A homage to classic Mac OS: platinum grey, pinstriped title bars, a smiling computer and a desk full of folders.",
+  "description": "A homage to classic Mac OS: platinum grey, a pinstriped title bar, and calm, crisp black type.",
   "base": "light",
   "backdrop": "none",
   "colors": {
@@ -36,14 +36,27 @@
     "cover": 0.04
   },
   "effects": {
+    "windowTitle": {
+      "font": "Segoe UI Semibold",
+      "size": 13,
+      "color": "#000000"
+    },
     "scene": {
       "layers": [
         {
+          "type": "image",
+          "src": "platinum.jpg",
+          "in": "window",
+          "x": 0,
+          "y": 0,
+          "opacity": 0.9
+        },
+        {
           "type": "line",
           "in": "titlebar",
-          "x": 130,
-          "y": 14,
-          "x2": -330,
+          "x": 0,
+          "y": 15,
+          "x2": "100%",
           "y2": 0,
           "stroke": "#9A9A9A",
           "repeat": {
@@ -52,166 +65,22 @@
           }
         },
         {
-          "type": "rect",
-          "x": "44%",
-          "y": 10,
-          "w": 120,
-          "h": 26,
-          "fill": "#DDDDDD",
-          "in": "titlebar"
-        },
-        {
-          "type": "text",
-          "text": "Driftwave",
-          "x": "45%",
-          "y": 13,
-          "size": 14,
-          "color": "#000000",
-          "font": "Segoe UI Semibold",
-          "in": "titlebar"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "KKKKKKKKKKKK",
-            "KWWWWWWWWWWK",
-            "KWKKKKKKKKWK",
-            "KWKWWWWWWKWK",
-            "KWKWKWWKWKWK",
-            "KWKWWWWWWKWK",
-            "KWKWKWWKWKWK",
-            "KWKWWKKWWKWK",
-            "KWKWWWWWWKWK",
-            "KWKKKKKKKKWK",
-            "KWWWWWWWWWWK",
-            "KWWWWWKKKKWK",
-            "KWWWWWWWWWWK",
-            "KKKKKKKKKKKK"
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF"
-          },
-          "x": -110,
-          "y": 20,
-          "scale": 3,
-          "in": "content",
-          "id": "hd",
-          "clickable": true
-        },
-        {
-          "type": "text",
-          "text": "Macintosh HD",
-          "x": -116,
-          "y": 66,
-          "size": 11,
-          "color": "#000000",
-          "font": "Segoe UI",
-          "in": "content"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "..KKKKK.......",
-            ".KYYYYYK......",
-            "KKKKKKKKKKKKKK",
-            "KYYYYYYYYYYYYK",
-            "KYWWWWWWWWWWYK",
-            "KYYYYYYYYYYYYK",
-            "KYYYYYYYYYYYYK",
-            "KYYYYYYYYYYYYK",
-            "KDDDDDDDDDDDDK",
-            "KKKKKKKKKKKKKK"
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF",
-            "Y": "#FFD34E",
-            "D": "#B08A2E"
-          },
-          "x": -110,
-          "y": 100,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "Radio Folder",
-          "x": -116,
-          "y": 134,
-          "size": 11,
-          "color": "#000000",
-          "font": "Segoe UI",
-          "in": "content"
-        },
-        {
-          "type": "pixels",
-          "rows": [
-            "...KKKKKK...",
-            "KKKKKKKKKKKK",
-            "KWWWWWWWWWWK",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWGWGWGWGK.",
-            ".KWWWWWWWWK.",
-            "..KKKKKKKK.."
-          ],
-          "palette": {
-            "K": "#000000",
-            "W": "#FFFFFF",
-            "G": "#C0C0C0"
-          },
-          "x": -104,
-          "y": -80,
-          "scale": 3,
-          "in": "content"
-        },
-        {
-          "type": "text",
-          "text": "Trash",
-          "x": -110,
-          "y": -46,
-          "size": 11,
-          "color": "#000000",
-          "font": "Segoe UI",
-          "in": "content"
-        },
-        {
-          "type": "rect",
-          "in": "content",
-          "x": "20%",
-          "y": "30%",
-          "w": 280,
-          "h": 90,
-          "fill": "#EEEEEE",
-          "stroke": "#000000",
-          "id": "welcome",
-          "hidden": true
-        },
-        {
           "type": "text",
           "text": "Welcome to Driftwave.",
-          "x": "23%",
-          "y": "36%",
-          "size": 20,
+          "x": "20%",
+          "y": "38%",
+          "size": 22,
           "color": "#000000",
+          "in": "content",
           "font": "Segoe UI Semibold",
           "id": "welcome",
-          "hidden": true,
-          "in": "content"
+          "hidden": true
         }
       ],
       "eggs": [
         {
           "trigger": "konami",
           "show": "welcome",
-          "seconds": 6
-        },
-        {
-          "trigger": "click:hd",
-          "say": "About This Radio: built-in memory? Plenty. Largest unused block: all of it.",
           "seconds": 6
         },
         {

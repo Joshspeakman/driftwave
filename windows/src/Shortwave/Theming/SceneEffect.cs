@@ -48,6 +48,8 @@ public sealed class SceneEffect : WindowEffects.Effect
 
     /// <summary>The window's layout, for placing items (the navigation pane and player sizes).</summary>
     public static double PaneWidth = 200, TitleHeight = 48, PlayerWidth = 312;
+    /// <summary>Where the window's own title (icon and name) ends, and how wide the caption buttons are.</summary>
+    public static double TitleEnd = 160, CaptionWidth = 140;
     public static bool PlayerShown = true;
 
     sealed record Egg(string Trigger, string? Show, string? Say, string? Run, double Seconds, string? Near);
@@ -117,7 +119,10 @@ public sealed class SceneEffect : WindowEffects.Effect
         double player = PlayerShown ? PlayerWidth : 0;
         return name switch
         {
-            "titlebar" => new Rect(0, 0, w, TitleHeight),
+            // "titlebar" is only the free stretch between the window's title and its caption buttons, so a theme
+            // can never draw over either; "titlebar-full" is the whole strip, for backgrounds.
+            "titlebar" => new Rect(TitleEnd + 16, 0, Math.Max(0, w - CaptionWidth - 12 - (TitleEnd + 16)), TitleHeight),
+            "titlebar-full" => new Rect(0, 0, w, TitleHeight),
             "pane" => new Rect(0, TitleHeight, PaneWidth, Math.Max(0, h - TitleHeight)),
             "content" => new Rect(PaneWidth, TitleHeight, Math.Max(0, w - PaneWidth - player), Math.Max(0, h - TitleHeight)),
             "player" => new Rect(Math.Max(0, w - player), TitleHeight, player, Math.Max(0, h - TitleHeight)),
@@ -249,6 +254,8 @@ public sealed class SceneEffect : WindowEffects.Effect
             }
             case "text":
                 return Text(item, scatterColor);
+            case "image":
+                return Picture(item, region, width, height);
             case "pixels":
                 return Pixels(item);
             default:
@@ -314,6 +321,54 @@ public sealed class SceneEffect : WindowEffects.Effect
         bmp.Invalidate();
         double scale = Num(item, "scale", 4);
         return new Image { Source = bmp, Width = pw * scale, Height = ph * scale, Stretch = Stretch.Fill };
+    }
+
+    /// <summary>
+    /// Rendered art from Assets\ThemeArt: <c>fit</c> "cover" (default) fills the region, cropping as needed. With
+    /// <c>loopY</c> or <c>loopX</c> (seconds) the picture is a seamless tile scrolled forever (rain sheets, fog).
+    /// </summary>
+    FrameworkElement? Picture(JsonObject item, Rect region, double width, double height)
+    {
+        string? src = Str(item, "src");
+        if (src is null) return null;
+        string path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "ThemeArt", src);
+        if (!System.IO.File.Exists(path)) { Diagnostics.Log("scene image missing: " + src); return null; }
+        var uri = new Uri(path);
+        double w0 = item["w"] is null ? region.Width : width, h0 = item["h"] is null ? region.Height : height;
+        Image Make(double iw, double ih) => new()
+        {
+            Source = new BitmapImage(uri) { DecodePixelType = DecodePixelType.Logical },
+            Width = iw, Height = ih,
+            Stretch = Str(item, "fit") == "fill" ? Stretch.Fill : Stretch.UniformToFill,
+        };
+        double loopY = Num(item, "loopY", 0), loopX = Num(item, "loopX", 0);
+        if (loopY <= 0 && loopX <= 0)
+        {
+            var img = Make(w0, h0);
+            return new Grid { Width = w0, Height = h0, Children = { img } };
+        }
+        // A tile repeated to cover the region plus one tile, then scrolled by one tile per loop.
+        double tile = Num(item, "tile", 512);
+        int cols = (int)Math.Ceiling(w0 / tile) + (loopX > 0 ? 1 : 0), rows = (int)Math.Ceiling(h0 / tile) + (loopY > 0 ? 1 : 0);
+        var sheet = new Canvas { Width = cols * tile, Height = rows * tile };
+        for (int r = 0; r < rows; r++)
+            for (int c = 0; c < cols; c++)
+            {
+                var img = Make(tile, tile);
+                img.Stretch = Stretch.Fill;
+                Canvas.SetLeft(img, c * tile);
+                Canvas.SetTop(img, r * tile);
+                sheet.Children.Add(img);
+            }
+        var host = new Grid { Width = w0, Height = h0, Children = { sheet } };
+        host.Clip = new RectangleGeometry { Rect = new Rect(0, 0, w0, h0) };
+        EffectsClock.AddTrack(sheet, (v, t) =>
+        {
+            float y = loopY > 0 ? (float)(-tile + tile * (t % loopY / loopY)) : 0;
+            float x = loopX > 0 ? (float)(-tile * (t % loopX / loopX)) : 0;
+            v.Properties.InsertVector3("Translation", new Vector3(x, y, 0));
+        });
+        return host;
     }
 
     Brush Gradient(JsonArray stops, string angle)

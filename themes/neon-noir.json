@@ -3,13 +3,13 @@
   "version": 1,
   "id": "neon-noir",
   "name": "Neon Noir",
-  "description": "Rain, amber neon and cyan haze in a city that never sees the sun. After Blade Runner.",
+  "description": "Rain over a real neon street at night in Tokyo, amber and cyan, behind smoky glass.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
     "background": "#070A10",
-    "surface": "#A60B1018",
-    "card": "#B3121A24",
+    "surface": "#8C0B1018",
+    "card": "#A6111820",
     "cardStroke": "#3300E5FF",
     "control": "#CC16202C",
     "controlStroke": "#4400E5FF",
@@ -21,7 +21,8 @@
     "accent": "#FF8A1E",
     "accentText": "#FFB347",
     "onAccent": "#070A10",
-    "dialog": "#0D131B"
+    "dialog": "#0D131B",
+    "pane": "#A6070A10"
   },
   "fonts": {
     "title": "Share Tech Mono",
@@ -36,12 +37,6 @@
     "cover": 0.04
   },
   "effects": {
-    "rain": {
-      "color": "#9FD8FF",
-      "drops": 90,
-      "glowA": "#FF8A1E",
-      "glowB": "#00E5FF"
-    },
     "titleShadow": {
       "color": "#00E5FF",
       "blur": 14
@@ -51,6 +46,56 @@
     },
     "vignette": {
       "opacity": 0.5
+    },
+    "windowTitle": {
+      "font": "Share Tech Mono",
+      "size": 14,
+      "color": "#38E8FF",
+      "uppercase": true
+    },
+    "scene": {
+      "surfaces": "translucent",
+      "layers": [
+        {
+          "type": "image",
+          "src": "photo-neon-noir.jpg",
+          "in": "window",
+          "x": 0,
+          "y": 0
+        },
+        {
+          "type": "rect",
+          "in": "titlebar-full",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 48,
+          "fill": [
+            "#B3000000",
+            "#00000000"
+          ]
+        },
+        {
+          "type": "image",
+          "src": "rain-far.png",
+          "in": "window",
+          "x": 0,
+          "y": 0,
+          "loopY": 1.7,
+          "tile": 512,
+          "opacity": 0.5
+        },
+        {
+          "type": "image",
+          "src": "rain-near.png",
+          "in": "window",
+          "x": 0,
+          "y": 0,
+          "loopY": 0.75,
+          "tile": 512,
+          "opacity": 0.7
+        }
+      ]
     }
   }
 }
