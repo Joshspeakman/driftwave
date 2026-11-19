@@ -511,7 +511,8 @@ export component ClassicView inherits Rectangle {
         if !shaded: Rectangle {
             // The buffer gauge: how much of the stream is waiting to play (live radio has nothing to seek).
             x: 12 * u; y: 65 * u; width: 260 * u; height: 6 * u;
-            property <length> gauge: self.width - max(24 * u, live.preferred-width + 17 * u);
+            // The groove, a gap, the light, a gap, LIVE: each clear of the next.
+            property <length> gauge: self.width - max(27 * u, live.preferred-width + 17 * u);
             Well { width: gauge; height: parent.height; fill: Pal.groove; shade: 2px; border-radius: 3 * u; }
             Rectangle {
                 x: 1px; y: 1px; height: parent.height - 2px; width: max(0px, (gauge - 2px) * root.buffer); border-radius: 3 * u;
@@ -519,7 +520,7 @@ export component ClassicView inherits Rectangle {
                 Rectangle { y: 0; height: parent.height / 2; border-radius: parent.border-radius; background: #FFFFFF26; }
             }
             Led { x: gauge + 4 * u; y: 1.5 * u; width: 5 * u; height: 3 * u; lit: root.playing; }
-            live := Text { x: gauge + 10.5 * u; y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u); font-weight: 800;
+            live := Text { x: gauge + 12.5 * u; y: (parent.height - self.height) / 2; text: "LIVE"; font-size: max(8px, 5 * u); font-weight: 800;
                 color: Pal.glyph.transparentize(root.playing ? 0% : 55%); }
         }
         if !shaded: Rectangle {

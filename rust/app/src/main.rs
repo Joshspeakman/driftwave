@@ -1675,7 +1675,13 @@ fn main() -> Result<(), slint::PlatformError> {
         app.borrow_mut().customize_theme();
     }
     if let Some(px) = app.borrow().args.num("scroll") {
-        ui.global::<Dir>().set_settings_scroll(-(px as f32));
+        // Once Settings has laid itself out, so the scroll is kept inside it.
+        let weak = ui.as_weak();
+        slint::Timer::single_shot(Duration::from_millis(800), move || {
+            if let Some(ui) = weak.upgrade() {
+                ui.global::<Dir>().set_settings_scroll(-(px as f32));
+            }
+        });
     }
     // Test runs: -egg <trigger> [-eggAt <s>] sets an easter egg off (konami, type:word, click:id, idle:s).
     if let Some(trigger) = app.borrow().args.get("egg").map(String::from) {

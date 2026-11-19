@@ -1714,9 +1714,7 @@ export component FullView inherits Rectangle {
             changed content-y => {
                 if (self.content-y < -max(0px, self.content-height - self.height)) { self.content-y = -max(0px, self.content-height - self.height); }
             }
-            init => {
-                if (self.content-y < -max(0px, self.content-height - self.height)) { self.content-y = -max(0px, self.content-height - self.height); }
-            }
+
             settings-col := VerticalLayout {
                 x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
                 HorizontalLayout { alignment: start; PageTitle { text: "Settings"; } }
@@ -2077,7 +2075,7 @@ export component FullView inherits Rectangle {
                             text: !root.record-armed ? "Not Recording" : root.recording ? "Recording" : "Ready to Record";
                             color: Th.control-text; font-size: 13px; font-weight: 600; }
                         Text { x: 42px; y: 28px; width: parent.width - 54px; overflow: elide; color: Th.control-text.transparentize(12%); font-size: 11px;
-                            text: !root.record-armed ? "Click to record each song as its own file." : Prefs.record-mode == "everything" ? "Save All: every song is kept." : "Decide per track: save from the list."; }
+                            text: !root.record-armed ? "Click to record each song as its own file." : Prefs.record-mode == "everything" ? "Save All: every song is kept." : "Decide per track: save below."; }
                     }
                     // Played songs.
                     Text { x: 18px; y: parent.y-rec + 68px; text: "Played Tracks"; color: Th.card-text2; font-size: 12px; font-weight: 600; }
