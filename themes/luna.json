@@ -37,6 +37,7 @@
     "cover": 0.1
   },
   "effects": {
+    "tiles": {"colors": ["#245EDC", "#3C9A3C", "#D98A1B", "#2D7FD6"]},
     "windowTitle": {
       "font": "Trebuchet MS",
       "size": 14,
@@ -45,6 +46,7 @@
     },
     "scene": {
       "surfaces": "translucent",
+      "frost": false,
       "layers": [
         {
           "type": "image",

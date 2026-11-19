@@ -36,6 +36,7 @@
     "cover": 0.12
   },
   "effects": {
+    "tiles": {"colors": ["#4F43AE", "#2E9E4F", "#D93D3D", "#3D5FD9", "#B8962A"]},
     "windowTitle": {
       "font": "Press Start 2P",
       "size": 10,
@@ -50,7 +51,7 @@
           "y": 4,
           "w": 16,
           "h": 16,
-          "fill": "#2E9E4F"
+          "fill": "#3D5FD9"
         },
         {
           "type": "ellipse",
@@ -59,7 +60,7 @@
           "y": 16,
           "w": 16,
           "h": 16,
-          "fill": "#3D5FD9"
+          "fill": "#2E9E4F"
         },
         {
           "type": "ellipse",

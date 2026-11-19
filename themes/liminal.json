@@ -31,6 +31,7 @@
   },
   "corners": {},
   "effects": {
+    "tiles": {"colors": ["#C9B458", "#BFA94E", "#D2BD63"], "ink": "#5C4F1E"},
     "grain": {
       "opacity": 0.07
     },

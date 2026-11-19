@@ -155,6 +155,10 @@ impl App {
                         (str_of(l, "text").unwrap_or("").chars().count() as f32 * size * 0.62, size * 1.3)
                     }
                     Some("image") if l.get("w").is_none() => (r.w, coord(l.get("h"), r.h, r.h)),
+                    Some("line") => {
+                        let rows = l.get("repeat").and_then(Value::as_object).map(|o| num(o, "n", 1.0) * num(o, "dy", 0.0)).unwrap_or(0.0) as f32;
+                        (coord(l.get("x2"), r.w, 0.0).abs(), coord(l.get("y2"), r.h, 0.0).abs() + rows)
+                    }
                     _ => (coord(l.get("w"), r.w, 32.0), coord(l.get("h"), r.h, 32.0)),
                 };
                 Some((Rect { x, y, w: w.max(16.0), h: h.max(16.0) }, id))

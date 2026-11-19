@@ -37,6 +37,7 @@
     "cover": 0
   },
   "effects": {
+    "tiles": {"colors": ["#000080", "#008080", "#800080", "#808000"], "flat": true},
     "windowTitle": {
       "font": "Microsoft Sans Serif",
       "size": 13,

@@ -11,7 +11,7 @@
     "surface": "#4D10101C",
     "card": "#73FFFFFF",
     "cardStroke": "#33FFFFFF",
-    "control": "#33FFFFFF",
+    "control": "#59101018",
     "controlStroke": "#44FFFFFF",
     "subtle": "#22FFFFFF",
     "divider": "#33FFFFFF",
@@ -80,7 +80,7 @@
         {
           "type": "text",
           "text": "{time24}",
-          "x": -60,
+          "x": 8,
           "y": 14,
           "size": 15,
           "color": "#FFFFFF",

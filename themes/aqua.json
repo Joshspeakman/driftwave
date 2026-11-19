@@ -45,6 +45,7 @@
     },
     "scene": {
       "surfaces": "translucent",
+      "frost": false,
       "layers": [
         {
           "type": "image",

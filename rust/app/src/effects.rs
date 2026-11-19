@@ -104,7 +104,8 @@ impl Effects {
     }
 
     /// Paints the effects that sit behind the panels (the aurora only when it holds still: it moves otherwise).
-    pub fn behind(&self, p: &mut Picture, scale: f32, still: bool) {
+    /// `sun_x`: where the synthwave sun stands (px), over the page's middle.
+    pub fn behind(&self, p: &mut Picture, scale: f32, still: bool, sun_x: f32) {
         if self.wood {
             wood(p, scale, self.back);
         }
@@ -112,7 +113,7 @@ impl Effects {
             concrete(p, scale, o, self.dark);
         }
         if let Some(s) = &self.synthwave {
-            synthwave(p, scale, s, self.back);
+            synthwave(p, scale, s, self.back, sun_x);
         }
         if let (Some(a), true) = (&self.aurora, still) {
             aurora(p, scale, a, 0.0);
@@ -190,6 +191,7 @@ fn vignette(p: &mut Picture, c: Rgba, o: f32) {
 /// Walnut veneer: a lit gradient with wavy grain lines.
 fn wood(p: &mut Picture, scale: f32, back: Rgba) {
     let (w, h) = (p.w as f32, p.h as f32);
+    let back = if 0.2126 * back[0] + 0.7152 * back[1] + 0.0722 * back[2] < 0.1 { hex(70, 42, 24) } else { back };
     let black = [0.0, 0.0, 0.0, 1.0];
     let stops = vec![(0.0, mix(back, black, 0.25)), (0.45, back), (0.7, mix(back, hex(120, 72, 40), 0.25)), (1.0, mix(back, black, 0.3))];
     // Along (0,0) → (1, 0.3) of the window.
@@ -209,7 +211,7 @@ fn wood(p: &mut Picture, scale: f32, back: Rgba) {
     for k in 0..count {
         let y0 = k as f32 * lh / count as f32 + rng.next() * 6.0;
         let amp = 2.0 + rng.next() * 7.0;
-        let (f1, f2, ph) = (0.004 + rng.next() * 0.006, 0.017 + rng.next() * 0.02, rng.next() * 6.28);
+        let (f1, f2, ph) = (0.004 + rng.next() * 0.006, 0.017 + rng.next() * 0.02, rng.next() * std::f32::consts::TAU);
         let is_dark = rng.next() < 0.65;
         let (c, a) = if is_dark { (dark, 0.35) } else { (light, 0.18) };
         let thick = (0.8 + rng.next() * if is_dark { 2.6 } else { 1.2 }) * scale;
@@ -252,29 +254,34 @@ fn concrete(p: &mut Picture, scale: f32, opacity: f32, dark_base: bool) {
 
 /// Retrowave: the sky, a striped setting sun, the floor and its vanishing lines. (The rows rolling towards you are
 /// the UI's.) Returns nothing; the horizon is at 60% of the height.
-fn synthwave(p: &mut Picture, scale: f32, s: &Synthwave, back: Rgba) {
+fn synthwave(p: &mut Picture, scale: f32, s: &Synthwave, back: Rgba, sun_x: f32) {
     let (w, h) = (p.w as f32, p.h as f32);
-    let horizon = h * 0.6;
+    let horizon = h * 0.68;
     let sky = Paint::Stops(vec![(0.0, back), (0.7, s.sky), (1.0, mix(s.sky, s.sun_bottom, 0.45))], b'v');
     p.fill(Rect { x: 0.0, y: 0.0, w, h: horizon }, Shape::Rect(0.0), &sky, 1.0);
-    // The sun: horizontal slices, with gaps that widen towards the horizon.
+    // The sun: a smooth disc cut into slices by gaps that widen towards the horizon (crisp, on whole pixels).
     let r = w.min(h) * 0.2;
-    let (cx, cy) = (w * 0.5, horizon - r * 0.3);
+    let (cx, cy) = (sun_x, horizon - r * 0.3);
     let step = 6.0 * scale;
-    let mut y = cy - r;
-    while y < horizon {
+    let (x0, x1) = ((cx - r - 1.0).max(0.0) as usize, ((cx + r + 1.0) as usize).min(p.w));
+    let (y0, y1) = ((cy - r - 1.0).max(0.0) as usize, (horizon as usize).min(p.h));
+    for py in y0..y1 {
+        let y = py as f32 + 0.5;
         let frac = (y - (cy - r)) / (2.0 * r);
-        let gap = if frac < 0.42 { 0.0 } else { ((frac - 0.42) * 14.0).min(4.5) } * scale;
-        let dy = (y + step / 2.0 - cy).abs();
-        if dy < r {
-            let half = (r * r - dy * dy).sqrt();
-            let band = (step - gap).min(horizon - y).max(0.0);
-            if band > 0.5 * scale {
-                let c = mix(s.sun_top, s.sun_bottom, frac.clamp(0.0, 1.0));
-                p.fill(Rect { x: cx - half, y, w: 2.0 * half, h: band }, Shape::Rect(0.0), &Paint::Solid(c), 1.0);
+        let gap = if frac < 0.42 { 0.0 } else { ((frac - 0.42) * 14.0).min(4.5) * scale };
+        // Each slice is `step` tall; its last `gap` rows are sky.
+        let into = (y - (cy - r)).rem_euclid(step);
+        if into >= step - gap {
+            continue;
+        }
+        let c = mix(s.sun_top, s.sun_bottom, frac.clamp(0.0, 1.0));
+        for px in x0..x1 {
+            let d = (px as f32 + 0.5 - cx).hypot(y - cy);
+            let cov = (r + 0.5 - d).clamp(0.0, 1.0);
+            if cov > 0.0 {
+                p.blend(py * p.w + px, [c[0], c[1], c[2]], cov);
             }
         }
-        y += step;
     }
     let floor = Paint::Stops(vec![(0.0, mix(back, s.grid, 0.18)), (1.0, back)], b'v');
     p.fill(Rect { x: 0.0, y: horizon, w, h: h - horizon }, Shape::Rect(0.0), &floor, 1.0);
@@ -321,7 +328,7 @@ mod tests {
             let e = Effects::for_theme(t);
             for (w, h, s) in [(1usize, 1usize, 1.0f32), (37, 211, 1.0), (300, 200, 1.5)] {
                 let mut p = Picture::filled(w, h, [0, 0, 0]);
-                e.behind(&mut p, s, true);
+                e.behind(&mut p, s, true, w as f32 / 2.0);
                 e.moving(&mut p, s, 12.0);
                 let _ = e.front(w, h, s, true);
             }

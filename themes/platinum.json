@@ -36,6 +36,7 @@
     "cover": 0.04
   },
   "effects": {
+    "tiles": {"colors": ["#7779AE", "#5F8EB0", "#8E8E8E"]},
     "windowTitle": {
       "font": "Segoe UI Semibold",
       "size": 13,

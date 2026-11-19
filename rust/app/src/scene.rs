@@ -52,7 +52,7 @@ impl Geometry {
         match name {
             Some("titlebar") => {
                 let x = self.title_end + 16.0;
-                Rect { x, y: 0.0, w: (w - 150.0 - x).max(0.0), h: self.title }
+                Rect { x, y: 0.0, w: (w - 174.0 - x).max(0.0), h: self.title }
             }
             Some("titlebar-full") => Rect { x: 0.0, y: 0.0, w, h: self.title },
             Some("pane") => Rect { x: 0.0, y: self.title, w: self.pane, h: h - self.title },
@@ -286,6 +286,7 @@ pub struct Scene {
     drops: Vec<Drop>,
     drops_size: (usize, usize),
     seed: u32,
+    glass: bool,
     pub has_motion: bool,
     /// How often what moves is repainted, and at what share of the screen's resolution (rain and lights at half;
     /// the aurora's huge soft blobs at a quarter).
@@ -325,7 +326,13 @@ impl Scene {
             return None;
         }
         let layer_motion = layers.iter().any(moving) || drips.is_some();
+        // Glass frosts the picture under the panels, unless the scene says not ("frost": false: XP and early Mac OS X
+        // showed their wallpaper sharp through see-through panels).
+        let sc = t.effects.get("scene");
+        let glass = sc.and_then(|s| s.get("surfaces")).and_then(Value::as_str) == Some("translucent")
+            && sc.and_then(|s| s.get("frost")).and_then(Value::as_bool) != Some(false);
         Some(Scene {
+            glass,
             has_motion: layer_motion || effects.moves(),
             motion_fps: if layer_motion { 12.0 } else { 6.0 },
             motion_scale: if layer_motion { 0.5 } else { 0.25 },
@@ -341,6 +348,11 @@ impl Scene {
             drops_size: (0, 0),
             seed: 0x2545_F491,
         })
+    }
+
+    /// A glass theme (its scene's `surfaces` are "translucent"): the picture under its panels is frosted.
+    pub fn glass(&self) -> bool {
+        self.glass
     }
 
     /// Whether anything lies behind the panels (then see-through panels show it).
@@ -393,7 +405,8 @@ impl Scene {
         let (w, h) = ((g.width * scale).round() as usize, (g.height * scale).round() as usize);
         let b = self.back;
         let mut p = Picture::filled(w, h, [b.r, b.g, b.b]);
-        self.effects.behind(&mut p, scale, still);
+        let page = g.region(Some("content"));
+        self.effects.behind(&mut p, scale, still, (page.x + page.w / 2.0) * scale);
         for l in self.layers.clone().iter() {
             if !moving(l) {
                 self.draw(&mut p, l, g, scale, 0.0, Mode::Still);
@@ -444,7 +457,7 @@ impl Scene {
         let g = Geometry { width: w, height: h, title: 0.0, pane: 0.0, player: 0.0, title_end: 0.0 };
         let b = self.back;
         let mut p = Picture::filled((w * scale).round() as usize, (h * scale).round() as usize, [b.r, b.g, b.b]);
-        self.effects.behind(&mut p, scale, true);
+        self.effects.behind(&mut p, scale, true, w * scale / 2.0);
         for l in self.layers.clone().iter().filter(|l| matches!(str_of(l, "in"), None | Some("window"))) {
             if motion_kind(l) == Some("pass") {
                 continue;
@@ -728,20 +741,27 @@ impl Scene {
                 self.drops[i] = d;
                 continue;
             }
-            if d.slide <= 0.0 {
+            if d.slide <= 0.0 && d.v == 0.0 {
                 d.slide = (25.0 + self.rand() * 240.0) * (d.r / 8.0);
             }
             let vmax = 30.0 + d.r * 16.0;
-            d.v = (d.v + vmax * 2.5 * dt).min(vmax);
+            if d.slide > 0.0 {
+                d.v = (d.v + vmax * 2.5 * dt).min(vmax);
+            }
             let dy = d.v * dt;
             d.y += dy;
             d.slide -= dy;
             d.x += (d.y / 27.0 + d.phase).sin() * 0.18;
             d.trail = (d.trail + dt * 1.5).min(0.9);
             if d.slide <= 0.0 {
-                d.v = 0.0;
-                d.wait = 0.3 + self.rand() * 4.5;
-                d.r = (d.r * 0.96).max(3.5);
+                // It's run out of water: it slows, then clings.
+                d.v *= 0.6f32.powf(dt * 24.0);
+                if d.v < 2.0 {
+                    d.v = 0.0;
+                    d.slide = 0.0;
+                    d.wait = 0.3 + self.rand() * 4.5;
+                    d.r = (d.r * 0.96).max(3.5);
+                }
             }
             if d.y > h + 40.0 {
                 d.gone = true;
