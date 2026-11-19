@@ -141,7 +141,7 @@ pub const TOKENS: [(&str, &str); 16] = [
 ];
 
 /// The decorative effects, with the label the editor shows. None of them may flash (docs/THEMES.md).
-pub const EFFECT_KINDS: [(&str, &str); 22] = [
+pub const EFFECT_KINDS: [(&str, &str); 23] = [
     ("synthwave", "Synthwave sun and grid"),
     ("rain", "Neon rain"),
     ("aurora", "Drifting colour behind glass"),
@@ -164,6 +164,7 @@ pub const EFFECT_KINDS: [(&str, &str); 22] = [
     ("neonEdges", "Neon tubes round the panels"),
     ("tiles", "Placeholder cover colours"),
     ("chrome", "Window buttons and bevels of an era"),
+    ("visTint", "Visualizers in the screen's own colour"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]

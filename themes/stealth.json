@@ -43,6 +43,10 @@
     "spotlight": {
       "radius": 560,
       "opacity": 0.42
+    },
+    "visTint": {
+      "back": "#000000",
+      "ink": "#B8B8B8"
     }
   }
 }

@@ -99,6 +99,7 @@ or while Windows' animation effects are off. They also freeze into one fixed fra
 | `vu` | Player pane: left and right VU meters | |
 | `scene` | The theme's own decoration and easter eggs (see "Scenes") | `layers`, `eggs` |
 | `tiles` | Placeholder covers in the theme's own colours (one per station, by name) | `colors` (array), `flat`, `ink` (the antenna; else chosen by brightness), `border` |
+| `visTint` | Classic's visualizers in two colours, like a one-colour screen (dark to bright follows the picture's brightness) | `back` (the darkest), `ink` (the brightest) |
 | `chrome` | Window chrome of an era: caption buttons, 90s bevels on buttons, fields, cards and dialogs, the selection colour, a centred title, a hard card shadow | `captions` (`fluent`, `win95`, `win31`, `xp`, `mac`, `platinum`), `bevel`, `bevelLight`, `bevelHi`, `bevelShadow`, `bevelDark`, `selection`, `selectionText`, `center`, `plate`, `hardShadow` |
 
 **Cost.** Moving effects run on one clock at 24 frames a second, setting composition properties

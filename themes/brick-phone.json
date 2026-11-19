@@ -122,6 +122,10 @@
           "seconds": 20
         }
       ]
+    },
+    "visTint": {
+      "back": "#9DB487",
+      "ink": "#1E2A1A"
     }
   }
 }
