@@ -188,13 +188,13 @@ pub(crate) fn open(app: &Rc<RefCell<App>>, at: Option<(f32, f32)>) {
     };
     let chosen = match host {
         Some(h) => popup(h, &items),
-        None => Err(()),
+        None => Err(driftwave_platform::context_menu::NoNativeMenus),
     };
     match chosen {
         Ok(Some(id)) => run(app, &ui, &id),
         Ok(None) => {}
         // No native menu here: the in-window options.
-        Err(()) => ui.set_options_open(true),
+        Err(_) => ui.set_options_open(true),
     }
 }
 

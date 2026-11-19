@@ -63,9 +63,13 @@ fn build_into(add: &dyn Fn(&dyn tray_icon::menu::IsMenuItem), items: &[Item]) {
     }
 }
 
+/// There are no native menus here (the app shows its own instead).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoNativeMenus;
+
 /// Shows `items` at the pointer and waits for a choice (or none). Returns the chosen item's id; `Err` where there are
 /// no native menus.
-pub fn popup(host: Host, items: &[Item]) -> Result<Option<String>, ()> {
+pub fn popup(host: Host, items: &[Item]) -> Result<Option<String>, NoNativeMenus> {
     let menu = Menu::new();
     build_into(&|i| drop(menu.append(i)), items);
     #[allow(unused_variables)]
@@ -89,7 +93,7 @@ pub fn popup(host: Host, items: &[Item]) -> Result<Option<String>, ()> {
         _ => false,
     };
     if !shown {
-        return Err(());
+        return Err(NoNativeMenus);
     }
     Ok(take(|id| id.starts_with(PREFIX)).into_iter().next().map(|id| id[PREFIX.len()..].to_string()))
 }
