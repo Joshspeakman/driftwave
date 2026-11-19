@@ -61,9 +61,9 @@
         {
           "type": "line",
           "in": "titlebar-full",
-          "x": 74,
+          "x": 34,
           "y": 15,
-          "x2": -236,
+          "x2": -84,
           "y2": 0,
           "stroke": "#9A9A9A",
           "repeat": {
@@ -105,7 +105,8 @@
       "bevelLight": "#FFFFFF",
       "bevelHi": "#EEEEEE",
       "bevelShadow": "#AAAAAA",
-      "bevelDark": "#555555"
+      "bevelDark": "#555555",
+      "platePad": 8
     }
   }
 }

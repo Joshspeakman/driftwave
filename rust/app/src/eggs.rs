@@ -142,7 +142,7 @@ impl App {
             .filter_map(|l| {
                 let id = str_of(l, "id")?.to_string();
                 let r = g.region(str_of(l, "in"));
-                let (x, y) = (r.x + coord(l.get("x"), r.w, 0.0), r.y + coord(l.get("y"), r.h, 0.0));
+                let (x, y) = (r.x + coord(l.get("x"), r.w, 0.0) + num(l, "dx", 0.0) as f32, r.y + coord(l.get("y"), r.h, 0.0) + num(l, "dy", 0.0) as f32);
                 let (w, h) = match str_of(l, "type") {
                     Some("pixels") => {
                         let rows = l.get("rows").and_then(Value::as_array).map(|a| a.to_vec()).unwrap_or_default();

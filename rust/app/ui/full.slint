@@ -134,6 +134,12 @@ export global Scenery {
     in property <image> front;
     // Synthwave's rows rolling towards you (phase 0–1), the scanlines' slow band, and Stealth's spotlight.
     in property <bool> synth-on;
+    in property <bool> sun-on;
+    in property <image> sun;
+    in property <length> sun-x;
+    in property <length> sun-y;
+    in property <length> sun-w;
+    in property <length> sun-h;
     in property <color> synth-grid: #FF2E97;
     in property <float> synth-phase;
     in property <bool> band-on;
@@ -408,41 +414,6 @@ export struct Swatch {
     on: bool,
 }
 
-// A station's picture: its logo, or a soft two-colour tile with an antenna.
-component Cover inherits Rectangle {
-    in property <image> source;
-    in property <bool> has-source;
-    // A small logo (under 128 px) is shown at a size it can carry, centred on its tile, not blown up.
-    in property <bool> small;
-    in property <color> c1: #6B4EA0;
-    in property <color> c2: #C24F8E;
-    border-radius: Th.radius-cover;
-    clip: true;
-    background: has-source && !small ? #00000000 : @linear-gradient(135deg, c1 0%, c2 100%);
-    border-width: Th.tile-border.alpha > 0 && !(has-source && !small) ? 2px : 0px;
-    border-color: Th.tile-border;
-    property <color> mid: root.c1.mix(root.c2, 0.5);
-    property <float> lum: (self.mid.red * 0.299 + self.mid.green * 0.587 + self.mid.blue * 0.114) / 255;
-    property <color> ink: Th.tile-ink.alpha > 0 ? Th.tile-ink : (self.lum > 0.62 ? #000000A6 : #FFFFFFE0);
-    if has-source && !small: Image { width: parent.width; height: parent.height; source: root.source; image-fit: cover; image-rendering: smooth; }
-    if has-source && small: Rectangle {
-        width: parent.width * 0.52; height: self.width;
-        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
-        border-radius: Th.radius-control <= 1px ? 0px : self.width * 0.14; clip: true; background: #FFFFFF;
-        border-width: 1px; border-color: #0000001F;
-        drop-shadow-blur: 10px; drop-shadow-offset-y: 2px; drop-shadow-color: #00000030;
-        // The logo itself is never blown up past 1.25× (small favicons go blocky).
-        property <length> art: min(self.width * 0.82, max(root.source.width, root.source.height) * 1.25px);
-        Image { x: (parent.width - parent.art) / 2; y: (parent.height - parent.art) / 2; width: parent.art; height: parent.art;
-            source: root.source; image-fit: contain; image-rendering: smooth; }
-    }
-    if !has-source: Path {
-        x: parent.width * 0.32; y: parent.height * 0.3; width: parent.width * 0.36; height: parent.height * 0.4;
-        viewbox-width: 24; viewbox-height: 26; fill: transparent; stroke: root.ink; stroke-width: max(1.5px, parent.width / 70);
-        commands: "M 12 10 L 5 26 M 12 10 L 19 26 M 7.5 20 L 16.5 20 M 6 4 Q 2.5 8 6 12 M 18 4 Q 21.5 8 18 12 M 3 1 Q -2 8 3 15 M 21 1 Q 26 8 21 15 M 12 7 L 12 10";
-    }
-}
-
 // A 90s 3D edge: two light lines top and left, two dark ones bottom and right (sunken: the reverse).
 component Bevel inherits Rectangle {
     in property <bool> sunken;
@@ -493,6 +464,44 @@ component RetroButton inherits Rectangle {
     }
     if root.glyph == "box": Rectangle {
         x: root.cx - 3px; y: root.cy - 3px; width: 6px; height: 6px; border-width: 1px; border-color: #555555;
+    }
+}
+
+// A station's picture: its logo, or a soft two-colour tile with an antenna.
+component Cover inherits Rectangle {
+    in property <image> source;
+    in property <bool> has-source;
+    // A small logo (under 128 px) is shown at a size it can carry, centred on its tile, not blown up.
+    in property <bool> small;
+    in property <color> c1: #6B4EA0;
+    in property <color> c2: #C24F8E;
+    border-radius: Th.radius-cover;
+    clip: true;
+    background: has-source && !small ? #00000000 : @linear-gradient(135deg, c1 0%, c2 100%);
+    border-width: Th.tile-border.alpha > 0 && !(has-source && !small) ? 2px : 0px;
+    if Th.bevel && !(root.has-source && !root.small): Bevel { width: parent.width; height: parent.height; sunken: true; }
+    border-color: Th.tile-border;
+    property <color> mid: root.c1.mix(root.c2, 0.5);
+    property <float> lum: (self.mid.red * 0.299 + self.mid.green * 0.587 + self.mid.blue * 0.114) / 255;
+    property <color> ink: Th.tile-ink.alpha > 0 ? Th.tile-ink : (self.lum > 0.62 ? #000000A6 : #FFFFFFE0);
+    if has-source && !small: Image { width: parent.width; height: parent.height; source: root.source; image-fit: cover; image-rendering: smooth; }
+    if has-source && small: Rectangle {
+        width: parent.width * 0.52; height: self.width;
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+        border-radius: Th.radius-control <= 1px ? 0px : self.width * 0.14; clip: true; background: #FFFFFF;
+        border-width: 1px; border-color: #0000001F;
+        drop-shadow-blur: Th.hard-shadow.alpha > 0 ? 0px : 10px;
+        drop-shadow-offset-x: Th.hard-shadow.alpha > 0 ? 3px : 0px; drop-shadow-offset-y: Th.hard-shadow.alpha > 0 ? 3px : 2px;
+        drop-shadow-color: Th.hard-shadow.alpha > 0 ? Th.hard-shadow : #00000030;
+        // The logo itself is never blown up past 1.25× (small favicons go blocky).
+        property <length> art: min(self.width * 0.82, max(root.source.width, root.source.height) * 1.25px);
+        Image { x: (parent.width - parent.art) / 2; y: (parent.height - parent.art) / 2; width: parent.art; height: parent.art;
+            source: root.source; image-fit: contain; image-rendering: smooth; }
+    }
+    if !has-source: Path {
+        x: parent.width * 0.32; y: parent.height * 0.3; width: parent.width * 0.36; height: parent.height * 0.4;
+        viewbox-width: 24; viewbox-height: 26; fill: transparent; stroke: root.ink; stroke-width: max(1.5px, parent.width / 70);
+        commands: "M 12 10 L 5 26 M 12 10 L 19 26 M 7.5 20 L 16.5 20 M 6 4 Q 2.5 8 6 12 M 18 4 Q 21.5 8 18 12 M 3 1 Q -2 8 3 15 M 21 1 Q 26 8 21 15 M 12 7 L 12 10";
     }
 }
 
@@ -657,6 +666,7 @@ component Captions inherits Rectangle {
                 ? (xp-ta.has-hover ? @linear-gradient(180deg, #F08E6A 0%, #D5492F 100%) : @linear-gradient(180deg, #E0573A 0%, #C42B1C 100%))
                 : (xp-ta.has-hover ? @linear-gradient(180deg, #6FA2FF 0%, #2C68E0 100%) : @linear-gradient(180deg, #4E8CF8 0%, #1550D0 100%));
             drop-shadow-blur: 2px; drop-shadow-color: #00000040;
+            Rectangle { x: 2px; y: 2px; width: parent.width - 4px; height: parent.height * 0.4; border-radius: 2px; background: #FFFFFF30; }
             xp-ta := TouchArea {
                 clicked => {
                     if (b == "min") { root.minimize(); }
@@ -808,6 +818,74 @@ component Slider01 inherits Rectangle {
     }
 }
 
+// Customize Theme (editor.rs): your own theme's colours, type, shape and effects, saved as you go.
+export struct TokenRow {
+    key: string,
+    label: string,
+    hex: string,
+    color: color,
+}
+
+export struct EffectRow {
+    key: string,
+    label: string,
+    on: bool,
+}
+
+export global Ed {
+    // The current theme is yours to change.
+    in property <bool> editable;
+    in property <string> name;
+    in property <string> base;
+    in property <[TokenRow]> tokens;
+    in property <string> body-font;
+    in property <string> title-font;
+    in property <string> title-size;
+    in property <int> weight;
+    in property <string> spacing;
+    in property <bool> upper;
+    in property <float> corners;
+    in property <float> cover;
+    in property <[EffectRow]> effects;
+    in-out property <bool> confirm-delete;
+    callback customize();
+    callback import();
+    callback export();
+    callback delete();
+    callback set-name(string);
+    callback set-base(string);
+    callback set-token(string, string);
+    callback set-font(string, string);
+    callback set-size(string);
+    callback set-weight(int);
+    callback set-spacing(string);
+    callback set-upper(bool);
+    callback set-corners(float);
+    callback set-cover(float);
+    callback toggle-effect(string, bool);
+}
+
+// A checkbox with its label.
+component Check inherits Rectangle {
+    in property <string> text;
+    in property <bool> checked;
+    callback toggled(bool);
+    height: 28px;
+    ta := TouchArea { clicked => { root.toggled(!root.checked); } }
+    Rectangle {
+        x: 0; y: (parent.height - 18px) / 2; width: 18px; height: 18px;
+        border-radius: Th.bevel ? 0px : 4px;
+        background: root.checked && !Th.bevel ? Th.accent : (Th.bevel ? Th.bevel-light : Th.control);
+        border-width: root.checked && !Th.bevel ? 0px : 1px; border-color: ta.has-hover ? Th.accent : Th.control-stroke;
+        if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
+        if root.checked: Path {
+            x: 3px; y: 4px; width: 12px; height: 10px; viewbox-width: 12; viewbox-height: 10; fill: transparent; stroke-width: 2px;
+            stroke: Th.bevel ? #000000 : Th.on-accent; commands: "M 1 5 L 4.5 8.5 L 11 1.5";
+        }
+    }
+    Text { x: 28px; y: (parent.height - self.height) / 2; width: parent.width - 28px; text: root.text; color: Th.card-text; font-size: 13px; overflow: elide; }
+}
+
 // A settings card: a heading, a line of explanation, and its controls.
 component SettingsCard inherits Rectangle {
     in property <string> heading;
@@ -870,6 +948,8 @@ export global Dir {
     in property <string> add-error;
     in property <string> add-cover;
     in property <string> message;
+    // How far Settings is scrolled (test runs set it with -scroll).
+    in-out property <length> settings-scroll;
     // What's typed in Search's field.
     in-out property <string> query;
     // A text field has the focus (typed easter-egg words don't count then).
@@ -986,7 +1066,7 @@ component Field inherits Rectangle {
     if Th.bevel: Bevel { width: parent.width; height: parent.height; sunken: true; }
     if input.text == "": Text { x: 10px; y: (parent.height - self.height) / 2; text: root.placeholder; color: Th.control-text.transparentize(45%); font-size: 13px; }
     input := TextInput {
-        x: 10px; y: (parent.height - self.height) / 2; width: parent.width - 20px;
+        x: 10px; y: 0; width: parent.width - 20px; height: parent.height; vertical-alignment: center;
         single-line: true; color: Th.control-text; font-size: 13px;
         accepted => { root.accepted(self.text); }
         changed has-focus => { Dir.typing = self.has-focus; }
@@ -1111,7 +1191,7 @@ export component FullView inherits Rectangle {
             for k in 3: Rectangle { y: (8.5 + k * 2.4) * 1px; height: 1.2px; background: Th.background; }
         }
         if Th.title-center && Th.title-plate.alpha > 0: Rectangle {
-            x: window-title.x - 10px; y: (parent.height - 20px) / 2; width: window-title.width + 20px; height: 20px; background: Th.title-plate;
+            x: window-title.x - 8px; y: (parent.height - 20px) / 2; width: window-title.width + 16px; height: 20px; background: Th.title-plate;
         }
         window-title := Text {
             x: Th.title-center ? (parent.width - self.width) / 2 : 40px;
@@ -1158,6 +1238,7 @@ export component FullView inherits Rectangle {
     }
 
     // ─────────── The content card ───────────
+    Rectangle { x: pane-w; y: root.title-h + root.inset; width: Th.radius-card; height: Th.radius-card; background: Th.pane; }
     Rectangle {
         x: pane-w; y: root.title-h + root.inset; width: parent.width - pane-w - root.inset + (root.inset > 0 ? 0px : 1px);
         height: parent.height - root.title-h - 2 * root.inset + (root.inset > 0 ? 0px : 1px);
@@ -1166,6 +1247,10 @@ export component FullView inherits Rectangle {
         border-width: Th.neon-content-on ? 0px : 1px;
         border-color: Th.card-stroke;
         clip: true;
+        if Scenery.sun-on: Image {
+            x: Scenery.sun-x - root.pane-w; y: Scenery.sun-y - root.title-h - root.inset; width: Scenery.sun-w; height: Scenery.sun-h;
+            source: Scenery.sun; image-fit: fill;
+        }
         // Neon: a tube round the page (the player has its own), 8 px in from the card's edges.
         if Th.neon-content-on: Rectangle {
             x: 8px; y: 8px; width: parent.width - 1px - 16px - (root.show-player ? root.player-w - 4px : 0px); height: parent.height - 1px - 16px;
@@ -1256,7 +1341,7 @@ export component FullView inherits Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
             PageTitle { x: 28px; y: 42px - self.height / 2; text: "Search"; }
             search-box := Field {
-                x: 28px; y: 76px; width: min(420px, parent.width - 56px - 88px); placeholder: "Station name";
+                x: 28px; y: 76px; width: parent.width - 56px - 88px; placeholder: "Station name";
                 text <=> Dir.query;
                 accepted(t) => { Dir.search(t); }
             }
@@ -1280,6 +1365,7 @@ export component FullView inherits Rectangle {
         // Settings.
         if root.page == "settings": Flickable {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
+            content-y <=> Dir.settings-scroll;
             content-height: settings-col.preferred-height + 40px;
             settings-col := VerticalLayout {
                 x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
@@ -1356,6 +1442,113 @@ export component FullView inherits Rectangle {
                         }
                     }
                 }
+                // Customize: make the current theme yours (a copy), or change your own.
+                HorizontalLayout {
+                    spacing: 8px; alignment: start;
+                    Btn { text: Ed.editable ? "Editing Your Theme" : "Customize Theme…"; primary: !Ed.editable; clicked => { Ed.customize(); } }
+                    Btn { text: "Import Theme…"; clicked => { Ed.import(); } }
+                    Btn { text: "Export Theme…"; clicked => { Ed.export(); } }
+                }
+                if Ed.editable: VerticalLayout {
+                    spacing: 12px;
+                    Rectangle { height: 4px; }
+                    GroupHeading { text: "Customize"; }
+                    SettingRow {
+                        label: "Name";
+                        note: "Your theme; built-in themes stay as they are.";
+                        Field { width: 240px; text: Ed.name; accepted(t) => { Ed.set-name(t); } }
+                    }
+                    SettingRow {
+                        label: "Base";
+                        note: "Light or dark: the window's controls and what colours a theme leaves out follow it.";
+                        Segmented { options: ["Light", "Dark"]; current: Ed.base == "light" ? 0 : 1; chosen(i) => { Ed.set-base(i == 0 ? "light" : "dark"); } }
+                    }
+                    SettingsCard {
+                        heading: "Colours";
+                        note: "A hex code each (#RRGGBB, or #AARRGGBB to see through). Press Enter to apply.";
+                        token-grid := Rectangle {
+                            property <int> cols: self.width > 560px ? 2 : 1;
+                            property <length> cw: (self.width - (self.cols - 1) * 16px) / self.cols;
+                            height: Math.ceil(Ed.tokens.length / self.cols) * 40px;
+                            for tk[i] in Ed.tokens: Rectangle {
+                                x: Math.mod(i, token-grid.cols) * (token-grid.cw + 16px); y: Math.floor(i / token-grid.cols) * 40px;
+                                width: token-grid.cw; height: 34px;
+                                Rectangle {
+                                    x: 0; y: 5px; width: 24px; height: 24px; border-radius: Th.bevel ? 0px : 5px;
+                                    background: tk.color; border-width: 1px; border-color: Th.card-stroke;
+                                }
+                                Text { x: 34px; y: (parent.height - self.height) / 2; width: parent.width - 34px - 112px; text: tk.label; color: Th.card-text; font-size: 13px; overflow: elide; }
+                                Field { x: parent.width - 104px; y: 1px; width: 104px; text: tk.hex; accepted(t) => { Ed.set-token(tk.key, t); } }
+                            }
+                        }
+                    }
+                    SettingsCard {
+                        heading: "Type";
+                        note: "Any installed font, or one of Driftwave's own: Orbitron, VT323, Press Start 2P, Share Tech Mono, Space Mono, Shrikhand.";
+                        HorizontalLayout {
+                            spacing: 12px;
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Text font"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 200px; text: Ed.body-font; placeholder: "Segoe UI"; accepted(t) => { Ed.set-font("body", t); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Title font"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 200px; text: Ed.title-font; placeholder: "Same as text"; accepted(t) => { Ed.set-font("title", t); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Title size"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 72px; text: Ed.title-size; accepted(t) => { Ed.set-size(t); } } }
+                            Rectangle { horizontal-stretch: 1; }
+                        }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Title weight"; color: Th.card-text2; font-size: 12px; }
+                                Segmented { options: ["Regular", "Semibold", "Bold", "Black"]; current: Ed.weight; chosen(i) => { Ed.set-weight(i); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Letter spacing"; color: Th.card-text2; font-size: 12px; }
+                                Field { width: 72px; text: Ed.spacing; accepted(t) => { Ed.set-spacing(t); } } }
+                            VerticalLayout { spacing: 4px;
+                                Text { text: "Titles"; color: Th.card-text2; font-size: 12px; }
+                                Segmented { options: ["As Written", "CAPITALS"]; current: Ed.upper ? 1 : 0; chosen(i) => { Ed.set-upper(i == 1); } } }
+                            Rectangle { horizontal-stretch: 1; }
+                        }
+                    }
+                    SettingsCard {
+                        heading: "Shape";
+                        note: "";
+                        HorizontalLayout {
+                            spacing: 24px; alignment: start;
+                            VerticalLayout { spacing: 6px;
+                                Text { text: "Corner radius: " + Math.round(corner-slider.value * 20) + " px"; color: Th.card-text2; font-size: 12px; }
+                                corner-slider := Slider01 { value: Ed.corners; released(v) => { Ed.set-corners(v); } } }
+                            VerticalLayout { spacing: 6px;
+                                Text { text: "Cover roundness: " + Math.round(cover-slider.value * 50) + "%"; color: Th.card-text2; font-size: 12px; }
+                                cover-slider := Slider01 { value: Ed.cover; released(v) => { Ed.set-cover(v); } } }
+                        }
+                    }
+                    SettingsCard {
+                        heading: "Effects";
+                        note: "Each effect uses the theme's colours. Its own settings (colours, sizes) are in the theme file: export it, edit it, import it.";
+                        fx-grid := Rectangle {
+                            property <int> cols: self.width > 560px ? 3 : 2;
+                            property <length> cw: (self.width - (self.cols - 1) * 12px) / self.cols;
+                            height: Math.ceil(Ed.effects.length / self.cols) * 30px;
+                            for fx[i] in Ed.effects: Check {
+                                x: Math.mod(i, fx-grid.cols) * (fx-grid.cw + 12px); y: Math.floor(i / fx-grid.cols) * 30px; width: fx-grid.cw;
+                                text: fx.label; checked: fx.on; toggled(on) => { Ed.toggle-effect(fx.key, on); }
+                            }
+                        }
+                    }
+                    SettingRow {
+                        label: "Delete this theme";
+                        note: Ed.confirm-delete ? "Delete \"" + Ed.name + "\"? This can't be undone." : "Removes your theme for good (exported copies stay).";
+                        HorizontalLayout {
+                            spacing: 8px;
+                            if !Ed.confirm-delete: Btn { text: "Delete Theme…"; clicked => { Ed.confirm-delete = true; } }
+                            if Ed.confirm-delete: Btn { text: "Cancel"; clicked => { Ed.confirm-delete = false; } }
+                            if Ed.confirm-delete: Btn { text: "Delete"; primary: true; clicked => { Ed.delete(); } }
+                        }
+                    }
+                }
                 Rectangle { height: 8px; }
                 GroupHeading { text: "About"; }
                 SettingRow {
@@ -1398,7 +1591,7 @@ export component FullView inherits Rectangle {
                     property <length> cover-s: clamp(240px - self.extra * 0.7, 140px, 240px);
                     property <length> y-name: 24px + self.top + self.cover-s + 16px;
                     property <length> y-song: self.y-name + min(52px, name.preferred-height) + 6px;
-                    property <length> y-ctl: self.y-song + (Decor.lcd ? 80px : 54px);
+                    property <length> y-ctl: self.y-song + (Decor.lcd ? 90px : 54px);
                     property <length> y-dec: self.y-ctl + 56px;
                     property <length> y-rec: self.y-dec + self.bars-h + self.vu-h + (Decor.analyzer || Decor.vu ? 0px : 4px);
                     if Decor.dial: TuningDial { x: 16px; y: 16px; width: parent.width - 32px; }
@@ -1409,7 +1602,7 @@ export component FullView inherits Rectangle {
                     if !Decor.lcd: Text { x: 20px; y: parent.y-song; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; color: Th.card-text; font-size: 13px; font-weight: 600;
                         horizontal-alignment: center; overflow: elide; }
                     if !Decor.lcd: Text { x: 20px; y: parent.y-song + 21px; width: parent.width - 40px; text: root.artist; color: Th.card-text2; font-size: 13px; horizontal-alignment: center; overflow: elide; }
-                    if Decor.lcd: LcdPanel { x: 16px; y: parent.y-song - 6px; width: parent.width - 32px; }
+                    if Decor.lcd: LcdPanel { x: 16px; y: parent.y-song + 4px; width: parent.width - 32px; }
                     if Decor.analyzer: SpectrumBars { x: 16px; y: parent.y-dec; width: parent.width - 32px; }
                     if Decor.vu: HorizontalLayout {
                         x: 16px; y: parent.y-dec + parent.bars-h; width: parent.width - 32px; height: 82px; spacing: 10px;
@@ -1471,6 +1664,10 @@ export component FullView inherits Rectangle {
     }
     // The spotlight: the dark closes in everywhere but round the pointer.
     if Scenery.spot-on: Rectangle {
+        x: root.pane-w; y: root.title-h; width: root.width - root.pane-w; height: root.height - root.title-h;
+        clip: true;
+        Rectangle {
+        x: -root.pane-w; y: -root.title-h; width: root.width; height: root.height;
         property <length> r: Scenery.spot-radius;
         property <color> dark: #000000.transparentize(1 - Scenery.spot-opacity);
         Rectangle {
@@ -1482,6 +1679,7 @@ export component FullView inherits Rectangle {
         Rectangle { x: 0; y: Scenery.spot-y + parent.r; width: root.width; height: max(0px, root.height - Scenery.spot-y - parent.r); background: parent.dark; }
         Rectangle { x: 0; y: Scenery.spot-y - parent.r; width: max(0px, Scenery.spot-x - parent.r); height: parent.r * 2; background: parent.dark; }
         Rectangle { x: Scenery.spot-x + parent.r; y: Scenery.spot-y - parent.r; width: max(0px, root.width - Scenery.spot-x - parent.r); height: parent.r * 2; background: parent.dark; }
+        }
     }
     if Th.frame-on: Rectangle { x: 0; y: 0; width: root.width; height: root.height; border-width: Th.frame-thickness; border-color: Th.frame-color; }
 
@@ -1597,17 +1795,30 @@ export component FullView inherits Rectangle {
             clip: true;
             TouchArea { }
             if Th.bevel: Bevel { width: parent.width; height: parent.height; }
-            if Th.bevel: Rectangle {
+            if Th.bevel && Th.captions == "win95": Rectangle {
                 x: 3px; y: 3px; width: parent.width - 6px; height: 18px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
                 Text { x: 6px; y: (parent.height - self.height) / 2; text: "Station Details"; color: #FFFFFF; font-size: 12px; font-weight: 700; }
                 RetroButton { x: parent.width - 18px; y: 2px; width: 16px; height: 14px; glyph: "close"; clicked => { Dir.details-close(); } }
+            }
+            if Th.bevel && Th.captions == "win31": Rectangle {
+                x: 3px; y: 3px; width: parent.width - 6px; height: 20px; background: Th.selection.alpha > 0 ? Th.selection : #000080;
+                RetroButton { x: 0; y: 0; width: 20px; height: 20px; glyph: ""; clicked => { Dir.details-close(); }
+                    Rectangle { x: 3px; y: 8px; width: 13px; height: 3px; background: #FFFFFF; border-width: 1px; border-color: #000000; } }
+                Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: "Station Details"; color: #FFFFFF; font-size: 12px; font-weight: 700; }
+            }
+            if Th.bevel && Th.captions == "platinum": Rectangle {
+                x: 3px; y: 3px; width: parent.width - 6px; height: 20px; background: #DDDDDD;
+                for k in 6: Rectangle { x: 26px; y: 4px + k * 2px; width: parent.width - 34px; height: 1px; background: #AAAAAA; }
+                Rectangle { x: (parent.width - plat-title.width) / 2 - 8px; y: 0; width: plat-title.width + 16px; height: parent.height; background: #DDDDDD; }
+                plat-title := Text { x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2; text: "Station Details"; color: #000000; font-size: 12px; font-weight: 700; }
+                RetroButton { x: 6px; y: 4px; width: 11px; height: 11px; glyph: "box"; clicked => { Dir.details-close(); } }
             }
             Rectangle { y: parent.height - 64px; height: 64px; background: #0000001A;
                 Rectangle { y: 0; height: 1px; background: Th.divider; } }
             Cover { x: 24px; y: 24px; width: 132px; height: 132px; source: Dir.details.cover; has-source: Dir.details.has-cover;
                 small: Dir.details.small; c1: Dir.details.c1; c2: Dir.details.c2; }
-            Text { x: 172px; y: 28px; width: parent.width - 196px; text: Dir.details.name; color: Th.card-text; font-size: 20px; font-weight: 600; wrap: word-wrap; max-height: 56px; overflow: elide; }
-            Text { x: 172px; y: 88px; width: parent.width - 196px; text: Dir.details.subtitle; color: Th.card-text2; font-size: 13px; overflow: elide; }
+            det-name := Text { x: 172px; y: 28px; width: parent.width - 196px; text: Dir.details.name; color: Th.card-text; font-size: 20px; font-weight: 600; wrap: word-wrap; max-height: 56px; overflow: elide; }
+            Text { x: 172px; y: det-name.y + min(56px, det-name.preferred-height) + 6px; width: parent.width - 196px; text: Dir.details.subtitle; color: Th.card-text2; font-size: 13px; overflow: elide; }
             if Dir.details.local || Dir.details.orphaned: Rectangle {
                 x: 172px; y: 114px; height: 22px; width: tag-text.preferred-width + 16px; border-radius: 11px; background: Th.subtle;
                 tag-text := Text { x: 8px; y: (parent.height - self.height) / 2; color: Th.card-text2; font-size: 11px;

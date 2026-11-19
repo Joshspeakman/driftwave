@@ -619,6 +619,22 @@ impl App {
             crate::paint::frost(&mut back, 0, (g.title * scale).round() as usize, bw, bh, r);
         }
         // The full-window scaled art isn't needed until the next backdrop (motion's pictures are smaller).
+        // Retrowave's sun: its own picture over the page's glass, in its real colours.
+        {
+            let scenery = ui.global::<Scenery>();
+            let page = g.region(Some("content"));
+            match scene.effects().sun_picture(g.width * scale, g.height * scale, (page.x + page.w / 2.0) * scale, scale, 0.4) {
+                Some((p, x, y)) => {
+                    scenery.set_sun(Image::from_rgba8_premultiplied(SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&p.px, p.w as u32, p.h as u32)));
+                    scenery.set_sun_x(x / scale);
+                    scenery.set_sun_y(y / scale);
+                    scenery.set_sun_w(p.w as f32 / scale);
+                    scenery.set_sun_h(p.h as f32 / scale);
+                    scenery.set_sun_on(true);
+                }
+                None => scenery.set_sun_on(false),
+            }
+        }
         scene.forget_large((back.w * back.h / 2) as u64);
         // See-through panels: as see-through as the theme asks, unless the picture behind would drown their text.
         // With motion, a little more (lights pass behind them).

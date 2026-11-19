@@ -402,6 +402,10 @@ impl Scene {
         })
     }
 
+    pub fn effects(&self) -> &Effects {
+        &self.effects
+    }
+
     /// A glass theme (its scene's `surfaces` are "translucent"): the picture under its panels is frosted.
     pub fn glass(&self) -> bool {
         self.glass
@@ -584,8 +588,8 @@ impl Scene {
                 }
             }
             let (w, h) = (coord(l.get("w"), region.w, 10.0) * c.jw, coord(l.get("h"), region.h, 10.0) * c.jh);
-            let x = region.x + coord(l.get("x"), region.w, 0.0) + c.ox + dx;
-            let mut y = region.y + coord(l.get("y"), region.h, 0.0) + c.oy + dy;
+            let x = region.x + coord(l.get("x"), region.w, 0.0) + num(l, "dx", 0.0) as f32 + c.ox + dx;
+            let mut y = region.y + coord(l.get("y"), region.h, 0.0) + num(l, "dy", 0.0) as f32 + c.oy + dy;
             if str_of(l, "anchor") == Some("bottom") {
                 y -= h;
             }
