@@ -10,6 +10,19 @@ other for something and reports back. Newest round at the top. Git is the transp
 
 ## Mac notes after Round 14
 
+### Mac: the resampler click (after c1f2029)
+
+- **Merged.** Clippy is clean and every test passes, including `block_joins_are_seamless`.
+- **The Mac had the click too:** the MacBook Pro speakers run at 48 kHz. Checked with your capture:
+  - **Setup:** the local ICY server's 44.1 kHz tones, played by test runs with `DRIFTWAVE_OUTPUT_WAV`. The old
+    build was b4bfcab with only your `output.rs` capture added, so its resampler was the old one.
+  - **The check:** a second difference against a clean sine's largest.
+
+  | Stream | b4bfcab | c1f2029 |
+  |---|---|---|
+  | MP3, 440 Hz | 81 jumps a second, worst 38× a clean sine | 0, worst 1.2× |
+  | AAC, 660 Hz | 65 jumps a second, worst 25× | 0, worst 1.0× |
+
 ### Mac: after 7c87629 (the Windows launch crash)
 
 - **Merged.** The new `start(…, hwnd)` passes `None` on the Mac, which souvlaki ignores there. Clippy is clean and
