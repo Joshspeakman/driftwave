@@ -29,6 +29,14 @@ export global Pal {
     in-out property <color> glow: #00000000;
     in-out property <string> body-font: "Segoe UI";
     in-out property <string> lcd-font: "Consolas";
+    // The theme's picture as the skin under the panels' faces (see-through then), what lies over everything
+    // (grain, scanlines), and the theme's neon on the panels' edges.
+    in-out property <bool> skin-on;
+    in-out property <image> skin;
+    in-out property <bool> skin-front-on;
+    in-out property <image> skin-front;
+    in-out property <bool> edge-on;
+    in-out property <color> edge: #FF3D88;
 }
 
 export struct StationRow {
@@ -45,12 +53,16 @@ export struct Choice {
 
 // A panel of the player: brushed face, a dark outer line and a light inner one.
 component Frame inherits Rectangle {
-    background: @linear-gradient(180deg, Pal.face.brighter(9%) 0%, Pal.face 38%, Pal.face.darker(10%) 100%);
+    // Over the theme's picture, the face is tinted glass.
+    property <float> see: Pal.skin-on ? 0.4 : 0;
+    background: @linear-gradient(180deg, Pal.face.brighter(9%).transparentize(self.see) 0%, Pal.face.transparentize(self.see) 38%,
+        Pal.face.darker(10%).transparentize(self.see * 0.8) 100%);
     border-width: 1px;
-    border-color: Pal.bevel-dark.darker(25%);
+    border-color: Pal.edge-on ? Pal.edge : Pal.bevel-dark.darker(25%);
     Rectangle {
         x: 1px; y: 1px; width: parent.width - 2px; height: parent.height - 2px;
-        border-width: 1px; border-color: Pal.bevel-light.transparentize(62%); background: transparent;
+        border-width: 1px; background: transparent;
+        border-color: Pal.edge-on ? Pal.edge.mix(#FFFFFF, 0.45).transparentize(0.35) : Pal.bevel-light.transparentize(62%);
     }
     @children
 }
@@ -388,6 +400,9 @@ export component ClassicView inherits Rectangle {
     callback panels-changed();
     callback to-full();
 
+    // The theme's picture, under everything.
+    if Pal.skin-on: Image { x: 0; y: 0; width: root.width; height: root.height; source: Pal.skin; image-fit: fill; }
+
     // ───────────────────────── The player ─────────────────────────
     Frame {
         x: 0; y: 0; width: root.width; height: main-h;
@@ -611,6 +626,9 @@ export component ClassicView inherits Rectangle {
             }
         }
     }
+
+    // Grain and scanlines over everything.
+    if Pal.skin-front-on: Image { x: 0; y: 0; width: root.width; height: root.height; source: Pal.skin-front; image-fit: fill; }
 
     // The resize grip, in the window's bottom-right corner: width scales the player, height grows the list.
     Rectangle {

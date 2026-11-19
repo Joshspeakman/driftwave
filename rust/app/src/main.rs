@@ -22,7 +22,9 @@
 static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod covers;
+mod decor;
 mod effects;
+mod eggs;
 mod finding;
 mod integration;
 mod look;
@@ -203,6 +205,8 @@ struct App {
     covers: covers::Covers,
     find: finding::Finding,
     look: look::Look,
+    decor: decor::Decor,
+    eggs: eggs::Eggs,
     /// The Full layout's cover cards and played songs, updated in place.
     cards: Rc<VecModel<StationCard>>,
     tracks: Rc<VecModel<TrackRow>>,
@@ -727,8 +731,13 @@ impl App {
             let focused = !self.args.flag("inactive")
                 && (self.args.flag("alwaysActive") || ui.window().with_winit_window(|w: &winit::window::Window| w.has_focus()).unwrap_or(true));
             self.tick_look(&ui, now, dt, focused);
+            self.tick_decor(&ui, dt, focused);
+            self.tick_eggs(&ui);
         } else {
             self.park_look(&ui);
+        }
+        if classic && !ui.window().is_minimized() {
+            self.tick_classic_look(&ui, now);
         }
         // Minimised, shaded or in the Full layout: nothing else moves but the clock.
         if ui.window().is_minimized() || ui.get_shaded() || !classic {
@@ -1009,6 +1018,8 @@ fn main() -> Result<(), slint::PlatformError> {
         }),
         find: finding::Finding::default(),
         look: look::Look::default(),
+        decor: decor::Decor::default(),
+        eggs: eggs::Eggs::default(),
         cards: Rc::new(VecModel::default()),
         tracks: Rc::new(VecModel::default()),
         sorting: StationSorting::from_raw_value(sorting_raw.as_deref().unwrap_or("name")).unwrap_or(StationSorting::ALL[0]),
@@ -1026,12 +1037,30 @@ fn main() -> Result<(), slint::PlatformError> {
         let w = app.clone();
         ui.global::<Scenery>().on_motion_chosen(move |on| w.borrow_mut().choose_motion(on));
         let w = app.clone();
+        let weak = ui.as_weak();
         ui.window().on_winit_window_event(move |window, event| {
             match event {
                 winit::event::WindowEvent::CursorMoved { position, .. } => {
                     let p = position.to_logical::<f32>(window.scale_factor() as f64);
                     if let Ok(mut a) = w.try_borrow_mut() {
                         a.look.pointer = Some((p.x, p.y));
+                        a.egg_input();
+                    }
+                }
+                // Easter eggs: keys anywhere, clicks on scene items (the UI still gets both).
+                winit::event::WindowEvent::KeyboardInput { event, .. } if event.state == winit::event::ElementState::Pressed && !event.repeat => {
+                    let full = weak.upgrade().is_some_and(|u| u.get_layout() == "full");
+                    let typing = weak.upgrade().is_some_and(|u| u.global::<Dir>().get_typing());
+                    if let (true, Ok(mut a)) = (full, w.try_borrow_mut()) {
+                        a.egg_key(&event.logical_key, typing);
+                    }
+                }
+                winit::event::WindowEvent::MouseInput { state: winit::event::ElementState::Pressed, button: winit::event::MouseButton::Left, .. } => {
+                    let full = weak.upgrade().is_some_and(|u| u.get_layout() == "full");
+                    if let (true, Ok(mut a)) = (full, w.try_borrow_mut()) {
+                        if let Some(at) = a.look.pointer {
+                            a.egg_click(at);
+                        }
                     }
                 }
                 winit::event::WindowEvent::CursorLeft { .. } => {
@@ -1361,18 +1390,40 @@ fn main() -> Result<(), slint::PlatformError> {
     if let Some(path) = app.borrow().args.get("screenshot").map(String::from) {
         let delay = app.borrow().args.num("screenshotDelay").unwrap_or(4.0);
         let weak = ui.as_weak();
+        // -frames <n> [-frameGap <ms>]: a run of snapshots (name_00.bmp, name_01.bmp…), to judge motion frame by frame.
+        let frames = app.borrow().args.num("frames").map(|n| n.clamp(1.0, 240.0) as usize).unwrap_or(1);
+        let gap = app.borrow().args.num("frameGap").unwrap_or(83.0);
+        let timer = Rc::new(slint::Timer::default());
+        let keep = timer.clone();
         slint::Timer::single_shot(Duration::from_secs_f64(delay), move || {
-            if let Some(ui) = weak.upgrade() {
-                match ui.window().take_snapshot() {
-                    Ok(buf) => {
-                        let _ = save_bmp(&path, &buf);
-                        log(&format!("screenshot {}x{} {path}", buf.width(), buf.height()));
+            let taken = Rc::new(RefCell::new(0usize));
+            let (weak, path, t) = (weak.clone(), path.clone(), keep.clone());
+            keep.start(slint::TimerMode::Repeated, Duration::from_secs_f64((gap / 1000.0).max(0.001)), move || {
+                let n = *taken.borrow();
+                if let Some(ui) = weak.upgrade() {
+                    let file = if frames > 1 { path.replace(".bmp", &format!("_{n:02}.bmp")) } else { path.clone() };
+                    match ui.window().take_snapshot() {
+                        Ok(buf) => {
+                            let _ = save_bmp(&file, &buf);
+                            log(&format!("screenshot {}x{} {file}", buf.width(), buf.height()));
+                        }
+                        Err(e) => log(&format!("screenshot failed: {e}")),
                     }
-                    Err(e) => log(&format!("screenshot failed: {e}")),
                 }
-            }
-            let _ = slint::quit_event_loop();
+                *taken.borrow_mut() += 1;
+                if n + 1 >= frames {
+                    t.stop();
+                    let _ = slint::quit_event_loop();
+                }
+            });
         });
+        std::mem::forget(timer);
+    }
+    // Test runs: -egg <trigger> [-eggAt <s>] sets an easter egg off (konami, type:word, click:id, idle:s).
+    if let Some(trigger) = app.borrow().args.get("egg").map(String::from) {
+        let at = app.borrow().args.num("eggAt").unwrap_or(3.0);
+        let a = app.clone();
+        slint::Timer::single_shot(Duration::from_secs_f64(at), move || a.borrow_mut().egg_test(&trigger));
     }
     // Test runs: -swapAt <s>[,<s>…] swaps the layout mid-run (with the engine playing), to check the swap
     // (and swapping back).
