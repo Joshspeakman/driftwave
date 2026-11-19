@@ -47,6 +47,10 @@ fn short_time() -> String {
             return String::from_utf16_lossy(&buf[..n as usize - 1]);
         }
     }
+    // The Mac: as the person's settings write a short time (12 or 24 hours).
+    if let Some(t) = driftwave_platform::system::short_time() {
+        return t;
+    }
     chrono::Local::now().format("%H:%M").to_string()
 }
 

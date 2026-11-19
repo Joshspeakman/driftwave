@@ -56,6 +56,52 @@ fn their_settings(support: &Path) -> Option<(PathBuf, Value)> {
     Some((path, value))
 }
 
+/// The Mac's Swift app (Shortwave), release and Nightly: its settings were in UserDefaults under these domains,
+/// its station list in `~/Library/Application Support/Shortwave`.
+#[cfg(target_os = "macos")]
+const SWIFT_DOMAINS: [&str; 2] = ["io.github.joshspeakman.Shortwave", "io.github.joshspeakman.Shortwave.Nightly"];
+
+/// macOS: the Swift Shortwave's settings, when this app has no settings yet (read only; it's left as it is).
+#[cfg(target_os = "macos")]
+pub(crate) fn from_swift() -> Option<Value> {
+    use driftwave_platform::system::{app_prefs, PrefValue};
+    for domain in SWIFT_DOMAINS {
+        let prefs = app_prefs(domain, &SAME);
+        if prefs.is_empty() {
+            continue;
+        }
+        let theirs: Map<String, Value> = prefs
+            .into_iter()
+            .map(|(k, v)| {
+                let v = match v {
+                    PrefValue::Str(s) => json!(s),
+                    PrefValue::Num(n) if n.fract() == 0.0 && n.abs() < 1e15 => json!(n as i64),
+                    PrefValue::Num(n) => json!(n),
+                    PrefValue::Bool(b) => json!(b),
+                };
+                (k, v)
+            })
+            .collect();
+        crate::log(&format!("migrated settings from the Swift app ({domain})"));
+        return Some(map_settings(&Value::Object(theirs)));
+    }
+    None
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn from_swift() -> Option<Value> {
+    None
+}
+
+/// The station list to start from on the first launch: the C# Driftwave's, else (Mac) the Swift Shortwave's.
+pub(crate) fn their_library() -> Option<PathBuf> {
+    let mut candidates = vec![AppPaths::for_app("Driftwave").library()];
+    if cfg!(target_os = "macos") {
+        candidates.push(AppPaths::for_app("Shortwave").library());
+    }
+    candidates.into_iter().find(|p| p.exists())
+}
+
 /// The C# app's settings, themes and background, when this app has no settings yet. Returns the settings to use.
 pub(crate) fn from_csharp(paths: &AppPaths) -> Option<Value> {
     from_folder(&AppPaths::for_app("Driftwave"), paths)
@@ -96,6 +142,15 @@ fn from_folder(theirs: &AppPaths, paths: &AppPaths) -> Option<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What the first launch would take from this Mac's Swift app (read only). Prints it; ignored by default:
+    /// `cargo test --release -p driftwave-app swift_settings -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn swift_settings_on_this_mac() {
+        println!("settings: {:?}", from_swift());
+        println!("library: {:?}", their_library());
+    }
 
     #[test]
     fn the_old_apps_settings_carry_over() {
