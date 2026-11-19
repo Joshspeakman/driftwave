@@ -1,6 +1,6 @@
 [package]
 name = "driftwave-app"
-description = "Driftwave: internet radio, in the Classic layout"
+description = "Driftwave: internet radio"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -29,6 +29,12 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 # Royalty-free licence: About says "Made with Slint" (docs/RUST-SCOPE.md).
 # Only the software renderer (measured lighter for this window than the GPU one) and the winit backend.
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "accessibility", "backend-winit", "renderer-software", "unstable-winit-030"] }
+
+# The process's own CPU time: a moving scene steps back to still if it costs too much on this computer.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_Threading"] }
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [build-dependencies]
 slint-build = "1.19"

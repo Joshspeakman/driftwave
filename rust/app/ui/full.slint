@@ -29,10 +29,113 @@ export global Th {
     in-out property <string> title-font: "Segoe UI";
     in-out property <length> title-size: 28px;
     in-out property <int> title-weight: 600;
+    // The window's own title ("windowTitle"); page titles' case, spacing and glow ("titleShadow").
+    in-out property <string> window-title-font: "Segoe UI";
+    in-out property <length> window-title-size: 12px;
+    in-out property <int> window-title-weight: 400;
+    in-out property <color> window-title-color: #FFFFFF;
+    in-out property <bool> title-upper: false;
+    in-out property <length> title-spacing: 0px;
+    in-out property <bool> title-glows: false;
+    in-out property <color> title-glow: transparent;
+    in-out property <length> title-glow-reach: 8px;
+    // Neon tubes round the page and the player ("neonEdges").
+    in-out property <bool> neon-content-on: false;
+    in-out property <color> neon-content: transparent;
+    in-out property <bool> neon-player-on: false;
+    in-out property <color> neon-player: transparent;
+    in-out property <length> neon-reach: 16px;
+    in-out property <float> neon-opacity: 0.8;
     in-out property <length> radius-card: 8px;
     in-out property <length> radius-control: 4px;
     in-out property <length> radius-cover: 10px;
 }
+
+
+// A theme's text in its scene (the title bar's sign, say): where it sits in its region, as a share of the
+// region's size plus px.
+export struct SceneText {
+    text: string,
+    region: string,
+    xf: float,
+    x: length,
+    yf: float,
+    y: length,
+    size: length,
+    ink: color,
+    family: string,
+    weight: int,
+    glows: bool,
+    glow: color,
+    reach: length,
+}
+
+// The theme's scene behind everything (scene.rs paints it): the still backdrop, and what moves on top of it.
+export global Scenery {
+    in property <bool> on;
+    in property <image> back;
+    in property <bool> moving;
+    in property <image> motion;
+    in property <[SceneText]> texts;
+    // The person's choice: scenes that move, or hold still.
+    in property <bool> motion-on: true;
+    callback motion-chosen(bool);
+}
+
+// Text that can glow like neon: a tight halo of copies hugging the letters and a soft haze behind them.
+component GlowText inherits Rectangle {
+    in property <string> text;
+    in property <color> ink;
+    in property <bool> glows;
+    in property <color> glow;
+    in property <length> reach: 6px;
+    in property <string> family;
+    in property <length> size: 14px;
+    in property <int> weight: 400;
+    in property <length> spacing: 0px;
+    in property <bool> upper;
+    property <string> shown: root.upper ? root.text.to-uppercase() : root.text;
+    width: label.preferred-width;
+    height: label.preferred-height;
+    if root.glows: Rectangle {
+        x: root.size * 0.1; y: root.height * 0.28; width: root.width - root.size * 0.2; height: root.height * 0.5;
+        border-radius: self.height / 2;
+        background: root.glow.transparentize(0.93);
+        drop-shadow-blur: root.reach * 1.6;
+        drop-shadow-color: root.glow.transparentize(0.72);
+    }
+    if root.glows: Rectangle {
+        for k in 20: Text {
+            property <bool> inner: k < 8;
+            property <angle> a: inner ? k * 45deg : (k - 8) * 30deg + 15deg;
+            property <length> r: inner ? min(1.2px, root.reach * 0.2) : min(2.8px, root.reach * 0.45);
+            x: r * cos(a);
+            y: r * sin(a);
+            text: root.shown;
+            color: root.glow.transparentize(inner ? 0.55 : 0.8);
+            font-family: root.family; font-size: root.size; font-weight: root.weight; letter-spacing: root.spacing;
+        }
+    }
+    label := Text {
+        x: 0; y: 0;
+        text: root.shown; color: root.ink;
+        font-family: root.family; font-size: root.size; font-weight: root.weight; letter-spacing: root.spacing;
+    }
+}
+
+// A page's title, in the theme's title font and treatment.
+component PageTitle inherits GlowText {
+    ink: Th.text;
+    glows: Th.title-glows;
+    glow: Th.title-glow;
+    reach: Th.title-glow-reach;
+    family: Th.title-font;
+    size: Th.title-size;
+    weight: Th.title-weight;
+    spacing: Th.title-spacing;
+    upper: Th.title-upper;
+}
+
 
 export struct StationCard {
     name: string,
@@ -379,6 +482,11 @@ export component FullView inherits Rectangle {
 
     background: Th.background;
     property <length> pane-w: 220px;
+
+    if Scenery.on: Image { x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.back; image-fit: fill; }
+    if Scenery.on && Scenery.moving: Image {
+        x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.motion; image-fit: fill; image-rendering: smooth;
+    }
     property <length> player-w: show-player ? 312px : 0px;
 
     // ─────────── Title bar ───────────
@@ -394,7 +502,19 @@ export component FullView inherits Rectangle {
             background: @linear-gradient(180deg, #FFD36E 0%, #FF8A70 55%, #FF6FA8 100%);
             for k in 3: Rectangle { y: (8.5 + k * 2.4) * 1px; height: 1.2px; background: Th.background; }
         }
-        Text { x: 40px; y: (parent.height - self.height) / 2; text: "Driftwave"; color: root.active ? Th.title-text : Th.title-text.transparentize(40%); font-size: 12px; }
+        window-title := Text {
+            x: 40px; y: (parent.height - self.height) / 2; text: "Driftwave";
+            color: root.active ? Th.window-title-color : Th.window-title-color.transparentize(40%);
+            font-family: Th.window-title-font; font-size: Th.window-title-size; font-weight: Th.window-title-weight;
+        }
+        for t in Scenery.texts: GlowText {
+            property <length> x0: window-title.x + window-title.width + 16px;
+            visible: t.region == "titlebar";
+            x: self.x0 + (parent.width - 150px - self.x0) * t.xf + t.x;
+            y: parent.height * t.yf + t.y;
+            text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach;
+            family: t.family; size: t.size; weight: t.weight;
+        }
         Caption { x: parent.width - 138px; y: 0; glyph: "min"; clicked => { root.minimize(); } }
         Caption { x: parent.width - 92px; y: 0; glyph: root.maximized ? "restore" : "max"; clicked => { root.toggle-maximize(); } }
         Caption { x: parent.width - 46px; y: 0; glyph: "close"; clicked => { root.quit(); } }
@@ -426,14 +546,28 @@ export component FullView inherits Rectangle {
         x: pane-w; y: 40px; width: parent.width - pane-w; height: parent.height - 40px;
         border-radius: Th.radius-card;
         background: Th.surface;
-        border-width: 1px;
-        border-color: Th.card-stroke;
+        border-width: Th.neon-content-on ? 2px : 1px;
+        border-color: Th.neon-content-on ? Th.neon-content : Th.card-stroke;
         clip: true;
+        // The tube's white-hot core.
+        if Th.neon-content-on: Rectangle {
+            x: 0.6px; y: 0.6px; width: parent.width - 1.2px; height: parent.height - 1.2px;
+            border-width: 0.75px; border-radius: max(0px, Th.radius-card - 0.6px); border-color: Th.neon-content.mix(#FFFFFF, 0.25);
+        }
+
+        // Theme text in the page's scene.
+        for t in Scenery.texts: GlowText {
+            visible: t.region == "content";
+            x: (parent.width - root.player-w) * t.xf + t.x;
+            y: parent.height * t.yf + t.y;
+            text: t.text; ink: t.ink; glows: t.glows; glow: t.glow; reach: t.reach;
+            family: t.family; size: t.size; weight: t.weight;
+        }
 
         // Library.
         if root.page == "library": Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
-            Text { x: 28px; y: 22px; text: "Library"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            PageTitle { x: 28px; y: 22px; text: "Library"; }
             Btn { x: parent.width - self.width - 64px; y: 26px; text: "↕  " + root.sort-name; clicked => { root.cycle-sort(); } }
             Btn {
                 x: parent.width - 56px; y: 26px; width: 32px; text: "···";
@@ -475,7 +609,7 @@ export component FullView inherits Rectangle {
         // Discover: popular stations where you are, trending worldwide, or a random handful.
         if root.page == "discover": Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
-            Text { x: 28px; y: 22px; text: "Discover"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            PageTitle { x: 28px; y: 22px; text: "Discover"; }
             HorizontalLayout {
                 x: 28px; y: 76px; height: 32px; spacing: 8px; alignment: start;
                 Btn { text: "Popular"; primary: Dir.discover-mode == "popular"; clicked => { Dir.discover-mode-chosen("popular"); } }
@@ -499,7 +633,7 @@ export component FullView inherits Rectangle {
         // Search: by name, filtered by country, language and tag, sorted.
         if root.page == "search": Rectangle {
             x: 0; y: 0; width: parent.width - root.player-w; height: parent.height;
-            Text { x: 28px; y: 22px; text: "Search"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+            PageTitle { x: 28px; y: 22px; text: "Search"; }
             search-box := Field {
                 x: 28px; y: 76px; width: min(420px, parent.width - 56px); placeholder: "Station name";
                 accepted(t) => { Dir.search(t); }
@@ -528,7 +662,7 @@ export component FullView inherits Rectangle {
             content-height: settings-col.preferred-height + 40px;
             settings-col := VerticalLayout {
                 x: 28px; y: 22px; width: parent.width - 56px; spacing: 12px; alignment: start;
-                Text { text: "Settings"; color: Th.text; font-family: Th.title-font; font-size: Th.title-size; font-weight: Th.title-weight; }
+                HorizontalLayout { alignment: start; PageTitle { text: "Settings"; } }
                 SettingsCard {
                     heading: "Layout";
                     note: "Full is everything; Classic is the compact player of the Winamp years. Swap any time: the music carries on.";
@@ -546,6 +680,15 @@ export component FullView inherits Rectangle {
                         Btn { text: "Use system setting"; primary: root.appearance == "system"; clicked => { root.choose-appearance("system"); } }
                         Btn { text: "Light"; primary: root.appearance == "light"; clicked => { root.choose-appearance("light"); } }
                         Btn { text: "Dark"; primary: root.appearance == "dark"; clicked => { root.choose-appearance("dark"); } }
+                    }
+                }
+                SettingsCard {
+                    heading: "Moving scenes";
+                    note: "Some themes have a scene that moves, like rain on the glass and people passing by. It moves only while Driftwave is in front, and holds still by itself if it would slow this computer down.";
+                    HorizontalLayout {
+                        spacing: 10px; alignment: start;
+                        Btn { text: "Moving"; primary: Scenery.motion-on; clicked => { Scenery.motion-chosen(true); } }
+                        Btn { text: "Still"; primary: !Scenery.motion-on; clicked => { Scenery.motion-chosen(false); } }
                     }
                 }
                 SettingsCard {
@@ -583,7 +726,13 @@ export component FullView inherits Rectangle {
             x: parent.width - root.player-w; y: 0; width: root.player-w; height: parent.height;
             Rectangle {
                 x: 4px; y: 8px; width: 300px; height: parent.height - 16px;
-                border-radius: Th.radius-card; background: Th.card; border-width: 1px; border-color: Th.card-stroke; clip: true;
+                border-radius: Th.radius-card; background: Th.card; clip: true;
+                border-width: Th.neon-player-on ? 2px : 1px;
+                border-color: Th.neon-player-on ? Th.neon-player : Th.card-stroke;
+                if Th.neon-player-on: Rectangle {
+                    x: 0.6px; y: 0.6px; width: parent.width - 1.2px; height: parent.height - 1.2px;
+                    border-width: 0.75px; border-radius: max(0px, Th.radius-card - 0.6px); border-color: Th.neon-player.mix(#FFFFFF, 0.25);
+                }
                 if root.station == "": VerticalLayout {
                     alignment: center; spacing: 8px; padding: 24px;
                     Text { text: "No Playback"; color: Th.card-text; font-size: 18px; font-weight: 600; horizontal-alignment: center; }
