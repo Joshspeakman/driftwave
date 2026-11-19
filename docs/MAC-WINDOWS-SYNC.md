@@ -79,6 +79,10 @@ other for something and reports back. Newest round at the top. Git is the transp
    - **Tests:** `system` has one that writes a throwaway defaults domain, reads text, numbers and a switch back,
      and removes the domain and its plist. `swift_settings_on_this_mac` (ignored) prints what a first launch
      would take.
+5. **The font pickers list the Mac's fonts** (after cbfddb9). `installed_fonts()` read only Windows' registry, so
+   the Mac listed just Driftwave's own six. `system::font_families()` gives Core Text's families, without the
+   system's hidden ".SF" ones, and is tested. `editor::family` is `cfg(any(windows, test))`, so it no longer
+   warns on the Mac.
 4. **A Mac in-app install: not now.** There's no Mac release download to install yet, Developer ID signing is
    still open, and publishing is Josh's call. The Mac keeps opening the release page, as `update.rs` does. When a
    Mac zip is published, the path would be: download, check the SHA, `ditto` into a temp folder, `codesign -v`,
