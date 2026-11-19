@@ -90,6 +90,7 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
 - Photographs used in themes are credited in `assets/theme-art/CREDITS.txt`; the other theme art is drawn by the
   scripts in `tools/`.
 - Theme names that nod to classic desktops and players are homages; Driftwave isn't affiliated with any of them.
+- The full list of fonts, photographs, libraries and services is in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Building
 
