@@ -75,7 +75,7 @@ fn vu_angle(samples: &[f32]) -> f32 {
     }
     let rms = (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt();
     let db = 20.0 * (rms.max(1e-6) * std::f32::consts::SQRT_2).log10();
-    (-48.0 + (db + 30.0) / 33.0 * 96.0).clamp(-50.0, 50.0)
+    (-48.0 + (db + 30.0) / 33.0 * 96.0).clamp(-48.0, 50.0)
 }
 
 impl App {
