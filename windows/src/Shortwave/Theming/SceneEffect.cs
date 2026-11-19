@@ -198,6 +198,8 @@ public sealed class SceneEffect : WindowEffects.Effect
     FrameworkElement? Build(JsonObject item, Rect region, string? scatterColor, Random? rnd)
     {
         string type = Str(item, "type") ?? "rect";
+        // Parts of the photograph's world (people's lights in the street) leave with the photo for your own background.
+        if (UserBackground && item["withPhoto"] is JsonValue wp && wp.TryGetValue(out bool withPhoto) && withPhoto) return null;
         Brush? Fill(string key = "fill") =>
             key == "fill" && scatterColor != null ? Solid(scatterColor) :
             item[key] is JsonArray stops ? Gradient(stops, Str(item, "angle") ?? "v") :
@@ -390,12 +392,16 @@ public sealed class SceneEffect : WindowEffects.Effect
         return g;
     }
 
-    /// <summary>Slow movement: drift (there and back), scroll (a loop), breathe (opacity), sway (rotation), spin.</summary>
+    /// <summary>
+    /// Slow movement: drift (there and back), scroll (a loop), breathe (opacity), sway (rotation), spin, and pass
+    /// (crosses once, fading in and out, then rests: someone walking by).
+    /// </summary>
     void Animate(FrameworkElement e, JsonObject item, int index, Random? rnd)
     {
         if (item["motion"] is not JsonObject m) return;
         double seconds = Math.Max(2, Num(m, "seconds", 12));
-        double offset = Num(m, "offset", 0) * index + (rnd?.NextDouble() ?? 0) * Num(m, "randomOffset", 0);
+        // start: a fixed time shift for this item; offset: a stagger between repeated items; randomOffset: scattered ones.
+        double offset = Num(m, "start", 0) + Num(m, "offset", 0) * index + (rnd?.NextDouble() ?? 0) * Num(m, "randomOffset", 0);
         switch (Str(m, "kind"))
         {
             case "drift":
@@ -423,7 +429,12 @@ public sealed class SceneEffect : WindowEffects.Effect
                 // Slow, gentle opacity (never under 4 s a cycle: a glow, not a blink).
                 seconds = Math.Max(4, seconds);
                 double lo = Num(m, "min", 0.6), hi = Num(m, "max", 1);
-                EffectsClock.AddTrack(e, (v, t) => v.Opacity = (float)(lo + (hi - lo) * (1 - Math.Cos((t + offset) / seconds * 2 * Math.PI)) / 2));
+                // In 1/100 steps: a step is invisible, and an unchanged opacity doesn't make the window redraw.
+                EffectsClock.AddTrack(e, (v, t) =>
+                {
+                    float o = (float)Math.Round((lo + (hi - lo) * (1 - Math.Cos((t + offset) / seconds * 2 * Math.PI)) / 2) * 100) / 100;
+                    if (v.Opacity != o) v.Opacity = o;
+                });
                 break;
             }
             case "sway":
@@ -433,6 +444,27 @@ public sealed class SceneEffect : WindowEffects.Effect
                 {
                     v.CenterPoint = new Vector3((float)(e.ActualWidth / 2), (float)e.ActualHeight, 0);
                     v.RotationAngleInDegrees = (float)(deg * Math.Sin((t + offset) / seconds * 2 * Math.PI));
+                });
+                break;
+            }
+            case "pass":
+            {
+                // x/y: the whole crossing (px); bob: a walking bounce (px); pause: seconds out of sight before the next.
+                float x = (float)Num(m, "x", 300), y = (float)Num(m, "y", 0), bob = (float)Num(m, "bob", 0);
+                double pause = Math.Max(0, Num(m, "pause", 0)), period = seconds + pause, peak = Num(m, "max", 1);
+                double step = 1.6 + (rnd?.NextDouble() ?? 0.5) * 0.5;   // steps a second
+                EffectsClock.AddTrack(e, (v, t) =>
+                {
+                    double f = ((t + offset) % period + period) % period / seconds;
+                    float o = 0;
+                    if (f <= 1)
+                    {
+                        double edge = Math.Min(1, Math.Min(f, 1 - f) / 0.18);   // fade in over the first 18%, out over the last
+                        o = (float)Math.Round(peak * edge * edge * (3 - 2 * edge) * 100) / 100;
+                        float b = bob * (float)Math.Abs(Math.Sin((t + offset) * step * Math.PI));
+                        v.Properties.InsertVector3("Translation", new Vector3(x * (float)f, y * (float)f - b, 0));
+                    }
+                    if (v.Opacity != o) v.Opacity = o;
                 });
                 break;
             }

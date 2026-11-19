@@ -144,9 +144,30 @@ A `scene` is a list of `layers` (drawn behind the UI unless `"front": true`) and
 - `scroll` (a loop by `x` and `y`);
 - `breathe` (opacity between `min` and `max`, never faster than 4 s a cycle);
 - `sway` (rotation by `angle`);
-- `spin`.
+- `spin`;
+- `pass` (crosses once by `x` and `y`, fading in and out over the first and last 18%, with a walking `bob` in px,
+  then rests for `pause` seconds; `max` is its brightest opacity). Night Market's people in the street use it.
 
-`offset` and `randomOffset` set the phase.
+`start` shifts one item in time, `offset` staggers repeated items, and `randomOffset` scatters them.
+
+`withPhoto: true` marks a layer that belongs to the photograph's world, such as the people's lights in the street.
+It leaves with the photo when you set your own background.
+
+**Rain on the window (`drips`):** drops cling to the glass, then run down in fits and starts, leaving wet trails
+that dry slowly. Each drop is a little lens of the street.
+- `density` sets the drops per 100,000 px² (2.4 by default).
+- Clinging drops cost nothing: the window redraws only while drops run.
+
+**Neon tubes (`neonEdges`):** a bright tube with a white-hot core round the page (`content`), the player card
+(`player`) and the bottom bar (`bar`), with a soft glow (`glow`, its reach in px) spilling round it.
+- It's plain XAML, so screenshots show it.
+- It's steady: neon in Driftwave hums, it never flickers.
+
+**Night Market's art** comes from `windows/tools/make-neon-glass.py`, made from the Kabukichō photograph:
+- the street blurred behind dark tinted glass, with neon bloom and still water beads (each a tiny upside-down lens);
+- a glow layer that breathes over 9 s;
+- the sliding drop sprites;
+- two out-of-focus rain tiles. These are drawn at 4× size and scaled down, so no streak is ever stair-stepped.
 
 **Eggs (`eggs: [{trigger, …}]`):**
 
