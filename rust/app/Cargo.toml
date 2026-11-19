@@ -17,6 +17,11 @@ driftwave-vis = { path = "../vis" }
 driftwave-platform = { path = "../platform" }
 serde_json.workspace = true
 ureq.workspace = true
+uuid.workspace = true
+url.workspace = true
+# Native file dialogs (import, export, a station's cover) and the locale's country (Discover).
+rfd = "0.15"
+sys-locale = "0.3"
 # Station covers: the formats station logos come in (no SVG); decoded small.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "ico", "webp", "bmp"] }
 # Local time for the LCD clock.

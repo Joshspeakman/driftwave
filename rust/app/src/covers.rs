@@ -23,8 +23,6 @@ struct Job {
     source: String,
 }
 
-pub type Delivered = Box<dyn FnOnce(String, Option<SharedPixelBuffer<Rgba8Pixel>>) + Send>;
-
 pub struct Covers {
     jobs: Sender<Job>,
     asked: HashSet<String>,

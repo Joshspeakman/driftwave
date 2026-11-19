@@ -3,8 +3,8 @@
 // window's size; the same engine keeps playing.
 
 import { ClassicView, Pal, StationRow, Choice } from "classic.slint";
-import { FullView, Th, StationCard, TrackRow, Swatch } from "full.slint";
-export { Pal, Th, StationRow, Choice, StationCard, TrackRow, Swatch }
+import { FullView, Th, Dir, Details, StationCard, TrackRow, Swatch } from "full.slint";
+export { Pal, Th, Dir, Details, StationRow, Choice, StationCard, TrackRow, Swatch }
 
 export component MainWindow inherits Window {
     title: "Driftwave";
@@ -98,7 +98,7 @@ export component MainWindow inherits Window {
     in property <color> cover-c2: #C24F8E;
     in property <[TrackRow]> tracks;
     in property <string> sort-name: "Name";
-    in property <bool> maximized;
+    in property <bool> is-maximized;
     in property <[Swatch]> swatches;
     in property <string> appearance: "system";
     in-out property <string> page <=> full.page;
@@ -131,7 +131,7 @@ export component MainWindow inherits Window {
         recording: root.recording;
         record-armed: root.record-armed;
         sort-name: root.sort-name;
-        maximized: root.maximized;
+        maximized: root.is-maximized;
         active: root.active;
         version: root.version;
         themes: root.swatches;
