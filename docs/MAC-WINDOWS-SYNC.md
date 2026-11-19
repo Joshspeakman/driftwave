@@ -8,6 +8,55 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 12 (2026-11-19): recording settings, closing to the tray, the theme editor
+
+**PC (done), recording and Settings (aa85ed2, merged with your eb3a6e8 in 6a1d78d):** new `app/src/played.rs`.
+- **Recording modes:** Off, Save All, or Decide per Track, the default as in the C# and Swift apps.
+  - REC switches between Off and the last mode chosen.
+  - Settings keys: `recordingMode` (`everything`, `decide` or `nothing`) and `recordingModeOn`. The old `record` bool is
+    read when `recordingMode` is missing.
+  - Also `recordingMinimumDuration`, `recordingMaximumDuration`, `trackDirectory` (default `Music/Driftwave`,
+    `storage::default_track_directory`), `pastTracksCount` (10), `backgroundPlayback` (true) and `notifications`.
+- **Played Tracks:**
+  - rows carry `can-save`, `saved`, `recording` and `queued`;
+  - Save on a recorded song saves it on a background thread; on a song still recording, it saves when the song ends;
+  - the recorder's `Started` events are matched to heard titles, since the recorder runs ahead by the buffer;
+  - the list now carries across stations.
+- **Temporary recordings** last until quit, or until their song drops off the list. `stop()` no longer deletes them.
+  A non-test start clears `caches/Recording`, since only one copy runs per data folder.
+- **Closing the window:** `ui.on_quit` and `on_close_requested` call `played::close_window`.
+  - With the tray up, the window is hidden. Playback stops only if background playback is off.
+  - Without a tray, closing quits. The tray's Quit calls `played::quit_app`.
+  - `main` now runs `slint::run_event_loop_until_quit()` instead of `ui.run()`.
+  - **Mac:** check that the menu-bar Show brings the window back. A Dock click on a hidden window may need a
+    reopen hook.
+- **Notifications toggle:** greyed out when `Integration::notifications_available()` is false. On the Mac it asks
+  permission when turned on and goes back off if refused (`request_notifications` is now used).
+- **Test flags:** `-recordingMode`, `-recordingMinimumDuration`, `-recordingMaximumDuration`, `-trackDirectory` and
+  `-pastTracksCount` become the test run's settings. `scripts/recording-test.ps1` now passes against the app
+  (`SHORTWAVE_APP=…\driftwave.exe`), with MP3 and AAC tagged and decoding.
+  - `-saveTrack <s>:<row>` presses Save; `-giphy` opens the GIPHY search; `-customize`, `-scroll <px>` and
+    `-appearance` also exist.
+  - Recorder states are logged as `recorder started "<title>" <state>`.
+- **New controls in `full.slint`:**
+  - `Switch` (Fluent's, or a checkbox in bevel themes), `Stepper` and `ColourPicker`;
+  - `Th.light-ui`;
+  - a `Timer`-driven message toast that fades in and leaves after 5 s.
+
+**PC (done), review pass 3 (same commit):**
+- **Customize:** reopens your existing "(Mine)" copy instead of duplicating it. Test runs keep theme copies in
+  memory and don't load user themes from disk.
+- **Retrowave:** the sun is now r = 0.15 × min(w, h) at alpha 0.7.
+- **The content card's corner:** a concave fillet.
+- **Your own background:** a title-bar scrim.
+- **Era dialogs:** offset by their caption.
+- **Default's tiles:** olive is remapped to amber.
+
+**Asks for the Mac:**
+1. Merge, run clippy and the tests, and check closing to the menu bar and coming back (above).
+2. Notifications: turn the toggle on in a bundled build and see that a song change notifies.
+3. Run `scripts/recording-test.sh`, if it passes the same flags to the app, against the GUI build.
+
 ## Round 11 (2026-11-18): stage 2, finding stations; and the themes' look
 
 **PC (done), stage 2 (fd5cb0a):** finding stations, in `app/src/finding.rs` and `ui/full.slint`.
