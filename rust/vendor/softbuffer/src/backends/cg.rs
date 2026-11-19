@@ -1,16 +1,11 @@
 //! Softbuffer implementation using CoreGraphics.
 use crate::backend_interface::*;
-use std::sync::{Arc, Mutex};
 use crate::error::InitError;
 use crate::{util, Rect, SoftBufferError};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool};
 use objc2::{define_class, msg_send, AllocAnyThread, DefinedClass, MainThreadMarker, Message};
-use objc2_core_foundation::{CFRetained, CGPoint};
-use objc2_core_graphics::{
-    CGBitmapInfo, CGColorRenderingIntent, CGColorSpace, CGDataProvider, CGImage, CGImageAlphaInfo,
-    CGImageByteOrderInfo, CGImageComponentInfo, CGImagePixelFormatInfo,
-};
+use objc2_core_foundation::CGPoint;
 use objc2_foundation::{
     ns_string, NSDictionary, NSKeyValueChangeKey, NSKeyValueChangeNewKey,
     NSKeyValueObservingOptions, NSNumber, NSObject, NSObjectNSKeyValueObserverRegistration,
@@ -19,12 +14,137 @@ use objc2_foundation::{
 use objc2_quartz_core::{kCAGravityTopLeft, CALayer, CATransaction};
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawWindowHandle};
 
+use std::collections::VecDeque;
 use std::ffi::c_void;
 use std::marker::PhantomData;
-use std::mem::size_of;
 use std::num::NonZeroU32;
 use std::ops::Deref;
-use std::ptr::{self, slice_from_raw_parts_mut, NonNull};
+use std::ptr;
+
+/// Driftwave: presenting through IOSurfaces instead of a new CGImage per frame.
+///
+/// Upstream softbuffer made a new zeroed buffer every frame (age 0: the renderer redrew the whole
+/// window) and wrapped it in a CGImage tagged device RGB, which macOS colour-matched to the display
+/// on the CPU (vImage) at full Retina size: most of Driftwave's CPU on a MacBook Pro.
+///
+/// Here the renderer draws into one persistent buffer (age 1: it redraws only what changed). Only the
+/// changed rectangles are copied into an IOSurface tagged sRGB, which becomes the layer's contents;
+/// the window server colour-matches IOSurfaces on the GPU, so colours stay exact. A few surfaces
+/// rotate so one isn't written while the window server is still showing it.
+#[allow(non_upper_case_globals)]
+mod iosurface {
+    use std::ffi::c_void;
+    use std::ptr;
+
+    pub type IOSurfaceRef = *mut c_void;
+    type CFTypeRef = *const c_void;
+    type CFStringRef = *const c_void;
+
+    #[repr(C)]
+    pub struct CallBacks {
+        _private: [u8; 0],
+    }
+
+    #[link(name = "IOSurface", kind = "framework")]
+    extern "C" {
+        static kIOSurfaceWidth: CFStringRef;
+        static kIOSurfaceHeight: CFStringRef;
+        static kIOSurfaceBytesPerElement: CFStringRef;
+        static kIOSurfacePixelFormat: CFStringRef;
+        static kIOSurfaceColorSpace: CFStringRef;
+        fn IOSurfaceCreate(properties: CFTypeRef) -> IOSurfaceRef;
+        pub fn IOSurfaceLock(surface: IOSurfaceRef, options: u32, seed: *mut u32) -> i32;
+        pub fn IOSurfaceUnlock(surface: IOSurfaceRef, options: u32, seed: *mut u32) -> i32;
+        pub fn IOSurfaceGetBaseAddress(surface: IOSurfaceRef) -> *mut c_void;
+        pub fn IOSurfaceGetBytesPerRow(surface: IOSurfaceRef) -> usize;
+        pub fn IOSurfaceIsInUse(surface: IOSurfaceRef) -> u8;
+        fn IOSurfaceSetValue(surface: IOSurfaceRef, key: CFStringRef, value: CFTypeRef);
+    }
+
+    #[link(name = "CoreFoundation", kind = "framework")]
+    extern "C" {
+        static kCFTypeDictionaryKeyCallBacks: CallBacks;
+        static kCFTypeDictionaryValueCallBacks: CallBacks;
+        fn CFDictionaryCreate(
+            allocator: *const c_void,
+            keys: *const CFTypeRef,
+            values: *const CFTypeRef,
+            count: isize,
+            key_callbacks: *const CallBacks,
+            value_callbacks: *const CallBacks,
+        ) -> CFTypeRef;
+        fn CFNumberCreate(allocator: *const c_void, number_type: isize, value: *const c_void) -> CFTypeRef;
+        pub fn CFRelease(cf: CFTypeRef);
+    }
+
+    #[link(name = "CoreGraphics", kind = "framework")]
+    extern "C" {
+        static kCGColorSpaceSRGB: CFStringRef;
+        fn CGColorSpaceCreateWithName(name: CFStringRef) -> *mut c_void;
+        fn CGColorSpaceCopyPropertyList(space: *mut c_void) -> CFTypeRef;
+        fn CGColorSpaceRelease(space: *mut c_void);
+    }
+
+    const CF_NUMBER_SINT32: isize = 3;
+    /// 'BGRA': softbuffer's 0x00RRGGBB pixels in memory order, with alpha set on copy.
+    const PIXEL_FORMAT_BGRA: i32 = 0x4247_5241;
+
+    /// A width × height BGRA surface tagged sRGB, or null.
+    pub fn create(width: usize, height: usize) -> IOSurfaceRef {
+        // SAFETY: plain CoreFoundation / IOSurface calls; everything created here is released here,
+        // except the surface itself (released by `Surface`'s Drop).
+        unsafe {
+            let values = [width as i32, height as i32, 4, PIXEL_FORMAT_BGRA];
+            let numbers = values.map(|v| CFNumberCreate(ptr::null(), CF_NUMBER_SINT32, &v as *const i32 as *const c_void));
+            let keys = [kIOSurfaceWidth, kIOSurfaceHeight, kIOSurfaceBytesPerElement, kIOSurfacePixelFormat];
+            let dict = CFDictionaryCreate(
+                ptr::null(),
+                keys.as_ptr(),
+                numbers.as_ptr(),
+                4,
+                &kCFTypeDictionaryKeyCallBacks,
+                &kCFTypeDictionaryValueCallBacks,
+            );
+            let surface = IOSurfaceCreate(dict);
+            CFRelease(dict);
+            for n in numbers {
+                CFRelease(n);
+            }
+            if !surface.is_null() {
+                let space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+                if !space.is_null() {
+                    let plist = CGColorSpaceCopyPropertyList(space);
+                    if !plist.is_null() {
+                        IOSurfaceSetValue(surface, kIOSurfaceColorSpace, plist);
+                        CFRelease(plist);
+                    }
+                    CGColorSpaceRelease(space);
+                }
+            }
+            surface
+        }
+    }
+}
+
+/// One IOSurface and the frame whose content it last received.
+#[derive(Debug)]
+struct Surface {
+    surface: iosurface::IOSurfaceRef,
+    width: usize,
+    height: usize,
+    frame: u64,
+}
+
+// SAFETY: IOSurfaces are thread-safe objects; we only lock and write one from the thread presenting.
+unsafe impl Send for Surface {}
+unsafe impl Sync for Surface {}
+
+impl Drop for Surface {
+    fn drop(&mut self) {
+        // SAFETY: we own one reference from IOSurfaceCreate.
+        unsafe { iosurface::CFRelease(self.surface as *const c_void) };
+    }
+}
 
 define_class!(
     #[unsafe(super(NSObject))]
@@ -104,17 +224,19 @@ pub struct CGImpl<D, W> {
     /// Can also be retrieved from `layer.superlayer()`.
     root_layer: SendCALayer,
     observer: Retained<Observer>,
-    color_space: CFRetained<CGColorSpace>,
     /// The width of the underlying buffer.
     width: usize,
     /// The height of the underlying buffer.
     height: usize,
-    /// Driftwave: buffers Core Animation has finished with, each with the frame it was presented as.
-    /// Drawing into one of these (instead of a new, zeroed buffer each frame) lets the renderer redraw
-    /// only what changed since that buffer was last shown (buffer age 1 or 2), with no copying.
-    pool: Arc<Mutex<Vec<(Box<[u32]>, u64)>>>,
-    /// Frames presented so far.
+    /// Driftwave (see `iosurface`): the persistent drawing buffer and whether it holds the last frame.
+    canvas: Vec<u32>,
+    canvas_valid: bool,
+    /// The surfaces in rotation, which one is the layer's contents now, frames presented so far, and
+    /// the damage of the last few frames (to bring an older surface up to date).
+    surfaces: Vec<Surface>,
+    current: Option<usize>,
     frame: u64,
+    damage: VecDeque<(u64, Vec<Rect>)>,
     window_handle: W,
     _display: PhantomData<D>,
 }
@@ -232,13 +354,6 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> SurfaceInterface<D, W> for CGImpl<
         // resized to something that doesn't fit, see #177.
         layer.setContentsGravity(unsafe { kCAGravityTopLeft });
 
-        // Initialize color space here, to reduce work later on.
-        //
-        // Driftwave: sRGB rather than device RGB. Device RGB never matches the window's colour space,
-        // so Core Animation colour-matched every presented frame on the CPU (vImage) at full Retina
-        // size, which was most of the app's CPU on a MacBook. The app gives the window sRGB too, so
-        // frames go through untouched and the window server converts for the display on the GPU.
-        let color_space = objc2_core_graphics::CGDisplayCopyColorSpace(objc2_core_graphics::CGMainDisplayID());
 
         // Grab initial width and height from the layer (whose properties have just been initialized
         // by the observer using `NSKeyValueObservingOptionInitial`).
@@ -251,9 +366,12 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> SurfaceInterface<D, W> for CGImpl<
             layer: SendCALayer(layer),
             root_layer: SendCALayer(root_layer),
             observer,
-            color_space,
-            pool: Arc::new(Mutex::new(Vec::new())),
+            canvas: Vec::new(),
+            canvas_valid: false,
+            surfaces: Vec::new(),
+            current: None,
             frame: 0,
+            damage: VecDeque::new(),
             width,
             height,
             _display: PhantomData,
@@ -268,7 +386,7 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> SurfaceInterface<D, W> for CGImpl<
 
     fn resize(&mut self, width: NonZeroU32, height: NonZeroU32) -> Result<(), SoftBufferError> {
         if (self.width, self.height) != (width.get() as usize, height.get() as usize) {
-            self.pool.lock().unwrap().clear();
+            self.canvas_valid = false;
         }
         self.width = width.get() as usize;
         self.height = height.get() as usize;
@@ -277,30 +395,35 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> SurfaceInterface<D, W> for CGImpl<
 
     fn buffer_mut(&mut self) -> Result<BufferImpl<'_, D, W>, SoftBufferError> {
         let len = self.width * self.height;
-        // The most recently presented free buffer of the right size.
-        let reused = {
-            let mut pool = self.pool.lock().unwrap();
-            pool.retain(|(b, _)| b.len() == len);
-            let best = pool.iter().enumerate().max_by_key(|(_, (_, f))| *f).map(|(i, _)| i);
-            best.map(|i| pool.swap_remove(i))
+        let (buffer, age) = if self.canvas_valid && self.canvas.len() == len {
+            (std::mem::take(&mut self.canvas), 1)
+        } else {
+            (vec![0; len], 0)
         };
-        let (buffer, age) = match reused {
-            // Age: frames since this buffer's content was on screen (1 = the last frame).
-            Some((b, presented)) => {
-                let age = self.frame + 1 - presented;
-                (b.into_vec(), if age <= 2 { age as u8 } else { 0 })
-            }
-            None => (vec![0; len], 0),
-        };
-        Ok(BufferImpl { buffer: util::PixelBuffer(buffer), age, imp: self })
+        Ok(BufferImpl { buffer: Some(util::PixelBuffer(buffer)), age, imp: self })
     }
 }
 
 #[derive(Debug)]
 pub struct BufferImpl<'a, D, W> {
     imp: &'a mut CGImpl<D, W>,
-    buffer: util::PixelBuffer,
+    /// Taken on present; given back to the surface if the buffer is dropped without presenting.
+    buffer: Option<util::PixelBuffer>,
     age: u8,
+}
+
+impl<D, W> Drop for BufferImpl<'_, D, W> {
+    fn drop(&mut self) {
+        if let Some(b) = self.buffer.take() {
+            // Not presented: what's in it is still the last frame plus nothing shown, so keep it only
+            // if it was the last frame to begin with.
+            if self.age == 1 {
+                self.imp.canvas = b.0;
+            } else {
+                self.imp.canvas_valid = false;
+            }
+        }
+    }
 }
 
 impl<D: HasDisplayHandle, W: HasWindowHandle> BufferInterface for BufferImpl<'_, D, W> {
@@ -314,12 +437,12 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> BufferInterface for BufferImpl<'_,
 
     #[inline]
     fn pixels(&self) -> &[u32] {
-        &self.buffer
+        self.buffer.as_ref().expect("buffer")
     }
 
     #[inline]
     fn pixels_mut(&mut self) -> &mut [u32] {
-        &mut self.buffer
+        self.buffer.as_mut().expect("buffer")
     }
 
     fn age(&self) -> u8 {
@@ -331,91 +454,99 @@ impl<D: HasDisplayHandle, W: HasWindowHandle> BufferInterface for BufferImpl<'_,
         self.present_with_damage(&[full])
     }
 
-    fn present_with_damage(self, _damage: &[Rect]) -> Result<(), SoftBufferError> {
-        // The whole buffer is handed over; the damage only told the renderer what it had to redraw.
-        self.present_frame()
-    }
-}
-
-impl<D: HasDisplayHandle, W: HasWindowHandle> BufferImpl<'_, D, W> {
-    fn present_frame(self) -> Result<(), SoftBufferError> {
-        /// Where a buffer goes back to when Core Animation is done with it.
-        struct ReleaseInfo {
-            pool: Arc<Mutex<Vec<(Box<[u32]>, u64)>>>,
-            frame: u64,
+    fn present_with_damage(mut self, damage: &[Rect]) -> Result<(), SoftBufferError> {
+        let (w, h) = (self.imp.width, self.imp.height);
+        let full = Rect { x: 0, y: 0, width: self.width(), height: self.height() };
+        let damage: Vec<Rect> = if self.age == 0 || damage.is_empty() { vec![full] } else { damage.to_vec() };
+        let imp = &mut *self.imp;
+        imp.canvas = self.buffer.take().expect("buffer").0;
+        imp.canvas_valid = true;
+        imp.frame += 1;
+        imp.damage.push_back((imp.frame, damage));
+        while imp.damage.len() > 6 {
+            imp.damage.pop_front();
         }
 
-        unsafe extern "C-unwind" fn release(
-            info: *mut c_void,
-            data: NonNull<c_void>,
-            size: usize,
-        ) {
-            let data = data.cast::<u32>();
-            let slice = slice_from_raw_parts_mut(data.as_ptr(), size / size_of::<u32>());
-            // SAFETY: This is the same slice that we passed to `Box::into_raw` below, and `info` the
-            // ReleaseInfo box made with it.
-            let buffer = unsafe { Box::from_raw(slice) };
-            let info = unsafe { Box::from_raw(info.cast::<ReleaseInfo>()) };
-            let ReleaseInfo { pool, frame } = *info;
-            if let Ok(mut pool) = pool.lock() {
-                if pool.len() < 3 {
-                    pool.push((buffer, frame));
+        // A surface of the right size that the window server isn't using, the most up to date first.
+        imp.surfaces.retain(|s| s.width == w && s.height == h);
+        if imp.current.is_some_and(|c| c >= imp.surfaces.len()) {
+            imp.current = None;
+        }
+        let current = imp.current;
+        let free = imp
+            .surfaces
+            .iter()
+            .enumerate()
+            // SAFETY: a live surface we own.
+            .filter(|(i, s)| Some(*i) != current && unsafe { iosurface::IOSurfaceIsInUse(s.surface) } == 0)
+            .max_by_key(|(_, s)| s.frame)
+            .map(|(i, _)| i);
+        let index = match free {
+            Some(i) => i,
+            None if imp.surfaces.len() < 4 => {
+                let surface = iosurface::create(w, h);
+                if surface.is_null() {
+                    return Err(SoftBufferError::PlatformError(Some("IOSurfaceCreate failed".into()), None));
                 }
-            };
-        }
-
-        self.imp.frame += 1;
-        let data_provider = {
-            let len = self.buffer.len() * size_of::<u32>();
-            let buffer: *mut [u32] = Box::into_raw(self.buffer.0.into_boxed_slice());
-            // Convert slice pointer to thin pointer.
-            let data_ptr = buffer.cast::<c_void>();
-            let info = Box::into_raw(Box::new(ReleaseInfo { pool: self.imp.pool.clone(), frame: self.imp.frame }));
-
-            // SAFETY: The data pointer and length are valid; `info` is freed by `release`.
-            unsafe {
-                CGDataProvider::with_data(info.cast::<c_void>(), data_ptr, len, Some(release)).unwrap()
+                imp.surfaces.push(Surface { surface, width: w, height: h, frame: 0 });
+                imp.surfaces.len() - 1
             }
+            // All busy: take the oldest that isn't on screen.
+            None => imp
+                .surfaces
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| Some(*i) != current)
+                .min_by_key(|(_, s)| s.frame)
+                .map(|(i, _)| i)
+                .unwrap_or(0),
         };
 
-        // `CGBitmapInfo` consists of a combination of `CGImageAlphaInfo`, `CGImageComponentInfo`
-        // `CGImageByteOrderInfo` and `CGImagePixelFormatInfo` (see e.g. `CGBitmapInfoMake`).
-        //
-        // TODO: Use `CGBitmapInfo::new` once the next version of objc2-core-graphics is released.
-        let bitmap_info = CGBitmapInfo(
-            CGImageAlphaInfo::NoneSkipFirst.0
-                | CGImageComponentInfo::Integer.0
-                | CGImageByteOrderInfo::Order32Little.0
-                | CGImagePixelFormatInfo::Packed.0,
-        );
-
-        let image = unsafe {
-            CGImage::new(
-                self.imp.width,
-                self.imp.height,
-                8,
-                32,
-                self.imp.width * 4,
-                Some(&self.imp.color_space),
-                bitmap_info,
-                Some(&data_provider),
-                ptr::null(),
-                false,
-                CGColorRenderingIntent::RenderingIntentDefault,
-            )
+        // What this surface is missing: the damage of every frame since it was last updated, or all of
+        // it if that's further back than we remember.
+        let since = imp.surfaces[index].frame;
+        let remembered = imp.damage.front().is_some_and(|(f, _)| *f <= since + 1);
+        let rects: Vec<Rect> = if since == 0 || !remembered {
+            vec![full]
+        } else {
+            imp.damage.iter().filter(|(f, _)| *f > since).flat_map(|(_, r)| r.iter().copied()).collect()
+        };
+        let surface = imp.surfaces[index].surface;
+        // SAFETY: the surface is ours and locked while we write inside its bounds.
+        unsafe {
+            iosurface::IOSurfaceLock(surface, 0, ptr::null_mut());
+            let base = iosurface::IOSurfaceGetBaseAddress(surface) as *mut u8;
+            let stride = iosurface::IOSurfaceGetBytesPerRow(surface);
+            for r in &rects {
+                let x0 = (r.x as usize).min(w);
+                let x1 = (r.x as usize + r.width.get() as usize).min(w);
+                for y in (r.y as usize).min(h)..(r.y as usize + r.height.get() as usize).min(h) {
+                    let src = &imp.canvas[y * w + x0..y * w + x1];
+                    let dst = std::slice::from_raw_parts_mut(base.add(y * stride).cast::<u32>().add(x0), x1 - x0);
+                    for (d, s) in dst.iter_mut().zip(src) {
+                        *d = *s | 0xFF00_0000; // opaque
+                    }
+                }
+            }
+            iosurface::IOSurfaceUnlock(surface, 0, ptr::null_mut());
         }
-        .unwrap();
+        imp.surfaces[index].frame = imp.frame;
 
         // The CALayer has a default action associated with a change in the layer contents, causing
         // a quarter second fade transition to happen every time a new buffer is applied. This can
         // be avoided by wrapping the operation in a transaction and disabling all actions.
         CATransaction::begin();
         CATransaction::setDisableActions(true);
-
-        // SAFETY: The contents is `CGImage`, which is a valid class for `contents`.
-        unsafe { self.imp.layer.setContents(Some(image.as_ref())) };
-
+        // SAFETY: an IOSurfaceRef is a valid object for `contents` (toll-free bridged to IOSurface).
+        unsafe {
+            let object = &*(surface as *const AnyObject);
+            imp.layer.setContents(Some(object));
+            if current == Some(index) {
+                let _: () = msg_send![&**imp.layer, setContentsChanged];
+            }
+        }
         CATransaction::commit();
+        imp.current = Some(index);
         Ok(())
     }
 }

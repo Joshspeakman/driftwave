@@ -1068,7 +1068,6 @@ dependencies = [
  "driftwave-audio",
  "driftwave-core",
  "driftwave-vis",
- "objc2 0.6.5",
  "serde_json",
  "slint",
  "slint-build",

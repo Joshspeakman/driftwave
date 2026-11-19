@@ -22,7 +22,7 @@ fn main() {
     let seconds: f64 = rest.get(2).and_then(|s| s.parse().ok()).unwrap_or(12.0);
     let rate = 44100u32;
     let audio: Vec<f32> = match audio_file {
-        Some(p) => std::fs::read(p).unwrap().chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect(),
+        Some(p) => std::fs::read(p).unwrap().as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect(),
         None => synth(rate, seconds + 1.0, |t| {
             let tau = std::f64::consts::TAU;
             let beat = t % (60.0 / 124.0);

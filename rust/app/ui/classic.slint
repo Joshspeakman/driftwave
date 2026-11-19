@@ -372,6 +372,9 @@ export component ClassicWindow inherits Window {
 
     callback drag();
     callback resize();
+    // Where the OS can't resize from the corner (winit on macOS): the grip resizes by the mouse's travel.
+    in property <bool> manual-resize;
+    callback resize-by(length, length);
     callback minimize();
     callback quit();
     callback play();
@@ -628,6 +631,8 @@ export component ClassicWindow inherits Window {
         TouchArea {
             mouse-cursor: nwse-resize;
             pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.resize(); } }
+            // The grip moves with the corner, so the travel since the press is always the next step.
+            moved => { if (root.manual-resize && self.pressed) { root.resize-by(self.mouse-x - self.pressed-x, self.mouse-y - self.pressed-y); } }
         }
     }
 

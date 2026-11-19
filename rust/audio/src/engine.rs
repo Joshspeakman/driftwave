@@ -217,10 +217,9 @@ fn control(output: Arc<OutputShared>, stop: Arc<AtomicBool>, timeline: Arc<Timel
     let mut current: Option<String> = None;
     let mut format: Option<StreamFormat> = None;
     while !stop.load(Ordering::Relaxed) {
-        let f = timeline.stream_format();
-        if f.is_some() && f != format {
-            format = f;
-            let _ = tx.send(Event::Format(f.unwrap()));
+        if let Some(f) = timeline.stream_format().filter(|f| Some(*f) != format) {
+            format = Some(f);
+            let _ = tx.send(Event::Format(f));
         }
         let buffered = output.buffered_seconds();
         let ended = timeline.ended.load(Ordering::Relaxed);

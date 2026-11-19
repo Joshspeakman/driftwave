@@ -94,6 +94,7 @@ impl Canvas {
     }
 
     /// An antialiased line. `width` over 1 adds a soft glow around a crisp core.
+    #[allow(clippy::too_many_arguments)] // two points, colour, alpha and width: grouping them helps no caller
     pub fn line(&mut self, x0: f32, y0: f32, x1: f32, y1: f32, c: Rgb, a: f32, width: f32) {
         let len = ((x1 - x0).powi(2) + (y1 - y0).powi(2)).sqrt();
         let steps = (len * 2.0).ceil().max(1.0) as usize;
@@ -148,7 +149,7 @@ impl Canvas {
         // 0..4 in steps of 1/1024.
         let table = TABLE.get_or_init(|| (0..4096).map(|i| (shoulder(i as f32 / 1024.0) * 255.0 + 0.5) as u8).collect());
         out.resize(self.w * self.h * 4, 255);
-        for (o, p) in out.chunks_exact_mut(4).zip(self.px.iter()) {
+        for (o, p) in out.as_chunks_mut::<4>().0.iter_mut().zip(self.px.iter()) {
             o[0] = table[((p[0].max(0.0) * 1024.0) as usize).min(4095)];
             o[1] = table[((p[1].max(0.0) * 1024.0) as usize).min(4095)];
             o[2] = table[((p[2].max(0.0) * 1024.0) as usize).min(4095)];

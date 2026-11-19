@@ -43,7 +43,7 @@ fn signals() -> Vec<(&'static str, Vec<f32>)> {
         }),
     ));
     let mut s = 11u32;
-    out.push(("silence and full scale every 0.15 s", synth(RATE, 6.0, |t| if (t / 0.15) as u32 % 2 == 0 { (0.0, 0.0) } else { let v = noise(&mut s); (v, -v) })));
+    out.push(("silence and full scale every 0.15 s", synth(RATE, 6.0, |t| if ((t / 0.15) as u32).is_multiple_of(2) { (0.0, 0.0) } else { let v = noise(&mut s); (v, -v) })));
     let mut s = 3u32;
     out.push((
         "a busy track",

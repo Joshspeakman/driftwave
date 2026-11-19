@@ -109,19 +109,16 @@ impl Analyzer {
         let (up, down) = (ease(dt, 0.025), ease(dt, 0.2));
         let mut sums = [0.0f32; 3];
         let mut counts = [0usize; 3];
-        for b in 0..BANDS {
+        for (b, band) in a.bands.iter_mut().enumerate().take(BANDS) {
             let f0 = lo * (hi / lo).powf(b as f32 / BANDS as f32);
             let f1 = lo * (hi / lo).powf((b + 1) as f32 / BANDS as f32);
             let (k0, k1) = ((f0 / bin_hz) as usize, ((f1 / bin_hz) as usize).max((f0 / bin_hz) as usize + 1));
-            let mut m = 0.0f32;
-            for k in k0..k1.min(FFT_LEN / 2) {
-                m = m.max(self.buf[k].norm());
-            }
+            let m = self.buf.get(k0..k1.min(FFT_LEN / 2)).unwrap_or(&[]).iter().fold(0.0f32, |m, c| m.max(c.norm()));
             // Magnitude to 0..1 over a 60 dB range.
             let db = 20.0 * (m / (FFT_LEN as f32 * 0.25) + 1e-9).log10();
             let v = ((db + 66.0) / 60.0).clamp(0.0, 1.0);
-            let k = if v > a.bands[b] { up } else { down };
-            a.bands[b] += (v - a.bands[b]) * k;
+            let k = if v > *band { up } else { down };
+            *band += (v - *band) * k;
             let group = if f1 <= 250.0 { 0 } else if f1 <= 2500.0 { 1 } else { 2 };
             sums[group] += v * v;
             counts[group] += 1;

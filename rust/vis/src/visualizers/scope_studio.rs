@@ -61,9 +61,9 @@ impl Visualizer for ScopeStudio {
 
         // Scope 1: the spectrum starburst, turning slowly behind everything.
         self.burst += dt * (0.12 + 0.1 * a.mid.min(2.0));
-        for b in 0..BANDS {
+        for (b, &band) in a.bands.iter().enumerate().take(BANDS) {
             let ang = b as f32 / BANDS as f32 * std::f32::consts::TAU + self.burst;
-            let len = size * (0.12 + 0.42 * a.bands[b]);
+            let len = size * (0.12 + 0.42 * band);
             let col = hsv(hue + 0.5 + b as f32 / BANDS as f32 * 0.2, 0.7, 0.35);
             c.line(cx + ang.cos() * size * 0.1, cy + ang.sin() * size * 0.1, cx + ang.cos() * len, cy + ang.sin() * len, col, 0.6 * lw, (1.2 * lw).max(0.9));
         }

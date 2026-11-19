@@ -253,8 +253,6 @@ features = [
     "objc2",
     "CGColorSpace",
     "CGDataProvider",
-    "CGDirectDisplay",
-    "CGDisplayConfiguration",
     "CGImage",
 ]
 default-features = false
