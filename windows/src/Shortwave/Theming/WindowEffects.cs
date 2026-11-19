@@ -53,6 +53,8 @@ public sealed class WindowEffects
                 "scanlines" => new Scanlines(o),
                 "spotlight" => new Spotlight(o, pointerSource),
                 "scene" => new SceneEffect(o, theme, pointerSource),
+                "drips" => new GlassDrops(o),
+                "neonEdges" => new NeonEdges(o, pointerSource),
                 _ => null,
             };
             if (e is null) continue;

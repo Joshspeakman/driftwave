@@ -3,26 +3,26 @@
   "version": 1,
   "id": "night-market",
   "name": "Night Market",
-  "description": "A rainy night in Tokyo's neon streets (a real photograph of Kabukichō) with rain falling over it.",
+  "description": "A rainy night in Tokyo, seen through dark tinted glass: neon blooming through, rain running down the window (a real photograph of Kabukichō), and every panel lit like a neon tube.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
-    "background": "#05070C",
-    "surface": "#8C070A12",
-    "card": "#A60B111C",
-    "cardStroke": "#3337E0FF",
-    "control": "#B3111A28",
-    "controlStroke": "#4437E0FF",
-    "subtle": "#2237E0FF",
-    "divider": "#2237E0FF",
-    "text": "#F2F4FF",
-    "textSecondary": "#B8C4DC",
-    "textTertiary": "#7A869E",
-    "accent": "#FF4F8B",
-    "accentText": "#4FE3FF",
-    "onAccent": "#05070C",
-    "dialog": "#F00B111C",
-    "pane": "#A6070A12"
+    "background": "#04050A",
+    "surface": "#8C06080F",
+    "card": "#9906080F",
+    "cardStroke": "#CC37E0FF",
+    "control": "#B30A0F1A",
+    "controlStroke": "#CCFF3D88",
+    "subtle": "#2637E0FF",
+    "divider": "#4D37E0FF",
+    "text": "#F4F6FF",
+    "textSecondary": "#C8D2EA",
+    "textTertiary": "#8892AA",
+    "accent": "#FF3D88",
+    "accentText": "#5CF2FF",
+    "onAccent": "#0A0410",
+    "dialog": "#F2070910",
+    "pane": "#B305070D"
   },
   "fonts": {
     "body": "Yu Gothic UI",
@@ -42,21 +42,21 @@
       "font": "Yu Gothic UI",
       "size": 13,
       "weight": "bold",
-      "color": "#FFFFFF"
+      "color": "#9FF6FF"
     },
     "vignette": {
-      "opacity": 0.4
+      "opacity": 0.45
     },
     "titleShadow": {
-      "color": "#FF4F8B",
-      "blur": 14
+      "color": "#FF3D88",
+      "blur": 18
     },
     "scene": {
       "surfaces": "translucent",
       "layers": [
         {
           "type": "image",
-          "src": "photo-night-market.jpg",
+          "src": "photo-night-market-glass.jpg",
           "in": "window",
           "x": 0,
           "y": 0
@@ -69,29 +69,341 @@
           "w": "100%",
           "h": 48,
           "fill": [
-            "#B3000000",
+            "#99000000",
             "#00000000"
           ]
         },
         {
           "type": "image",
-          "src": "rain-far.png",
+          "src": "night-market-neon.png",
           "in": "window",
           "x": 0,
           "y": 0,
-          "loopY": 1.7,
-          "tile": 512,
-          "opacity": 0.45
+          "opacity": 0.7,
+          "motion": {
+            "kind": "breathe",
+            "seconds": 9,
+            "min": 0.5,
+            "max": 0.85
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "18%",
+          "y": "74%",
+          "w": 26,
+          "h": 26,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FFF1DC",
+              0
+            ],
+            [
+              "#80FFF1DC",
+              0.35
+            ],
+            [
+              "#00FFF1DC",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": 380,
+            "bob": 1.2,
+            "seconds": 34,
+            "pause": 10,
+            "start": 0,
+            "max": 0.9
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "62%",
+          "y": "71%",
+          "w": 34,
+          "h": 34,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FF6FA8",
+              0
+            ],
+            [
+              "#80FF6FA8",
+              0.35
+            ],
+            [
+              "#00FF6FA8",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": -420,
+            "bob": 1.0,
+            "seconds": 40,
+            "pause": 6,
+            "start": 13,
+            "max": 0.75
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "40%",
+          "y": "78%",
+          "w": 18,
+          "h": 18,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E67FE8FF",
+              0
+            ],
+            [
+              "#807FE8FF",
+              0.35
+            ],
+            [
+              "#007FE8FF",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": 300,
+            "bob": 1.4,
+            "seconds": 28,
+            "pause": 16,
+            "start": 21,
+            "max": 0.85
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "75%",
+          "y": "69%",
+          "w": 22,
+          "h": 22,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FFE2B0",
+              0
+            ],
+            [
+              "#80FFE2B0",
+              0.35
+            ],
+            [
+              "#00FFE2B0",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": -300,
+            "bob": 1.0,
+            "seconds": 36,
+            "pause": 12,
+            "start": 5,
+            "max": 0.8
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "8%",
+          "y": "80%",
+          "w": 30,
+          "h": 30,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FFC070",
+              0
+            ],
+            [
+              "#80FFC070",
+              0.35
+            ],
+            [
+              "#00FFC070",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": 460,
+            "bob": 1.1,
+            "seconds": 44,
+            "pause": 8,
+            "start": 30,
+            "max": 0.7
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "50%",
+          "y": "66%",
+          "w": 14,
+          "h": 14,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6DCE8FF",
+              0
+            ],
+            [
+              "#80DCE8FF",
+              0.35
+            ],
+            [
+              "#00DCE8FF",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": -220,
+            "bob": 0.6,
+            "seconds": 30,
+            "pause": 20,
+            "start": 17,
+            "max": 0.7
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "30%",
+          "y": "70%",
+          "w": 20,
+          "h": 20,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FF8FD0",
+              0
+            ],
+            [
+              "#80FF8FD0",
+              0.35
+            ],
+            [
+              "#00FF8FD0",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": 260,
+            "bob": 0.9,
+            "seconds": 38,
+            "pause": 14,
+            "start": 9,
+            "max": 0.6
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "100%",
+          "y": "86%",
+          "w": 46,
+          "h": 30,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FFF6E8",
+              0
+            ],
+            [
+              "#80FFF6E8",
+              0.35
+            ],
+            [
+              "#00FFF6E8",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": -1500,
+            "bob": 0,
+            "seconds": 14,
+            "pause": 46,
+            "start": 8,
+            "max": 0.9
+          },
+          "repeat": {
+            "n": 2,
+            "dx": 42
+          }
+        },
+        {
+          "type": "radial",
+          "in": "window",
+          "x": "-4%",
+          "y": "84%",
+          "w": 30,
+          "h": 20,
+          "withPhoto": true,
+          "fill": [
+            [
+              "#E6FF3B30",
+              0
+            ],
+            [
+              "#80FF3B30",
+              0.35
+            ],
+            [
+              "#00FF3B30",
+              1
+            ]
+          ],
+          "motion": {
+            "kind": "pass",
+            "x": 1500,
+            "bob": 0,
+            "seconds": 17,
+            "pause": 52,
+            "start": 35,
+            "max": 0.55
+          },
+          "repeat": {
+            "n": 2,
+            "dx": 40
+          }
         },
         {
           "type": "image",
-          "src": "rain-near.png",
+          "src": "rain-glass-far.png",
           "in": "window",
           "x": 0,
           "y": 0,
-          "loopY": 0.75,
+          "loopY": 0.9,
+          "loopX": 5.7,
           "tile": 512,
-          "opacity": 0.65
+          "opacity": 0.55
+        },
+        {
+          "type": "image",
+          "src": "rain-glass-near.png",
+          "in": "window",
+          "x": 0,
+          "y": 0,
+          "loopY": 0.5,
+          "loopX": 3.2,
+          "tile": 512,
+          "opacity": 0.6
         },
         {
           "type": "text",
@@ -103,7 +415,7 @@
           "in": "titlebar",
           "font": "Yu Gothic UI",
           "weight": "bold",
-          "glow": "#FF4F8B",
+          "glow": "#FF3D88",
           "glowRadius": 2
         },
         {
@@ -116,7 +428,7 @@
           "in": "content",
           "font": "Yu Gothic UI",
           "weight": "bold",
-          "glow": "#FF4F8B",
+          "glow": "#FF3D88",
           "id": "two",
           "hidden": true
         }
@@ -134,6 +446,16 @@
           "seconds": 6
         }
       ]
+    },
+    "drips": {
+      "density": 2.4
+    },
+    "neonEdges": {
+      "content": "#37E0FF",
+      "player": "#FF3D88",
+      "bar": "#FF3D88",
+      "glow": 16,
+      "opacity": 0.8
     }
   }
 }
