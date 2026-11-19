@@ -1054,6 +1054,29 @@ component Field inherits Rectangle {
     }
 }
 
+// A line of the player that fades and settles into place when it changes (a new song), rather than snapping.
+component SongText inherits Rectangle {
+    in property <string> text;
+    in property <color> ink;
+    in property <int> weight: 400;
+    // Just changed: drawn transparent and a little low for a moment, then eased back into place.
+    property <bool> fresh;
+    changed text => { self.fresh = true; }
+    height: 18px;
+    Timer { interval: 30ms; running: root.fresh; triggered => { root.fresh = false; } }
+    label := Text {
+        width: parent.width; text: root.text; color: root.ink; font-size: 13px; font-weight: root.weight;
+        horizontal-alignment: center; overflow: elide;
+    }
+    states [
+        new when root.fresh: {
+            label.opacity: 0;
+            label.y: 3px;
+            out { animate label.opacity, label.y { duration: 320ms; easing: ease-out; } }
+        }
+    ]
+}
+
 // A colour picker: saturation and brightness in the square, hue in the strip; the colour applies when you let go.
 // Its opacity stays as it was.
 component ColourPicker inherits Rectangle {
@@ -1946,9 +1969,8 @@ export component FullView inherits Rectangle {
                         source: root.cover; has-source: root.has-cover; small: root.cover-small; c1: root.cover-c1; c2: root.cover-c2; }
                     name := Text { x: 20px; y: parent.y-name; width: parent.width - 40px; text: root.station; color: Th.card-text; font-size: 20px; font-weight: 600;
                         horizontal-alignment: center; wrap: word-wrap; max-height: 52px; overflow: elide; }
-                    if !Decor.lcd: Text { x: 20px; y: parent.y-song; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; color: Th.card-text; font-size: 13px; font-weight: 600;
-                        horizontal-alignment: center; overflow: elide; }
-                    if !Decor.lcd: Text { x: 20px; y: parent.y-song + 21px; width: parent.width - 40px; text: root.artist; color: Th.card-text2; font-size: 13px; horizontal-alignment: center; overflow: elide; }
+                    if !Decor.lcd: SongText { x: 20px; y: parent.y-song; width: parent.width - 40px; text: root.song != "" ? root.song : root.status; ink: Th.card-text; weight: 600; }
+                    if !Decor.lcd: SongText { x: 20px; y: parent.y-song + 21px; width: parent.width - 40px; text: root.artist; ink: Th.card-text2; }
                     if Decor.lcd: LcdPanel { x: 16px; y: parent.y-song + 4px; width: parent.width - 32px; }
                     if Decor.analyzer: SpectrumBars { x: 16px; y: parent.y-dec; width: parent.width - 32px; }
                     if Decor.vu: HorizontalLayout {
