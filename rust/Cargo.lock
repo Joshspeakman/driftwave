@@ -1247,7 +1247,7 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "driftwave-app"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 dependencies = [
  "chrono",
  "driftwave-audio",
@@ -1271,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "driftwave-audio"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 dependencies = [
  "cpal",
  "driftwave-core",
@@ -1285,7 +1285,7 @@ dependencies = [
 
 [[package]]
 name = "driftwave-core"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -1298,7 +1298,7 @@ dependencies = [
 
 [[package]]
 name = "driftwave-platform"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 dependencies = [
  "block2 0.6.2",
  "objc2 0.6.5",
@@ -1315,7 +1315,7 @@ dependencies = [
 
 [[package]]
 name = "driftwave-vis"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 dependencies = [
  "driftwave-core",
  "rustfft",

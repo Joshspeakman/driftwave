@@ -3,7 +3,7 @@ resolver = "2"
 members = ["core", "audio", "vis", "app", "platform"]
 
 [workspace.package]
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 edition = "2021"
 authors = ["Josh Speakman"]
 license = "GPL-3.0-or-later"
