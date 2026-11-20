@@ -1,4 +1,7 @@
-"""Writes the homage themes (themes/*.json): tributes to computers, phones and consoles people loved.
+"""HISTORICAL: don't run this. It first wrote the homage themes, but themes/*.json have been edited by hand since
+(review passes, the 2026-11-20 colour rule, Woodgrain's redesign) and are the source now; running it would undo that.
+
+Wrote the homage themes (themes/*.json): tributes to computers, phones and consoles people loved.
 
 Design rules (Josh, 2026-11-18):
 - Nothing is drawn over the window's own parts: themes restyle the real window title ("windowTitle") instead of
