@@ -32,6 +32,7 @@ mod editor;
 mod effects;
 mod eggs;
 mod finding;
+mod full_menu;
 mod integration;
 mod look;
 mod paint;
@@ -221,6 +222,8 @@ struct App {
     bg_state: bg::State,
     /// The songs heard, and their recordings.
     played: played::Tracks,
+    /// The station card just right-clicked in the Full layout (its list and place), for the menu.
+    menu_card: Option<(String, i32)>,
     /// Newer releases, and installing one.
     updates: update::Updates,
     /// The Full layout's cover cards and played songs, updated in place.
@@ -1129,6 +1132,7 @@ fn main() -> Result<(), slint::PlatformError> {
         }),
         find: finding::Finding::default(),
         played: played::Tracks::default(),
+        menu_card: None,
         vis_tint: None,
         updates: update::Updates::default(),
         look: look::Look::default(),
@@ -1203,10 +1207,15 @@ fn main() -> Result<(), slint::PlatformError> {
                 }
                 // Classic: right-click anywhere for its menu (opened just after this event: it runs its own loop).
                 winit::event::WindowEvent::MouseInput { state: winit::event::ElementState::Pressed, button: winit::event::MouseButton::Right, .. } => {
-                    if weak.upgrade().is_some_and(|u| u.get_layout() == "classic") {
+                    let layout = weak.upgrade().map(|u| u.get_layout().to_string()).unwrap_or_default();
+                    let app = w.clone();
+                    if layout == "classic" {
                         let at = w.try_borrow().ok().and_then(|a| a.look.pointer);
-                        let app = w.clone();
                         slint::Timer::single_shot(Duration::from_millis(1), move || classic_menu::open(&app, at));
+                    } else {
+                        // The Full layout: a station card under the pointer tells the menu which (it hears the
+                        // click before this timer runs).
+                        slint::Timer::single_shot(Duration::from_millis(1), move || full_menu::open(&app));
                     }
                 }
                 winit::event::WindowEvent::MouseInput { state: winit::event::ElementState::Pressed, button: winit::event::MouseButton::Left, .. } => {
@@ -1459,6 +1468,8 @@ fn main() -> Result<(), slint::PlatformError> {
         let a = app.clone();
         dir.on_open(move |source, i| a.borrow_mut().open_details(&source, i));
         let a = app.clone();
+        dir.on_card_menu(move |source, i| a.borrow_mut().menu_card = Some((source.to_string(), i)));
+        let a = app.clone();
         dir.on_play_now(move |source, i| {
             let mut app = a.borrow_mut();
             let list = if source == "discover" { &app.find.discover } else { &app.find.results };
@@ -1521,11 +1532,21 @@ fn main() -> Result<(), slint::PlatformError> {
         let a = a.clone();
         slint::Timer::single_shot(Duration::from_millis(1), move || classic_menu::open(&a, None));
     });
-    // Test runs: -classicMenu x,y opens Classic's menu as a right-click there would; -classicAction id;id carries out
-    // menu choices (as their ids).
+    // Test runs: -classicMenu x,y opens Classic's menu as a right-click there would; -classicAction id;id and
+    // -fullAction id;id carry out menu choices (as their ids).
     if let Some(at) = app.borrow().args.get("classicMenu").and_then(|v| v.split_once(',')).and_then(|(x, y)| Some((x.trim().parse::<f32>().ok()?, y.trim().parse::<f32>().ok()?))) {
         let a = app.clone();
         slint::Timer::single_shot(Duration::from_millis(2500), move || classic_menu::open(&a, Some(at)));
+    }
+    if let Some(ids) = app.borrow().args.get("fullAction").map(String::from) {
+        let (a, weak) = (app.clone(), ui.as_weak());
+        slint::Timer::single_shot(Duration::from_millis(2000), move || {
+            if let Some(ui) = weak.upgrade() {
+                for id in ids.split(';').filter(|s| !s.is_empty()) {
+                    full_menu::run(&a, &ui, id);
+                }
+            }
+        });
     }
     if let Some(ids) = app.borrow().args.get("classicAction").map(String::from) {
         let (a, weak) = (app.clone(), ui.as_weak());

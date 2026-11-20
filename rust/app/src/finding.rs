@@ -307,7 +307,7 @@ impl App {
         self.discover();
     }
 
-    fn station_from(&self, source: &str, i: i32) -> Option<Station> {
+    pub(crate) fn station_from(&self, source: &str, i: i32) -> Option<Station> {
         let i = usize::try_from(i).ok()?;
         match source {
             "library" => self.stations.get(i),
