@@ -174,7 +174,7 @@ fn near_banned(r: i32, g: i32, b: i32) -> bool {
     } else {
         60 * (r - g) / c + 240
     };
-    (148..=207).contains(&h) || (223..=352).contains(&h) || ((h >= 334 || h < 12) && max + min > 300)
+    (148..=207).contains(&h) || (223..=352).contains(&h) || (!(12..334).contains(&h) && max + min > 300)
 }
 
 /// The colour rule at the output (RGBA8, in place): blends, glows and additive light can make teal, purple or pink
