@@ -195,7 +195,11 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
         Some(o) => overridden(p, o),
         None => p,
     };
-    // The rule, then text made readable again on what the rule changed, then the rule on that text.
+    // The rule (for Driftwave's own themes: one you make keeps the colours you chose), then text made readable again
+    // on what the rule changed, then the rule on that text.
+    if theme.is_some_and(|t| !t.built_in) {
+        return p;
+    }
     all_ruled(settled(all_ruled(p)))
 }
 
@@ -244,7 +248,8 @@ fn all_ruled(p: ClassicPalette) -> ClassicPalette {
 }
 
 /// How much of the theme's picture shows through Classic's frames, as Full shows it through its panels: glass
-/// themes as see-through as their panels, materials (walnut, concrete) mostly the material, the rest a hint.
+/// themes as see-through as their panels, materials (walnut, concrete) mostly the material, the rest as their
+/// panels are (solid panels, solid frames).
 /// (Where the picture would drown the frames' text, `look` thickens them again.)
 fn see_through(theme: Option<&Theme>, panel: Option<Color>) -> f32 {
     let Some(t) = theme else { return 0.4 };
@@ -257,7 +262,9 @@ fn see_through(theme: Option<&Theme>, panel: Option<Color>) -> f32 {
     if t.effects.contains_key("wood") || t.effects.contains_key("concrete") {
         return 0.7;
     }
-    0.4
+    // Otherwise as see-through as Full's panels, up to a hint: Ninety-Five's grey windows are solid.
+    let a = panel.map(|c| c.a as f32 / 255.0).unwrap_or(1.0);
+    (1.0 - a).clamp(0.0, 0.4)
 }
 
 /// A theme's own choices for Classic (the `classic` effect: any part's colour, and `see`), for materials the

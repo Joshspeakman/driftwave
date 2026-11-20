@@ -108,6 +108,8 @@ pub struct Look {
     skin_pending: Option<((u32, u32), Instant)>,
     /// How see-through the theme wants Classic's frames (palette.rs), before the picture's say.
     pub classic_see: f32,
+    /// Whether the colour rule goes over the composed pictures: a built-in theme's, never your own background's.
+    rule: bool,
     /// The theme's scene layers as written (for placing the eggs' clickable items).
     layers: Vec<Map<String, Value>>,
     /// The last motion frames' cost, for DRIFTWAVE_LOG.
@@ -351,6 +353,7 @@ impl App {
         // The scene, and the panels that let it show through: a theme's see-through colours are see-through
         // whenever there's something behind them.
         let user = self.bg.as_ref().map(|p| p.frames[0].clone());
+        self.look.rule = theme.is_none_or(|t| t.built_in) && user.is_none();
         self.look.scene = match user {
             Some(img) => Some(Scene::with_user(theme, img, self.bg_dim(), f.background)),
             None => Scene::for_theme(theme),
@@ -628,6 +631,7 @@ impl App {
     /// The Classic layout's skin, painted once per size (after a resize settles): still, so Classic stays as light
     /// as it was.
     pub(crate) fn tick_classic_look(&mut self, ui: &MainWindow, now: Instant) {
+        let rule = self.look.rule;
         let Some(scene) = self.look.scene.as_mut() else { return };
         let size = ui.window().size();
         if size.width < 8 || size.height < 8 {
@@ -661,7 +665,9 @@ impl App {
                     let (pw, ph) = (p.w, p.h);
                     crate::paint::frost(&mut p, 0, 0, pw, ph, (15.0 * scale).round() as usize);
                 }
-                driftwave_vis::canvas::keep_the_rule(&mut p.px);
+                if rule {
+                    driftwave_vis::canvas::keep_the_rule(&mut p.px);
+                }
                 // As see-through as the theme asks, unless the picture would drown the frames' labels. They're all on
                 // the player's frame, at the top (136 units of a 412-unit-wide window).
                 let face = from_slint(pal.get_face());
@@ -697,6 +703,7 @@ impl App {
     }
 
     fn paint_backdrop(&mut self, ui: &MainWindow, g: &Geometry, scale: f32, still: bool) {
+        let rule = self.look.rule;
         let Some(scene) = self.look.scene.as_mut() else { return };
         let t0 = Instant::now();
         let mut back = scene.backdrop(g, scale, still);
@@ -707,9 +714,12 @@ impl App {
             let (bw, bh) = (back.w, back.h);
             crate::paint::frost(&mut back, 0, (g.title * scale).round() as usize, bw, bh, r);
         }
-        // The colour rule over the whole picture, once it's put together: light meeting light (red neon over blue)
-        // can make what no layer had. Painted once per size, so this costs a millisecond or two, once.
-        driftwave_vis::canvas::keep_the_rule(&mut back.px);
+        // The colour rule over a built-in theme's picture, once it's put together: light meeting light (red neon over
+        // blue) can make what no layer had. Painted once per size, so this costs a millisecond or two, once. Your own
+        // picture or GIF is left as it is.
+        if rule {
+            driftwave_vis::canvas::keep_the_rule(&mut back.px);
+        }
         // The full-window scaled art isn't needed until the next backdrop (motion's pictures are smaller).
         // Retrowave's sun: its own picture over the page's glass, in its real colours.
         {

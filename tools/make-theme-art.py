@@ -394,6 +394,24 @@ def blobs(name, bg, colors, seed, blur=140, count=7):
     return img
 
 
+def dawn(seed=21):
+    """Home Screen's wallpaper: a phone's dawn. Deep night at the top lifts through blue into a warm horizon glow,
+    through a soft neutral haze (blue straight into orange passes through mauve); big soft light, a little bokeh."""
+    rnd = random.Random(seed)
+    img = vgrad(W, H, [(0, '#060E22'), (0.38, '#123170'), (0.62, '#2F5A9E'), (0.76, '#7D8597'), (0.88, '#E39A5C'),
+                       (1.0, '#FFC27A')]).convert('RGBA')
+    lay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    # The sun's glow, low and a little to the right, and broad cool light high up.
+    for x, y, r, c, a in ((W * 0.6, H * 1.08, 900, '#FFB86B', 170), (W * 0.6, H * 1.0, 420, '#FFE0A8', 170),
+                          (W * 0.2, -H * 0.1, 1000, '#1E4FB0', 60)):
+        d.ellipse((x - r, y - r, x + r, y + r), fill=hexc(c, a))
+    img = Image.alpha_composite(img, lay.filter(ImageFilter.GaussianBlur(220))).convert('RGB')
+    grain = noise(W, H, 1, seed).point(lambda v: int((v - 128) * 0.05 + 128))
+    img = ImageChops.overlay(img, Image.merge('RGB', (grain, grain, grain)))
+    return bokeh(img, seed, 14, ('#FFFFFF', '#FFE2C2'))
+
+
 def bokeh(img, seed, n=40, colors=('#FFFFFF',)):
     rnd = random.Random(seed)
     lay = Image.new('RGBA', img.size, (0, 0, 0, 0))
@@ -444,8 +462,7 @@ ART = {
     'fluent': lambda: None,
     'big-glass': lambda: save(blobs('big-glass.jpg', [(0, '#F6E9F7'), (1, '#E4EEFB')], ['#FF8FB8', '#8F9BFF', '#7FE0D8', '#FFC07A', '#C59BFF'], 9), 'big-glass.jpg'),
     # A dawn wallpaper: deep blue night lifting into a warm amber glow (the colour rule: no teal, purple or pink).
-    'home-screen': lambda: save(bokeh(blobs('home-screen.jpg', [(0, '#0B1A3A'), (0.55, '#2457A8'), (1, '#F2A25A')],
-                                            ['#3D8BFF', '#FFB86B', '#FF8A3D', '#2A5BD7'], 21, blur=120), 4, 30, ('#FFFFFF', '#FFE2C2')), 'home-screen.jpg'),
+    'home-screen': lambda: save(dawn(), 'home-screen.jpg'),
     'platinum': lambda: save(brushed('platinum.jpg', '#DADADA', 0.18, seed=2), 'platinum.jpg'),
     'llama': lambda: (save(brushed('llama-metal.jpg', '#24242C', 0.35, seed=3), 'llama-metal.jpg'),
                       save(Image.composite(brushed('', '#D4AF37', 0.5, (W, 48), 4), Image.new('RGB', (W, 48), (60, 48, 14)),
