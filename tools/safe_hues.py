@@ -130,5 +130,5 @@ if __name__ == '__main__':
             if name.lower().endswith('.png'):
                 out.save(path, optimize=True)
             else:
-                out.save(path, quality=90, optimize=True)
+                out.save(path, quality=84, optimize=True, progressive=True)
             print(f'{name}: {before:.1f}% -> {share(out):.1f}% banned')

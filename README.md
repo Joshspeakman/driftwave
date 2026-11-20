@@ -17,6 +17,7 @@ expect rough edges, and tell us about them.
 ## One window, two looks
 
 **Full:** your library, Discover and Search, station details, the player and the songs it has played, and Settings.
+Right-click anywhere for a menu, and on a station for that station's own: play it, its details, add or remove it.
 
 ![The Full layout](docs/screenshots/full-default.webp)
 
@@ -32,13 +33,15 @@ back to Full. It scales by dragging its corner, and the music carries on as you 
 
 Default (light, dark, or following your system) plus 26 built-in themes, every one in both layouts. Some are photo
 scenes with rain running down the glass, neon, drifting light and moving street life; some are homages to the
-desktops of their eras. Make your own in the theme editor, or put your own picture or GIF behind the window. Nothing
+desktops of their eras. Each looks the same in Classic as in Full: Classic's frames are made of the same glass,
+walnut or metal. Make your own in the theme editor, or put your own picture or GIF behind the window. Nothing
 ever flashes: moving scenes hold still on a slower computer or when Driftwave isn't in front.
 
 | | |
 |---|---|
 | ![Retrowave](docs/screenshots/full-retrowave.webp) | ![Aqua](docs/screenshots/full-aqua.webp) |
 | ![Ninety-Five](docs/screenshots/full-ninety-five.webp) | ![Analog 70s](docs/screenshots/full-analog.webp) |
+| ![Woodgrain](docs/screenshots/full-woodgrain.webp) | ![Home Screen](docs/screenshots/full-home-screen.webp) |
 
 ![Settings, with the theme gallery](docs/screenshots/full-themes.webp)
 
@@ -49,7 +52,7 @@ program with nothing else to install, it downloads in a moment, and while it pla
 
 | Measured on a Windows PC | |
 |---|---|
-| Download | 15.6 MB |
+| Download | 15.8 MB |
 | Memory | about 46 MB while playing |
 | CPU | under 1% of one core while playing (Default theme); a few percent with Classic's visualizer or a moving scene in front |
 

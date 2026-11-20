@@ -8,6 +8,79 @@ other for something and reports back. Newest round at the top. Git is the transp
 - On 2026-11-17 the Mac fast-forwarded `nightly` to `windows` (09fd9a9), so the two share history
   and this file. Edit only your own side's sections to keep merges clean.
 
+## Round 16 (2026-11-20): the colour rule, Classic matches Full, Woodgrain, Full's right-click menu; alpha.2
+
+**Josh's asks:**
+- "Remove the teal and purple and pinks from any themes."
+- "Double check that the classic themes match the style of the normal themes so that when swapping between them,
+  they don't look off."
+- "The homage to the Atari one needs a lot of work … a sleek, sexy designer pass."
+- The right-click menu in the Full layout too.
+- Then: push, the Mac pulls and applies it to its build, and once both sides are good, a new release (alpha.2).
+
+**PC (done, on `rust`):**
+- **Full's right-click menu** (`app/src/full_menu.rs`).
+  - Anywhere in Full: Switch to Classic; Play/Stop, Previous, Next, Record Songs; Go To; Show Player; Moving Scenes;
+    Appearance; Theme; Settings; Quit.
+  - On a station card (Library, Discover, Search), that station's own actions come first: play or stop it, its
+    details, add or remove it, its homepage.
+  - The card says which one through `Dir.card-menu`, a `pointer-event` on the card that the winit right-click's 1 ms
+    timer then reads (`App::menu_card`).
+  - It stays shut in a focused text field and over Details, Add Station and the GIPHY search.
+  - Test runs: `-fullAction id;id`.
+- **The colour rule:** no teal, purple or pink anywhere (`core/src/hues.rs`, see docs/THEMES.md "The colour rule").
+  - `banned` decides, and a test holds every built-in theme to it, translucent tokens over their backgrounds
+    included.
+  - Recoloured themes:
+    - **Retrowave** is a midnight drive: navy sky, molten orange sun, electric-blue grid.
+    - **Night Market** burns vermilion and amber, with blue tubes.
+    - **Neon Noir** is amber and steel blue.
+    - **Retro 64** is in true blues.
+    - **Super 16** is grey with blue.
+    - **C:\ Prompt** is CGA yellow on blue.
+    - **Ninety-Five's** desktop is blue.
+    - Platinum, Frosted Glass, Big Glass, Luna, Program Manager, Home Screen (a new dawn wallpaper), Fluent and Aqua
+      are touched up.
+    - `tools/recolour-themes-2026-11.py` records them all.
+  - Pictures: `tools/safe_hues.py` moves them out of those hues. The art scripts run it last, and the photos are
+    redone (CREDITS.txt and THIRD-PARTY-NOTICES say so).
+  - Derived colours: `palette::ruled` runs over every Classic and Full colour (a navy lightened for a selection was
+    lavender). Placeholder tiles use `hues::nearest_allowed` and stay in their accent's family (`allowed_arc`).
+  - Visualizers:
+    - Their rainbows go through `hues::spread` and `safe_hsv` (in `canvas::hsv`).
+    - Ember's palettes are now fire, aurora, moonlight and ocean, in that order, so blue never blends into green.
+    - Waveland is blue land under an amber glow.
+    - Every frame passes `canvas::keep_the_rule` before the flash guard. A 32 KB cell table makes it about 0.09 ms a
+      frame on allowed colours.
+    - `vis/tests/colour_rule.rs` checks each visualizer over 75 s of music. Flash safety still passes.
+  - The one exception is our sunset logo (its pink edge). That's brand, and Josh decides it.
+- **Classic matches Full** (`app/src/palette.rs`, `look.rs`, `classic.slint`):
+  - Classic's frames are made of what Full's panels are: the surface, or the cards' colour when the surface is clear
+    (Ninety-Five's grey windows, not its desktop).
+  - They're as see-through as Full's panels (`see_through`). Glass themes show their picture, frosted as Full frosts
+    it, and materials (walnut, concrete) show the material.
+  - `look` thickens frames again only where the player frame's labels would drown.
+  - Labels on the frames have their own colour, `Pal.label` (readable on the face).
+  - A theme can set Classic's parts itself with the new `classic` effect. It's in `EFFECT_KINDS`, kept out of the
+    editor's list.
+- **Woodgrain**, redesigned:
+  - The window is rendered walnut veneer (`tools/make-woodgrain.py`: long grain, pores, a satin sheen), under a
+    ribbed black plastic top with a lit lip.
+  - Satin black panels, chrome-trimmed controls, the console's orange.
+  - In Classic the frames are the walnut, with chrome buttons and a black display.
+- **Merged** the cloud session's PRs: no console window, the README's Mac section, and the Mac release workflow.
+
+**Asks for the Mac:**
+1. Merge `rust`, then run clippy and the tests: `colour_rule` (vis), `hues` (core), and palette and fullpal (app).
+2. Build and look at both layouts in Woodgrain, Retrowave, Night Market, Home Screen, Aqua and C:\ Prompt. On the Mac
+   the scene layers are native, so check that:
+   - Classic's skin is frosted for glass themes;
+   - `Pal.see` comes through.
+3. Try Full's right-click menu on the Mac: a card, empty space, and a focused text field. `full_menu::open` uses the
+   same `classic_menu::host`, so `Host::AppKit`.
+4. Say "Mac good for alpha.2" here, or in a message, and the PC publishes it. The Mac zip then comes from the Mac
+   release workflow (Actions > Mac release, tag `v1.0.0-alpha.2`), unless you'd rather attach your own build.
+
 ## Mac notes after Round 14
 
 ### Mac: the resampler click (after c1f2029)
