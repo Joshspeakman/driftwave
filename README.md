@@ -9,6 +9,10 @@ under the [GPL-3.0](LICENSE), and based on GNOME's [Shortwave](https://gitlab.gn
 
 **Download:** the latest alpha is on [Releases](https://github.com/Joshspeakman/driftwave/releases). It's an alpha:
 expect rough edges, and tell us about them.
+- **Windows:** `Driftwave-<version>-win-x64.zip`. Unzip it, right-click `Install.ps1` and choose Run with PowerShell.
+- **macOS 13 or later:** `Driftwave-<version>-mac-universal.zip`, for Apple silicon and Intel. Unzip it and drag
+  `Driftwave.app` to Applications. It isn't notarized yet, so the first time, right-click it and choose Open (or
+  allow it in System Settings > Privacy & Security). To build it yourself, see [A Mac app](#a-mac-app).
 
 ## One window, two looks
 
@@ -121,6 +125,18 @@ notification-area icon and the system media controls) and fails on a panic. Run 
 
 The first launch of the installed app brings an earlier Driftwave's settings, themes and background across, and only
 reads them.
+
+### A Mac app
+
+`scripts/package-mac.sh` builds `Driftwave.app` (Apple silicon or Intel, whichever Mac builds it) into
+`~/ProjectBuilds/shortwave-macos/app`, ad-hoc signed, with its icon, bundle id `io.github.joshspeakman.Driftwave`
+(which notifications need), the themes and their art. Drag it to Applications. `--nightly` builds
+`Driftwave Nightly.app` alongside it, with its own bundle id. It needs Rust and the Xcode command line
+tools.
+
+The `Mac release` workflow (`.github/workflows/mac-release.yml`) does the same on a GitHub macOS runner from a
+release tag, adds an Intel build to make it universal, and attaches `Driftwave-<version>-mac-universal.zip` and its
+`.sha256` to that release.
 
 ## Layout of the repository
 
