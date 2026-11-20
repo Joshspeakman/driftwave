@@ -1315,6 +1315,8 @@ export global Dir {
     callback search(string);
     callback filter-chosen(string, int);
     callback open(string, int);      // "library", "discover" or "search", and the card
+    // A card right-clicked (its menu follows).
+    callback card-menu(string, int);
     callback play-now(string, int);
     callback details-play();
     callback details-library();
@@ -1332,6 +1334,7 @@ component StationGrid inherits Flickable {
     in property <[StationCard]> cards;
     in property <int> selected: -1;
     callback open(int);
+    callback menu(int);
     callback play(int);
     property <length> gap: 8px;
     property <int> cols: max(1, Math.floor((self.width + gap) / (164px + gap)));
@@ -1348,6 +1351,7 @@ component StationGrid inherits Flickable {
         card-ta := TouchArea {
             clicked => { root.open(i); }
             double-clicked => { root.play(i); }
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) { root.menu(i); } }
         }
         Cover { x: 8px; y: 8px; width: root.cover; height: root.cover; source: s.cover; has-source: s.has-cover; small: s.small; c1: s.c1; c2: s.c2; }
         if s.playing || card-ta.has-hover: Rectangle {
@@ -1642,6 +1646,7 @@ export component FullView inherits Rectangle {
                 x: 20px; y: 80px; width: parent.width - 40px; height: parent.height - 92px;
                 cards: root.stations; selected: root.selected;
                 open(i) => { root.selected = i; Dir.open("library", i); }
+                menu(i) => { Dir.card-menu("library", i); }
                 play(i) => { root.selected = i; root.play-station(i); }
             }
         }
@@ -1675,6 +1680,7 @@ export component FullView inherits Rectangle {
                 x: 20px; y: 144px; width: parent.width - 40px; height: parent.height - 156px;
                 cards: Dir.discover;
                 open(i) => { Dir.open("discover", i); }
+                menu(i) => { Dir.card-menu("discover", i); }
                 play(i) => { Dir.play-now("discover", i); }
             }
         }
@@ -1701,6 +1707,7 @@ export component FullView inherits Rectangle {
                 x: 20px; y: 164px; width: parent.width - 40px; height: parent.height - 176px;
                 cards: Dir.results;
                 open(i) => { Dir.open("search", i); }
+                menu(i) => { Dir.card-menu("search", i); }
                 play(i) => { Dir.play-now("search", i); }
             }
         }

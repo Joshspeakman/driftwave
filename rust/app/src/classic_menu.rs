@@ -74,7 +74,7 @@ fn key_of(part: Part) -> Option<&'static str> {
 }
 
 /// The window's native handle, for its menu.
-fn host(ui: &MainWindow) -> Option<Host> {
+pub(crate) fn host(ui: &MainWindow) -> Option<Host> {
     use slint::winit_030::{winit, WinitWindowAccessor};
     ui.window()
         .with_winit_window(|w: &winit::window::Window| {
