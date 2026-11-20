@@ -95,7 +95,7 @@ impl Visualizer for PeakMeter {
         let amp = h * 0.11;
         let n = a.wave.len();
         let mut prev = (0.0, mid);
-        let col = [0.25, 0.85, 1.0];
+        let col = [0.4, 0.68, 1.0];
         for (i, &sample) in a.wave.iter().enumerate().take(n) {
             let x = i as f32 / (n - 1) as f32 * w;
             let y = mid - sample * amp;

@@ -7,21 +7,21 @@
   "base": "dark",
   "backdrop": "none",
   "colors": {
-    "background": "#352879",
-    "surface": "#352879",
-    "card": "#40338A",
-    "cardStroke": "#6C5EB5",
-    "control": "#40338A",
-    "controlStroke": "#6C5EB5",
-    "subtle": "#406C5EB5",
-    "divider": "#6C5EB5",
-    "text": "#A79DF2",
-    "textSecondary": "#8A7FDA",
-    "textTertiary": "#6C5EB5",
-    "accent": "#6C5EB5",
-    "accentText": "#BDB4FF",
-    "onAccent": "#1C1450",
-    "dialog": "#352879"
+    "background": "#1E3488",
+    "surface": "#1E3488",
+    "card": "#27409A",
+    "cardStroke": "#5A7BD8",
+    "control": "#27409A",
+    "controlStroke": "#5A7BD8",
+    "subtle": "#405A7BD8",
+    "divider": "#5A7BD8",
+    "text": "#A6B8F2",
+    "textSecondary": "#869DE0",
+    "textTertiary": "#5A7BD8",
+    "accent": "#5A7BD8",
+    "accentText": "#C2D0FF",
+    "onAccent": "#0F1D52",
+    "dialog": "#1E3488"
   },
   "fonts": {
     "body": "Consolas",
@@ -37,11 +37,11 @@
   },
   "effects": {
     "frame": {
-      "color": "#6C5EB5",
+      "color": "#5A7BD8",
       "thickness": 14
     },
     "cursor": {
-      "color": "#A79DF2"
+      "color": "#A6B8F2"
     },
     "scanlines": {
       "opacity": 0.16

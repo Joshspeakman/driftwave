@@ -10,17 +10,17 @@
     "background": "#04050A",
     "surface": "#8C06080F",
     "card": "#9906080F",
-    "cardStroke": "#4037E0FF",
+    "cardStroke": "#403D8BFF",
     "control": "#B30A0F1A",
-    "controlStroke": "#59FF3D88",
-    "subtle": "#2637E0FF",
-    "divider": "#4D37E0FF",
+    "controlStroke": "#59FF5A36",
+    "subtle": "#263D8BFF",
+    "divider": "#4D3D8BFF",
     "text": "#F4F6FF",
     "textSecondary": "#C8D2EA",
     "textTertiary": "#8892AA",
-    "accent": "#FF3D88",
-    "accentText": "#5CF2FF",
-    "onAccent": "#0A0410",
+    "accent": "#FF5A36",
+    "accentText": "#FFB45E",
+    "onAccent": "#120804",
     "dialog": "#F2070910",
     "pane": "#B305070D"
   },
@@ -42,13 +42,13 @@
       "font": "Yu Gothic UI",
       "size": 13,
       "weight": "bold",
-      "color": "#9FF6FF"
+      "color": "#FFD7A8"
     },
     "vignette": {
       "opacity": 0.45
     },
     "titleShadow": {
-      "color": "#FF3D88",
+      "color": "#FFB347",
       "blur": 18
     },
     "scene": {
@@ -129,15 +129,15 @@
           "withPhoto": true,
           "fill": [
             [
-              "#E6FF6FA8",
+              "#E6FFB347",
               0
             ],
             [
-              "#80FF6FA8",
+              "#80FFB347",
               0.35
             ],
             [
-              "#00FF6FA8",
+              "#00FFB347",
               1
             ]
           ],
@@ -161,15 +161,15 @@
           "withPhoto": true,
           "fill": [
             [
-              "#E67FE8FF",
+              "#E69CC2FF",
               0
             ],
             [
-              "#807FE8FF",
+              "#809CC2FF",
               0.35
             ],
             [
-              "#007FE8FF",
+              "#009CC2FF",
               1
             ]
           ],
@@ -289,15 +289,15 @@
           "withPhoto": true,
           "fill": [
             [
-              "#E6FF8FD0",
+              "#E6FF7A52",
               0
             ],
             [
-              "#80FF8FD0",
+              "#80FF7A52",
               0.35
             ],
             [
-              "#00FF8FD0",
+              "#00FF7A52",
               1
             ]
           ],
@@ -411,11 +411,11 @@
           "x": 4,
           "y": 12,
           "size": 16,
-          "color": "#FF8FB8",
+          "color": "#FFB58A",
           "in": "titlebar",
           "font": "Yu Gothic UI",
           "weight": "bold",
-          "glow": "#FF3D88",
+          "glow": "#FF5A36",
           "glowRadius": 2
         },
         {
@@ -428,7 +428,7 @@
           "in": "content",
           "font": "Yu Gothic UI",
           "weight": "bold",
-          "glow": "#FF3D88",
+          "glow": "#FF5A36",
           "id": "two",
           "hidden": true
         }
@@ -451,9 +451,9 @@
       "density": 2.4
     },
     "neonEdges": {
-      "content": "#37E0FF",
-      "player": "#FF3D88",
-      "bar": "#FF3D88",
+      "content": "#3D8BFF",
+      "player": "#FF5A36",
+      "bar": "#FF5A36",
       "glow": 16,
       "opacity": 0.8
     }

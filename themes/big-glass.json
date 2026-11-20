@@ -8,8 +8,8 @@
   "backdrop": "none",
   "colors": {
     "background": "#1A1420",
-    "surface": "#4D161220",
-    "card": "#73201828",
+    "surface": "#4D121620",
+    "card": "#731A1E28",
     "cardStroke": "#33FFFFFF",
     "control": "#33FFFFFF",
     "controlStroke": "#44FFFFFF",

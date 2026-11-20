@@ -68,11 +68,33 @@ pub fn hue_of(r: u8, g: u8, b: u8) -> f32 {
     h / 6.0
 }
 
+/// A tile's second colour's hue (turns): `dh` on from the first, but within the first's family of allowed colours.
+/// The tile blends from one to the other, and green to azure would pass through teal.
+fn partner(h: f32, dh: f32) -> f32 {
+    use driftwave_core::hues::{allowed_arc, nearest_allowed};
+    let h1 = nearest_allowed(h * 360.0, 1.0, 0.5).0;
+    let (lo, hi) = allowed_arc(h1);
+    let base = if h1 < lo { h1 + 360.0 } else { h1 };
+    let d = dh * 360.0;
+    let h2 = if base + d <= hi {
+        base + d
+    } else if base - d >= lo {
+        base - d
+    } else {
+        base
+    };
+    (h2 / 360.0).rem_euclid(1.0)
+}
+
 pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
     let mut h = DefaultHasher::new();
     name.hash(&mut h);
     let hue = (h.finish() % 360) as f32 / 360.0;
+    // The colour rule: no teal, purple or pink, however the hue falls (a tile is one colour: it moves to the nearest
+    // allowed hue at full strength).
     let rgb = |h: f32, s: f32, v: f32| {
+        let (h, s) = driftwave_core::hues::nearest_allowed(h * 360.0, s, v);
+        let h = h / 360.0;
         let i = (h * 6.0).floor();
         let f = h * 6.0 - i;
         let (p, q, t) = (v * (1.0 - s), v * (1.0 - s * f), v * (1.0 - s * (1.0 - f)));
@@ -108,21 +130,33 @@ pub fn tile_colours(name: &str) -> (slint::Color, slint::Color) {
                 arc += 1.0;
             }
             let span = if arc.abs() < 0.08 { 0.24 } else { 0.0 };
-            let h = if span > 0.0 { m.from - 0.12 + hue * span } else { m.from + arc * hue };
+            let h = if span > 0.0 {
+                // A little either side of the accent, but only within its own family of allowed colours (a blue
+                // theme's tiles stay blue, rather than spilling into teal and lavender).
+                let from = m.from * 360.0;
+                let (lo, hi) = driftwave_core::hues::allowed_arc(from);
+                let from = if from < lo { from + 360.0 } else { from };
+                let side = if hue < 0.5 { (from - lo).min(43.2) } else { (hi - from).min(43.2) };
+                (from + (hue - 0.5) * 2.0 * side) / 360.0
+            } else {
+                m.from + arc * hue
+            };
             let h = h.rem_euclid(1.0);
             if m.light {
-                (rgb(h, 0.35, 0.80 + vary * 0.06), rgb((h + 0.03).rem_euclid(1.0), 0.30, 0.94))
+                (rgb(h, 0.35, 0.80 + vary * 0.06), rgb(partner(h, 0.03), 0.30, 0.94))
             } else if (0.11..0.22).contains(&h) {
                 // Deep yellows go olive: pull them to amber, and lighter.
                 let h = 0.07 + (h - 0.11) * 0.25;
-                (rgb(h, 0.8, 0.36 + vary * 0.08), rgb(h + 0.02, 0.75, 0.72))
+                (rgb(h, 0.8, 0.36 + vary * 0.08), rgb(partner(h, 0.02), 0.75, 0.72))
             } else {
-                (rgb(h, 0.78, 0.22 + vary * 0.08), rgb((h + 0.03).rem_euclid(1.0), 0.72, 0.50 + vary * 0.1))
+                (rgb(h, 0.78, 0.22 + vary * 0.08), rgb(partner(h, 0.03), 0.72, 0.50 + vary * 0.1))
             }
         }
         None => {
+            // Spread over the allowed colours (crimson to green, azure to blue), mostly clear of the banned bands.
+            let hue = driftwave_core::hues::spread(hue * 360.0) / 360.0;
             let hue = if (0.13..0.22).contains(&hue) { 0.06 + (hue - 0.13) * 0.4 } else { hue };
-            (rgb(hue, 0.5, 0.55), rgb((hue + 0.09) % 1.0, 0.55, 0.78))
+            (rgb(hue, 0.5, 0.55), rgb(partner(hue, 0.09), 0.55, 0.78))
         }
     }
 }

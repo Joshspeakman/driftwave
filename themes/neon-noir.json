@@ -3,18 +3,18 @@
   "version": 1,
   "id": "neon-noir",
   "name": "Neon Noir",
-  "description": "Rain over a real neon street at night in Tokyo, amber and cyan, behind smoky glass.",
+  "description": "Rain over a real neon street at night in Tokyo, amber and steel blue, behind smoky glass.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
     "background": "#070A10",
     "surface": "#8C0B1018",
     "card": "#A6111820",
-    "cardStroke": "#3300E5FF",
+    "cardStroke": "#334A90FF",
     "control": "#CC16202C",
-    "controlStroke": "#4400E5FF",
-    "subtle": "#2600E5FF",
-    "divider": "#3300E5FF",
+    "controlStroke": "#444A90FF",
+    "subtle": "#264A90FF",
+    "divider": "#334A90FF",
     "text": "#E6EEF2",
     "textSecondary": "#8FA7B3",
     "textTertiary": "#5A6B75",
@@ -38,7 +38,7 @@
   },
   "effects": {
     "titleShadow": {
-      "color": "#00E5FF",
+      "color": "#4A90FF",
       "blur": 14
     },
     "grain": {
@@ -50,7 +50,7 @@
     "windowTitle": {
       "font": "Share Tech Mono",
       "size": 14,
-      "color": "#38E8FF",
+      "color": "#9CC2FF",
       "uppercase": true
     },
     "scene": {

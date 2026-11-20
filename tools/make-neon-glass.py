@@ -10,7 +10,8 @@ Writes into assets/theme-art:
   rain-glass-near.png           nearer rain beyond the glass: fewer, longer, softer streaks (a seamless tile)
 
 Run with Pillow and NumPy:  python windows/tools/make-neon-glass.py
-Source: photo-night-market.jpg (Basile Morin, CC BY-SA 4.0; see assets/theme-art/CREDITS.txt).
+Source: photo-night-market.jpg (Basile Morin, CC BY-SA 4.0; see assets/theme-art/CREDITS.txt), its colours moved
+out of teal, purple and pink by safe_hues.py.
 """
 import os
 import random
@@ -20,13 +21,16 @@ import math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+from safe_hues import safe_photo, safe_rgb
+
 ART = os.path.join(os.path.dirname(__file__), '..', 'assets', 'theme-art')
 W = 1920
 
 photo = Image.open(os.path.join(ART, 'photo-night-market.jpg')).convert('RGB')
 photo = photo.resize((W, round(photo.height * W / photo.width)), Image.LANCZOS)
 H = photo.height
-sharp = np.asarray(photo).astype(np.float32) / 255
+# Driftwave's colour rule (no teal, purple or pink): the street's magenta and pink neon burns crimson, its cyan azure.
+sharp = safe_rgb(np.asarray(photo).astype(np.float32) / 255).astype(np.float32)
 
 
 def blur(arr, r):
@@ -63,7 +67,8 @@ glow = np.clip(screen(far * 0.6, wide * 0.7), 0, 1)
 alpha = glow.max(axis=2)
 rgb = glow / np.maximum(alpha[..., None], 1e-4)
 glow_img = Image.fromarray((np.dstack([np.clip(rgb, 0, 1), alpha]) * 255).astype(np.uint8), 'RGBA')
-glow_img.resize((W // 2, H // 2), Image.LANCZOS).save(os.path.join(ART, 'night-market-neon.png'), optimize=True)
+# Red and blue light screened together make magenta: the rule again, last.
+safe_photo(glow_img.resize((W // 2, H // 2), Image.LANCZOS)).save(os.path.join(ART, 'night-market-neon.png'), optimize=True)
 
 
 def lens(cx, cy, r, src, gain=1.25):
@@ -132,7 +137,7 @@ for _ in range(9):
             wgt = (np.exp(-((cols - xx) / width) ** 2) * k)[:, None]
             out[y, x1:x2] = out[y, x1:x2] * (1 - wgt) + clear[y, x1:x2] * wgt
 
-Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8)).save(
+safe_photo(Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8))).save(
     os.path.join(ART, 'photo-night-market-glass.jpg'), quality=88, optimize=True)
 
 # Sliding drops: big lenses of the street, slightly taller than wide (they sag as they run).
@@ -145,7 +150,7 @@ for i in range(6):
     a = a * (0.4 + 0.5 * np.clip((d - 0.45) / 0.55, 0, 1))
     img = Image.fromarray((np.dstack([np.clip(view, 0, 1), a]) * 255).astype(np.uint8), 'RGBA')
     img = img.resize((size, int(size * 1.18)), Image.LANCZOS)
-    img.save(os.path.join(ART, f'drop-{i}.png'), optimize=True)
+    safe_photo(img).save(os.path.join(ART, f'drop-{i}.png'), optimize=True)
 
 # The trail: a faint wet streak with brighter edges, fading at the top.
 tw, th = 16, 256

@@ -8,8 +8,8 @@
   "backdrop": "none",
   "colors": {
     "background": "#020A12",
-    "surface": "#66081620",
-    "card": "#8C0E1A28",
+    "surface": "#660A0D12",
+    "card": "#8C10141A",
     "cardStroke": "#5582C8FF",
     "control": "#66203040",
     "controlStroke": "#6682C8FF",
@@ -21,8 +21,8 @@
     "accent": "#3FA0E8",
     "accentText": "#7FC8FF",
     "onAccent": "#00121F",
-    "dialog": "#E6101C28",
-    "pane": "#8C06101A"
+    "dialog": "#E610141A",
+    "pane": "#8C0A0C10"
   },
   "fonts": {
     "body": "Segoe UI",

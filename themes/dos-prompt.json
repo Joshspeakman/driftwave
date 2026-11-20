@@ -3,7 +3,7 @@
   "version": 1,
   "id": "dos-prompt",
   "name": "C:\\ Prompt",
-  "description": "A homage to DOS: grey text on black, a prompt in the title bar and box-drawn borders.",
+  "description": "A homage to DOS: grey text on black, yellow on blue, a prompt in the title bar and box-drawn borders.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
@@ -13,13 +13,13 @@
     "cardStroke": "#AAAAAA",
     "control": "#0000AA",
     "controlStroke": "#AAAAAA",
-    "subtle": "#335555FF",
+    "subtle": "#33AAAAAA",
     "divider": "#555555",
     "text": "#AAAAAA",
     "textSecondary": "#AAAAAA",
     "textTertiary": "#555555",
-    "accent": "#55FFFF",
-    "accentText": "#55FFFF",
+    "accent": "#FFFF55",
+    "accentText": "#FFFF55",
     "onAccent": "#000000",
     "dialog": "#0000AA",
     "pane": "#000000"
@@ -40,8 +40,8 @@
     "tiles": {
       "colors": [
         "#0000AA",
-        "#00AAAA",
-        "#AA00AA"
+        "#AA5500",
+        "#00AA00"
       ],
       "flat": true
     },
@@ -85,7 +85,7 @@
           "palette": {
             "K": "#AAAAAA",
             "W": "#555555",
-            "Y": "#55FFFF"
+            "Y": "#FFFF55"
           },
           "x": 64,
           "y": 12,
@@ -123,7 +123,7 @@
     },
     "visTint": {
       "back": "#000000",
-      "ink": "#55FFFF"
+      "ink": "#FFFF55"
     }
   }
 }

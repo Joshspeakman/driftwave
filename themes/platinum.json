@@ -13,13 +13,13 @@
     "cardStroke": "#000000",
     "control": "#EEEEEE",
     "controlStroke": "#555555",
-    "subtle": "#33666699",
+    "subtle": "#335B7299",
     "divider": "#999999",
     "text": "#000000",
     "textSecondary": "#262626",
     "textTertiary": "#666666",
-    "accent": "#666699",
-    "accentText": "#333399",
+    "accent": "#5B7299",
+    "accentText": "#2E4F99",
     "onAccent": "#FFFFFF",
     "dialog": "#EEEEEE",
     "pane": "#E4E4E4"
@@ -38,7 +38,7 @@
   "effects": {
     "tiles": {
       "colors": [
-        "#7779AE",
+        "#6F86B0",
         "#5F8EB0",
         "#8E8E8E"
       ]

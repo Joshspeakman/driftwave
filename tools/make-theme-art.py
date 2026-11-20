@@ -6,6 +6,8 @@ Pillow only. Usage: python windows/tools/make-theme-art.py [name ...]
 """
 import math
 import os
+
+from safe_hues import safe_photo
 import random
 import sys
 
@@ -86,6 +88,8 @@ def vignette(img, strength=0.55):
 def save(img, name, quality=88):
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, name)
+    # Driftwave's colour rule (no teal, purple or pink), last: blending light can make what no input had.
+    img = safe_photo(img.convert('RGBA') if img.mode in ('RGBA', 'LA') else img.convert('RGB'))
     if name.endswith('.png'):
         img.save(path, optimize=True)
     else:
@@ -434,13 +438,14 @@ ART = {
                               ['#2FFF9A', '#1BD6C6', '#3F8BFF', '#7DFFB8'], 3, count=7, thickness=(80, 220), blur=(40, 110), core=False, stars=True),
     'superbar': lambda: ribbons('superbar.jpg', [(0, '#0A2E5C'), (0.55, '#1868B4'), (1, '#0A2550')],
                                 ['#9AD8FF', '#4FB2FF', '#FFFFFF'], 7, count=4, thickness=(40, 120), blur=(20, 60)),
-    'aqua': lambda: ribbons('aqua.jpg', [(0, '#062A6E'), (0.5, '#0E5AC2'), (1, '#1B8FE8')],
-                            ['#7FD4FF', '#BFEAFF', '#4FB2FF'], 13, count=5, thickness=(50, 140), blur=(26, 70)),
+    'aqua': lambda: ribbons('aqua.jpg', [(0, '#062A6E'), (0.5, '#0E56C2'), (1, '#1B7FE8')],
+                            ['#8CC4FF', '#CFE4FF', '#5A9BFF'], 13, count=5, thickness=(50, 140), blur=(26, 70)),
     # Fluent's bloom is made by make-fluent-bloom.py (folded, shaded petals; needs numpy).
     'fluent': lambda: None,
     'big-glass': lambda: save(blobs('big-glass.jpg', [(0, '#F6E9F7'), (1, '#E4EEFB')], ['#FF8FB8', '#8F9BFF', '#7FE0D8', '#FFC07A', '#C59BFF'], 9), 'big-glass.jpg'),
-    'home-screen': lambda: save(bokeh(blobs('home-screen.jpg', [(0, '#3A1C71'), (0.6, '#D76D77'), (1, '#FFAF7B')],
-                                            ['#FF6FA8', '#7A5CFF', '#FFB86B', '#FF8A5B'], 21, blur=120), 4, 30, ('#FFFFFF', '#FFD7E8')), 'home-screen.jpg'),
+    # A dawn wallpaper: deep blue night lifting into a warm amber glow (the colour rule: no teal, purple or pink).
+    'home-screen': lambda: save(bokeh(blobs('home-screen.jpg', [(0, '#0B1A3A'), (0.55, '#2457A8'), (1, '#F2A25A')],
+                                            ['#3D8BFF', '#FFB86B', '#FF8A3D', '#2A5BD7'], 21, blur=120), 4, 30, ('#FFFFFF', '#FFE2C2')), 'home-screen.jpg'),
     'platinum': lambda: save(brushed('platinum.jpg', '#DADADA', 0.18, seed=2), 'platinum.jpg'),
     'llama': lambda: (save(brushed('llama-metal.jpg', '#24242C', 0.35, seed=3), 'llama-metal.jpg'),
                       save(Image.composite(brushed('', '#D4AF37', 0.5, (W, 48), 4), Image.new('RGB', (W, 48), (60, 48, 14)),

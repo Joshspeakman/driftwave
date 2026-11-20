@@ -25,6 +25,8 @@ pub struct ClassicPalette {
     pub button: Color,
     pub glyph: Color,
     pub glyph_on: Color,
+    /// Text on the frames themselves (labels, status): readable on the face.
+    pub label: Color,
     /// Sliders: the groove, and the fill from low to high.
     pub groove: Color,
     pub fill_low: Color,
@@ -38,6 +40,8 @@ pub struct ClassicPalette {
     /// Neon edges and glows (themes with a neon look).
     pub glow: Color,
     pub dark: bool,
+    /// How much of the theme's picture shows through the panels' faces (0.4 unless the theme says).
+    pub see: f32,
 }
 
 fn rgb(r: u8, g: u8, b: u8) -> Color {
@@ -75,6 +79,17 @@ pub fn readable(fg: Color, bg: Color, min: f64) -> Color {
     c
 }
 
+/// A derived colour kept to the colour rule (no teal, purple or pink). Violet-leaning blues (a pure navy) are blue
+/// as they are, but lavender once the UI lightens them for a highlight or a glow, so they lean to a plainer blue now.
+pub fn ruled(c: Color) -> Color {
+    use driftwave_core::hues;
+    let (r, g, b) = hues::rule_rgb(c.r, c.g, c.b);
+    let (h, _, _) = hues::hsl(r, g, b);
+    let chroma = r.max(g).max(b) - r.min(g).min(b);
+    let (r, g, b) = if chroma >= 16 && (229.0..245.0).contains(&h) { hues::with_hue(r, g, b, 226.0) } else { (r, g, b) };
+    Color { a: c.a, r, g, b }
+}
+
 /// Composites a translucent token over an opaque colour (themes often give glassy surfaces).
 fn over(top: Color, under: Color) -> Color {
     let a = top.a as f64 / 255.0;
@@ -93,7 +108,13 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
     let accent = Color { a: 255, ..get("accent").unwrap_or(def_accent) };
     let accent_text = Color { a: 255, ..get("accentText").unwrap_or(accent) };
     let on_accent = get("onAccent").unwrap_or(if luminance(accent) > 0.4 { rgb(0, 0, 0) } else { rgb(255, 255, 255) });
-    let surface = get("surface").map(|s| over(s, back)).unwrap_or(back);
+    // The frame is what Full's panels are made of: the theme's surface, unless it leaves that clear (Ninety-Five's
+    // desktop shows through it), then its cards'.
+    let panel = match get("surface") {
+        Some(s) if s.a >= 40 => Some(s),
+        _ => get("card").or_else(|| get("pane")),
+    };
+    let surface = panel.map(|s| over(s, back)).unwrap_or(back);
     let control = get("control").map(|c| over(c, back)).unwrap_or(surface);
 
     // The frame: the theme's surface, nudged off the background so the panel reads as an object.
@@ -144,7 +165,7 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
         .and_then(Color::parse)
         .unwrap_or(Color { a: 0, ..accent });
 
-    ClassicPalette {
+    let p = ClassicPalette {
         face,
         bevel_light,
         bevel_dark,
@@ -157,6 +178,7 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
         button,
         glyph,
         glyph_on,
+        label: readable(glyph, face, 4.5),
         groove,
         fill_low,
         fill_high,
@@ -167,7 +189,121 @@ pub fn classic(theme: Option<&Theme>, dark: bool) -> ClassicPalette {
         list_selected_text,
         glow,
         dark,
+        see: see_through(theme, panel),
+    };
+    let p = match theme.and_then(|t| t.effects.get("classic")) {
+        Some(o) => overridden(p, o),
+        None => p,
+    };
+    // The rule, then text made readable again on what the rule changed, then the rule on that text.
+    all_ruled(settled(all_ruled(p)))
+}
+
+/// Every pair of text and what it sits on, readable again (after a theme's overrides, or the colour rule).
+fn settled(mut p: ClassicPalette) -> ClassicPalette {
+    p.title_text = readable(p.title_text, p.title_a.mix(p.title_b, 0.5), 4.5);
+    p.lcd_lit = readable(p.lcd_lit, p.lcd_back, 4.5);
+    p.lcd_ghost = Color { a: 26, ..p.lcd_lit };
+    p.glyph = readable(p.glyph, p.button, 4.5);
+    p.glyph_on = readable(p.glyph_on, p.button, 3.0);
+    p.label = readable(p.label, p.face, 4.5);
+    p.fill_low = readable(p.fill_low, p.groove, 3.0);
+    p.fill_high = readable(p.fill_high, p.groove, 3.0);
+    p.list_text = readable(p.list_text, p.list_back, 4.5);
+    p.list_playing = readable(p.list_playing, p.list_back, 4.5);
+    p.list_selected_text = readable(p.list_selected_text, p.list_selected_back, 4.5);
+    p
+}
+
+fn all_ruled(p: ClassicPalette) -> ClassicPalette {
+    ClassicPalette {
+        face: ruled(p.face),
+        bevel_light: ruled(p.bevel_light),
+        bevel_dark: ruled(p.bevel_dark),
+        title_a: ruled(p.title_a),
+        title_b: ruled(p.title_b),
+        title_text: ruled(p.title_text),
+        lcd_back: ruled(p.lcd_back),
+        lcd_lit: ruled(p.lcd_lit),
+        lcd_ghost: ruled(p.lcd_ghost),
+        button: ruled(p.button),
+        glyph: ruled(p.glyph),
+        glyph_on: ruled(p.glyph_on),
+        label: ruled(p.label),
+        groove: ruled(p.groove),
+        fill_low: ruled(p.fill_low),
+        fill_high: ruled(p.fill_high),
+        list_back: ruled(p.list_back),
+        list_text: ruled(p.list_text),
+        list_playing: ruled(p.list_playing),
+        list_selected_back: ruled(p.list_selected_back),
+        list_selected_text: ruled(p.list_selected_text),
+        glow: ruled(p.glow),
+        ..p
     }
+}
+
+/// How much of the theme's picture shows through Classic's frames, as Full shows it through its panels: glass
+/// themes as see-through as their panels, materials (walnut, concrete) mostly the material, the rest a hint.
+/// (Where the picture would drown the frames' text, `look` thickens them again.)
+fn see_through(theme: Option<&Theme>, panel: Option<Color>) -> f32 {
+    let Some(t) = theme else { return 0.4 };
+    let glass = t.effects.get("scene").and_then(|s| s.get("surfaces")).and_then(serde_json::Value::as_str) == Some("translucent")
+        || t.effects.contains_key("aurora");
+    if glass {
+        let a = panel.map(|c| c.a as f32 / 255.0).unwrap_or(0.6);
+        return (1.0 - a).clamp(0.4, 0.75);
+    }
+    if t.effects.contains_key("wood") || t.effects.contains_key("concrete") {
+        return 0.7;
+    }
+    0.4
+}
+
+/// A theme's own choices for Classic (the `classic` effect: any part's colour, and `see`), for materials the
+/// derivation can't know (Woodgrain's frames are the walnut itself). Whatever it sets, text stays readable: the
+/// derived pairs are checked again.
+fn overridden(mut p: ClassicPalette, o: &serde_json::Map<String, serde_json::Value>) -> ClassicPalette {
+    let c = |k: &str| o.get(k).and_then(serde_json::Value::as_str).and_then(Color::parse).map(|c| Color { a: 255, ..c });
+    if let Some(face) = c("face") {
+        p.face = face;
+        p.bevel_light = face.mix(rgb(255, 255, 255), if p.dark { 0.22 } else { 0.7 });
+        p.bevel_dark = face.mix(rgb(0, 0, 0), if p.dark { 0.55 } else { 0.35 });
+        p.groove = face.mix(rgb(0, 0, 0), 0.45);
+    }
+    let fields: [(&str, &mut Color); 17] = [
+        ("bevelLight", &mut p.bevel_light),
+        ("bevelDark", &mut p.bevel_dark),
+        ("titleA", &mut p.title_a),
+        ("titleB", &mut p.title_b),
+        ("titleText", &mut p.title_text),
+        ("lcdBack", &mut p.lcd_back),
+        ("lcdLit", &mut p.lcd_lit),
+        ("button", &mut p.button),
+        ("glyph", &mut p.glyph),
+        ("glyphOn", &mut p.glyph_on),
+        ("groove", &mut p.groove),
+        ("fillLow", &mut p.fill_low),
+        ("fillHigh", &mut p.fill_high),
+        ("listBack", &mut p.list_back),
+        ("listText", &mut p.list_text),
+        ("listPlaying", &mut p.list_playing),
+        ("listSelectedBack", &mut p.list_selected_back),
+    ];
+    for (k, field) in fields {
+        if let Some(v) = c(k) {
+            *field = v;
+        }
+    }
+    if let Some(v) = c("listSelectedText") {
+        p.list_selected_text = v;
+    }
+    p.label = c("label").unwrap_or(p.label);
+    if let Some(see) = o.get("see").and_then(serde_json::Value::as_f64) {
+        p.see = see.clamp(0.0, 1.0) as f32;
+    }
+    p.lcd_ghost = Color { a: 26, ..p.lcd_lit };
+    settled(p)
 }
 
 #[cfg(test)]
@@ -186,6 +322,7 @@ mod tests {
             ("LCD", p.lcd_lit, p.lcd_back, 4.5),
             ("button glyph", p.glyph, p.button, 4.5),
             ("button on", p.glyph_on, p.button, 3.0),
+            ("label", p.label, p.face, 4.5),
             ("slider", p.fill_low, p.groove, 3.0),
             ("list text", p.list_text, p.list_back, 4.5),
             ("playing station", p.list_playing, p.list_back, 4.5),

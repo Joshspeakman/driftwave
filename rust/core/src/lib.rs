@@ -4,6 +4,7 @@
 pub mod audio_frames;
 pub mod exchange;
 pub mod flash;
+pub mod hues;
 pub mod icy;
 pub mod id3;
 pub mod m4a;
