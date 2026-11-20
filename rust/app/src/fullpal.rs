@@ -144,7 +144,11 @@ pub fn full(theme: Option<&Theme>, dark: bool) -> FullPalette {
         on_accent,
         dialog: solid("dialog", base.dialog),
     };
-    // Derived colours kept to the colour rule (a navy lightened for reading turns lavender).
+    // Derived colours kept to the colour rule (a navy lightened for reading turns lavender), for Driftwave's own
+    // themes: one you make keeps the colours you chose.
+    if !t.built_in {
+        return p;
+    }
     FullPalette {
         background: ruled(p.background),
         pane: ruled(p.pane),

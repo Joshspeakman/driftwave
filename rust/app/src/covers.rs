@@ -225,3 +225,39 @@ fn load(cache: &std::path::Path, source: &str) -> Option<SharedPixelBuffer<Rgba8
     let rgba = img.to_rgba8();
     Some(SharedPixelBuffer::clone_from_slice(rgba.as_raw(), rgba.width(), rgba.height()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use driftwave_core::hues::banned;
+
+    /// Placeholder tiles keep the colour rule: both ends of every tile's gradient and the colour halfway between,
+    /// with no theme and under light and dark themes' moods (one each side of every banned band).
+    #[test]
+    fn tiles_keep_the_colour_rule() {
+        let moods = [
+            None,
+            Some(Mood { from: 215.0 / 360.0, to: 210.0 / 360.0, light: true, palette: Vec::new(), flat: false }),
+            Some(Mood { from: 215.0 / 360.0, to: 205.0 / 360.0, light: false, palette: Vec::new(), flat: false }),
+            Some(Mood { from: 10.0 / 360.0, to: 32.0 / 360.0, light: false, palette: Vec::new(), flat: false }),
+            Some(Mood { from: 140.0 / 360.0, to: 30.0 / 360.0, light: true, palette: Vec::new(), flat: false }),
+            Some(Mood { from: 20.0 / 360.0, to: 220.0 / 360.0, light: false, palette: Vec::new(), flat: false }),
+        ];
+        let mut bad = Vec::new();
+        for (m, mood) in moods.iter().enumerate() {
+            set_mood(mood.clone());
+            for i in 0..2000 {
+                let name = format!("Station {i} FM");
+                let (a, b) = tile_colours(&name);
+                let mid = (((a.red() as u16 + b.red() as u16) / 2) as u8, ((a.green() as u16 + b.green() as u16) / 2) as u8, ((a.blue() as u16 + b.blue() as u16) / 2) as u8);
+                for (part, c) in [("top", (a.red(), a.green(), a.blue())), ("bottom", (b.red(), b.green(), b.blue())), ("middle", mid)] {
+                    if let Some(k) = banned(c.0, c.1, c.2, 255) {
+                        bad.push(format!("mood {m}, {name}, {part}: {c:?} ({k:?})"));
+                    }
+                }
+            }
+        }
+        set_mood(None);
+        assert!(bad.is_empty(), "{} banned tiles, e.g. {:?}", bad.len(), &bad[..bad.len().min(8)]);
+    }
+}
