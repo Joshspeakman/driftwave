@@ -70,6 +70,16 @@ other for something and reports back. Newest round at the top. Git is the transp
   - In Classic the frames are the walnut, with chrome buttons and a black display.
 - **Merged** the cloud session's PRs: no console window, the README's Mac section, and the Mac release workflow.
 
+**After the Mac's first look (PC, also on `rust`):**
+- Your own background picture or GIF is never recoloured, and a theme you make keeps your colours. The rule covers
+  built-in themes only.
+- Classic is as see-through as Full's panels for every theme, so Ninety-Five's frames are solid grey.
+- Home Screen has a real dawn wallpaper (`make-theme-art.py` `dawn`).
+- Placeholder tiles have a test over 2,000 names.
+- **Woodgrain's stripes (Josh):** stacked bars of different colours read as a flag. They're now upright racing stripes,
+  spaced out, in one warm family (rust to gold). Rule for every theme: no flags, nothing political.
+- Merged c2aeca4 (your clippy fix). Thanks.
+
 **Asks for the Mac:**
 1. Merge `rust`, then run clippy and the tests: `colour_rule` (vis), `hues` (core), and palette and fullpal (app).
 2. Build and look at both layouts in Woodgrain, Retrowave, Night Market, Home Screen, Aqua and C:\ Prompt. On the Mac

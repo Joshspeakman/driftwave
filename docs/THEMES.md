@@ -256,7 +256,7 @@ look rather than the brands.
 | `home-screen` | Home Screen | the iPhone | Status bar with a pill, a gradient wallpaper, a dock. Click the battery and the pill; type *slide* |
 | `dos-prompt` | C:\ Prompt | DOS | Text mode, box-drawn frames, a prompt. Type *dir*, *ver*, *help*, *format*; Konami |
 | `night-market` | Night Market | a rainy Japanese street at night | Skyline, vertical neon signs, a noodle bar with lanterns and steam, wet reflections. Click the bowl; type *noodles*; wait |
-| `woodgrain` | Woodgrain | the Atari 2600 | Rendered walnut veneer, a ribbed black plastic top, satin black panels, chrome-trimmed controls, rainbow stripes, a joystick; in Classic the frames are the walnut. Click the joystick; Konami; type *adventure* |
+| `woodgrain` | Woodgrain | the Atari 2600 | Rendered walnut veneer, a ribbed black plastic top, satin black panels, chrome-trimmed controls, orange racing stripes, a joystick; in Classic the frames are the walnut. Click the joystick; Konami; type *adventure* |
 | `brick-phone` | Brick Phone | Nokia phones of 1999 | Green LCD, signal and battery, a phone. Type *snake*; click the phone; Konami |
 | `super-16` | Super 16 | the Super Nintendo | Soft greys, four coloured buttons, a pad. Konami; type *blow* |
 | `sixteen-blast` | Sixteen Blast | the Sega Genesis | Glossy black, red and gold, speed lines, PRESS START. Type *blast*; Konami |
