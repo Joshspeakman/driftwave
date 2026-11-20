@@ -53,7 +53,7 @@ program with nothing else to install, it downloads in a moment, and while it pla
 | Measured on a Windows PC | |
 |---|---|
 | Download | 15.8 MB |
-| Memory | about 46 MB while playing |
+| Memory | about 50 MB while playing |
 | CPU | under 1% of one core while playing (Default theme); a few percent with Classic's visualizer or a moving scene in front |
 
 How it stays that small:

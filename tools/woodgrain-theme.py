@@ -1,7 +1,7 @@
 """Woodgrain, redesigned (2026-11-20): the 1977 console itself. Walnut veneer is the window; the ribbed black plastic
 of its top runs across the title bar with a bevelled lip; the panels are satin black plastic; controls are trimmed in
 brushed chrome like its switches; and everything you press glows the console's orange. Pixel art stays in the title
-bar's free stretch (the joystick, its rainbow stripes), per the homage rules.
+bar's free stretch (the joystick, racing stripes), per the homage rules.
 
 Writes themes/woodgrain.json (the art comes from make-woodgrain.py).
 """
@@ -52,10 +52,12 @@ theme = {
                 {"type": "rect", "in": "titlebar-full", "x": 0, "y": 46, "w": "100%", "h": 1, "fill": "#40FFFFFF"},
                 {"type": "rect", "in": "titlebar-full", "x": 0, "y": 47, "w": "100%", "h": 1, "fill": "#000000"},
                 {"type": "rect", "in": "pane", "x": 0, "y": 0, "w": "100%", "h": 14, "fill": ["#80000000", "#00000000"]},
-                {"type": "rect", "in": "titlebar", "x": -120, "y": 16, "w": 56, "h": 3, "fill": "#D8342C"},
-                {"type": "rect", "in": "titlebar", "x": -120, "y": 20, "w": 56, "h": 3, "fill": "#E8782A"},
-                {"type": "rect", "in": "titlebar", "x": -120, "y": 24, "w": 56, "h": 3, "fill": "#F2C230"},
-                {"type": "rect", "in": "titlebar", "x": -120, "y": 28, "w": 56, "h": 3, "fill": "#4A9A3A"},
+                # Racing stripes: upright and spaced out, in one warm family (rust to gold, the console's own
+                # oranges). Never stacked bars of different colours: that reads as a flag (Josh, 2026-11-20).
+                {"type": "rect", "in": "titlebar", "x": -132, "y": 11, "w": 7, "h": 26, "fill": "#C4561A"},
+                {"type": "rect", "in": "titlebar", "x": -120, "y": 11, "w": 7, "h": 26, "fill": "#E8752A"},
+                {"type": "rect", "in": "titlebar", "x": -108, "y": 11, "w": 3, "h": 26, "fill": "#F2A65A"},
+                {"type": "rect", "in": "titlebar", "x": -100, "y": 11, "w": 3, "h": 26, "fill": "#F5C77A"},
                 {"type": "pixels",
                  "rows": [".....RR.....", "....RRRR....", "....RRRR....", ".....KK.....", ".....KK.....", "KKKKKKKKKKKK",
                           "KWWWWWWWWWRK", "KKKKKKKKKKKK"],
