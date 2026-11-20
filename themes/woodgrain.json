@@ -3,26 +3,26 @@
   "version": 1,
   "id": "woodgrain",
   "name": "Woodgrain",
-  "description": "A homage to the woodgrain consoles of 1977: walnut veneer, ribbed black plastic, chunky pixels and a joystick.",
+  "description": "A homage to the woodgrain consoles of 1977: walnut veneer, ribbed black plastic, chrome switches, chunky pixels and a joystick.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
-    "background": "#1A120B",
-    "surface": "#E01C1410",
-    "card": "#EE141010",
-    "cardStroke": "#55E07A1F",
-    "control": "#E0201812",
-    "controlStroke": "#66E07A1F",
-    "subtle": "#33E07A1F",
-    "divider": "#44E07A1F",
-    "text": "#F4E6CF",
-    "textSecondary": "#D4B48C",
-    "textTertiary": "#9C7E5C",
-    "accent": "#E07A1F",
-    "accentText": "#F2A65A",
-    "onAccent": "#1A120B",
-    "dialog": "#20160E",
-    "pane": "#99100B07"
+    "background": "#2A1A10",
+    "pane": "#3A0E0905",
+    "surface": "#F2131010",
+    "card": "#1D1916",
+    "cardStroke": "#2EF4E9D8",
+    "control": "#2B2622",
+    "controlStroke": "#A8A39A",
+    "subtle": "#22F5A35C",
+    "divider": "#2EF4E9D8",
+    "text": "#F4E9D8",
+    "textSecondary": "#CDB79A",
+    "textTertiary": "#97836C",
+    "accent": "#E8752A",
+    "accentText": "#F5A35C",
+    "onAccent": "#1A0F08",
+    "dialog": "#1A1512"
   },
   "fonts": {
     "body": "Segoe UI",
@@ -31,42 +31,76 @@
     "titleUppercase": true
   },
   "corners": {
-    "control": 0,
-    "overlay": 2,
-    "card": 0,
-    "cover": 0
+    "control": 2,
+    "overlay": 4,
+    "card": 2,
+    "cover": 0.02
   },
   "effects": {
-    "wood": {},
     "windowTitle": {
       "font": "Press Start 2P",
       "size": 10,
-      "color": "#F2A65A",
+      "color": "#F5A35C",
       "uppercase": true
+    },
+    "classic": {
+      "see": 0.88,
+      "face": "#3A2516",
+      "button": "#BDB8AF",
+      "glyph": "#1B1714",
+      "glyphOn": "#C4561A",
+      "label": "#EADBC4",
+      "titleA": "#17130F",
+      "titleB": "#0E0C0A",
+      "titleText": "#F5A35C"
     },
     "scene": {
       "layers": [
         {
-          "type": "rect",
+          "type": "image",
+          "src": "woodgrain-walnut.jpg",
+          "in": "window",
+          "x": 0,
+          "y": 0
+        },
+        {
+          "type": "image",
+          "src": "woodgrain-ribs.jpg",
           "in": "titlebar-full",
           "x": 0,
           "y": 0,
-          "w": "100%",
           "h": 48,
-          "fill": "#0E0E0E"
+          "fit": "fill"
         },
         {
-          "type": "line",
+          "type": "rect",
           "in": "titlebar-full",
           "x": 0,
-          "y": 4,
-          "x2": "100%",
-          "y2": 0,
-          "stroke": "#202020",
-          "repeat": {
-            "n": 10,
-            "dy": 4
-          }
+          "y": 46,
+          "w": "100%",
+          "h": 1,
+          "fill": "#40FFFFFF"
+        },
+        {
+          "type": "rect",
+          "in": "titlebar-full",
+          "x": 0,
+          "y": 47,
+          "w": "100%",
+          "h": 1,
+          "fill": "#000000"
+        },
+        {
+          "type": "rect",
+          "in": "pane",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": 14,
+          "fill": [
+            "#80000000",
+            "#00000000"
+          ]
         },
         {
           "type": "rect",
