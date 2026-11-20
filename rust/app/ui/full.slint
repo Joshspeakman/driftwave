@@ -24,7 +24,7 @@ export global Th {
     in-out property <color> title-text: #FFFFFF;
     in-out property <color> control-text: #FFFFFF;
     in-out property <color> accent: #4CC2FF;
-    in-out property <color> accent-text: #99EBFF;
+    in-out property <color> accent-text: #9CCBFF;
     in-out property <color> on-accent: #000000;
     in-out property <color> dialog: #2B2B2B;
     in-out property <string> body-font: "Segoe UI";
@@ -144,7 +144,7 @@ export global Scenery {
     in property <length> sun-y;
     in property <length> sun-w;
     in property <length> sun-h;
-    in property <color> synth-grid: #FF2E97;
+    in property <color> synth-grid: #2F7BFF;
     in property <float> synth-phase;
     in property <bool> band-on;
     in property <length> band-y: -400px;
@@ -524,8 +524,8 @@ component Cover inherits Rectangle {
     in property <bool> has-source;
     // A small logo (under 128 px) is shown at a size it can carry, centred on its tile, not blown up.
     in property <bool> small;
-    in property <color> c1: #6B4EA0;
-    in property <color> c2: #C24F8E;
+    in property <color> c1: #2F5BD3;
+    in property <color> c2: #FF8A3D;
     border-radius: Th.radius-cover;
     clip: true;
     background: has-source && !small ? #00000000 : @linear-gradient(135deg, c1 0%, c2 100%);

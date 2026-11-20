@@ -399,6 +399,7 @@ impl App {
         g.set_button(to_slint(p.button));
         g.set_glyph(to_slint(p.glyph));
         g.set_glyph_on(to_slint(p.glyph_on));
+        g.set_label(to_slint(p.label));
         g.set_groove(to_slint(p.groove));
         g.set_fill_low(to_slint(p.fill_low));
         g.set_fill_high(to_slint(p.fill_high));
@@ -408,6 +409,8 @@ impl App {
         g.set_list_selected_back(to_slint(p.list_selected_back));
         g.set_list_selected_text(to_slint(p.list_selected_text));
         g.set_glow(to_slint(p.glow));
+        g.set_see(p.see);
+        self.look.classic_see = p.see;
         let fallback_body = if cfg!(target_os = "macos") { "Helvetica Neue" } else { "Segoe UI" };
         let fallback_lcd = if cfg!(target_os = "macos") { "Menlo" } else { "Consolas" };
         g.set_body_font(theme.and_then(|t| t.fonts.body.clone()).unwrap_or(fallback_body.into()).into());

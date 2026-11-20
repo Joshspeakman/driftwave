@@ -32,7 +32,7 @@ Driftwave is based on [Shortwave](https://gitlab.gnome.org/World/Shortwave) by F
 
 ## Theme photographs
 
-Some themes use photographs from Wikimedia Commons under free licences (resized for the app). Thank you to the photographers:
+Some themes use photographs from Wikimedia Commons under free licences (resized for the app; Night Market's, Neon Noir's, Aurora Glass's and Big Glass's colours shifted to keep Driftwave's palette: no teal, purple or pink). Thank you to the photographers:
 
 | Theme | Photograph | Author | Licence |
 |---|---|---|---|
@@ -42,7 +42,7 @@ Some themes use photographs from Wikimedia Commons under free licences (resized 
 | Luna | [Polonyna Rohneska, Zakarpattia, Ukraine](https://commons.wikimedia.org/wiki/File:Ukraine,_Zakarpatska,_Bohdan_-_%D0%9F%D0%BE%D0%BB%D0%BE%D0%BD%D0%B8%D0%BD%D0%B0_%D0%A0%D0%BE%D0%B3%D0%BD%D0%B5%D1%81%D0%BA%D0%B0_WMID5619549.jpg) | ChSt | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
 | Big Glass | [Big Sur, California – Poseidon's Gate](https://commons.wikimedia.org/wiki/File:Big_Sur,_California_-_Poseidon%27s_Gate.jpg) | Janusz Sobolewski | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) |
 
-The resized photographs keep their licences. The other theme pictures (light wallpapers, metal, rain) were made for Driftwave.
+The resized and colour-shifted photographs keep their licences. The other theme pictures (light wallpapers, metal, rain, walnut) were made for Driftwave.
 
 ## Homage themes
 

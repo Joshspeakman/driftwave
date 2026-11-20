@@ -118,6 +118,7 @@ impl VisHost {
         let a = self.analyzer.analyse(samples, channels, rate, time, dt);
         self.vis.render(a, &mut self.canvas);
         self.canvas.to_rgba8(&mut self.out);
+        crate::canvas::keep_the_rule(&mut self.out);
         self.guard.apply(&mut self.out, dt);
         &self.out
     }

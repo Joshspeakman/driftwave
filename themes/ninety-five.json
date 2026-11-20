@@ -3,17 +3,17 @@
   "version": 1,
   "id": "ninety-five",
   "name": "Ninety-Five",
-  "description": "A homage to Windows 95: a teal desktop, grey 3D windows, and a navy-to-blue title bar.",
+  "description": "A homage to Windows 95: a blue desktop, grey 3D windows, and a navy-to-blue title bar.",
   "base": "light",
   "backdrop": "none",
   "colors": {
-    "background": "#008080",
+    "background": "#3A6EA5",
     "surface": "#00008080",
     "card": "#C0C0C0",
     "cardStroke": "#000000",
     "control": "#C0C0C0",
     "controlStroke": "#000000",
-    "subtle": "#330000A8",
+    "subtle": "#33002A9C",
     "divider": "#808080",
     "text": "#000000",
     "textSecondary": "#222222",
@@ -41,7 +41,7 @@
       "colors": [
         "#000080",
         "#800000",
-        "#800080",
+        "#808000",
         "#808000"
       ],
       "flat": true

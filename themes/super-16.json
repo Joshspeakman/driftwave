@@ -3,26 +3,26 @@
   "version": 1,
   "id": "super-16",
   "name": "Super 16",
-  "description": "A homage to the 16-bit era's grey-and-purple console: soft greys, purple accents, four coloured buttons and a star.",
+  "description": "A homage to the 16-bit era's grey console: soft greys, four coloured buttons and a star.",
   "base": "light",
   "backdrop": "none",
   "colors": {
-    "background": "#C9C9D4",
-    "surface": "#E6E4E4EC",
-    "card": "#F2F2F7",
-    "cardStroke": "#7C76B8",
-    "control": "#E8E8F0",
-    "controlStroke": "#7C76B8",
-    "subtle": "#334F43AE",
-    "divider": "#A9A9BC",
-    "text": "#26243A",
-    "textSecondary": "#4A4766",
-    "textTertiary": "#7A7896",
-    "accent": "#4F43AE",
-    "accentText": "#4F43AE",
+    "background": "#C8C9CE",
+    "surface": "#E6E4E5E9",
+    "card": "#F3F3F5",
+    "cardStroke": "#8A8D99",
+    "control": "#E9E9EC",
+    "controlStroke": "#8A8D99",
+    "subtle": "#332F5BD3",
+    "divider": "#A9AAB2",
+    "text": "#25262E",
+    "textSecondary": "#4A4C58",
+    "textTertiary": "#767986",
+    "accent": "#2F5BD3",
+    "accentText": "#2550C0",
     "onAccent": "#FFFFFF",
-    "dialog": "#ECECF3",
-    "pane": "#B8B8C6"
+    "dialog": "#EDEDF0",
+    "pane": "#B9BAC0"
   },
   "fonts": {
     "body": "Segoe UI",
@@ -38,7 +38,7 @@
   "effects": {
     "tiles": {
       "colors": [
-        "#4F43AE",
+        "#4A4D57",
         "#2E9E4F",
         "#D93D3D",
         "#3D5FD9",
@@ -48,7 +48,7 @@
     "windowTitle": {
       "font": "Press Start 2P",
       "size": 10,
-      "color": "#4F43AE"
+      "color": "#2F5BD3"
     },
     "scene": {
       "layers": [
@@ -115,7 +115,7 @@
           "x": "40%",
           "y": "40%",
           "size": 20,
-          "color": "#4F43AE",
+          "color": "#2F5BD3",
           "in": "content",
           "font": "Press Start 2P",
           "id": "lives",

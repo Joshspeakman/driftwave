@@ -158,6 +158,69 @@ impl Canvas {
     }
 }
 
+/// Whether an 8-bit colour sits in (or at the edge of) a banned band: a colour with a visible hue between teal's and
+/// purple-to-pink's edges, or a pale red.
+#[inline]
+fn near_banned(r: i32, g: i32, b: i32) -> bool {
+    let (max, min) = (r.max(g).max(b), r.min(g).min(b));
+    let c = max - min;
+    if c < 12 {
+        return false;
+    }
+    let h = if max == r {
+        (60 * (g - b) / c).rem_euclid(360)
+    } else if max == g {
+        60 * (b - r) / c + 120
+    } else {
+        60 * (r - g) / c + 240
+    };
+    (148..=207).contains(&h) || (223..=352).contains(&h) || ((h >= 334 || h < 12) && max + min > 300)
+}
+
+/// The colour rule at the output (RGBA8, in place): blends, glows and additive light can make teal, purple or pink
+/// from allowed colours (blue over amber is lavender), so every frame's pixels pass through `hues::safe_hsv` last.
+/// Quick: a table of 32 × 32 × 32 colour cells says which cells come near a banned band, so nearly every pixel costs
+/// one lookup.
+pub fn keep_the_rule(px: &mut [u8]) {
+    static CELLS: std::sync::OnceLock<Vec<bool>> = std::sync::OnceLock::new();
+    let cells = CELLS.get_or_init(|| {
+        let mut t = vec![false; 32 * 32 * 32];
+        for (i, cell) in t.iter_mut().enumerate() {
+            let (r0, g0, b0) = (((i >> 10) & 31) as i32 * 8, ((i >> 5) & 31) as i32 * 8, (i & 31) as i32 * 8);
+            // The corners and the middle of the cell.
+            *cell = [(0, 0, 0), (7, 0, 0), (0, 7, 0), (0, 0, 7), (7, 7, 0), (7, 0, 7), (0, 7, 7), (7, 7, 7), (4, 4, 4)]
+                .iter()
+                .any(|&(dr, dg, db)| near_banned(r0 + dr, g0 + dg, b0 + db));
+        }
+        t
+    });
+    for p in px.as_chunks_mut::<4>().0 {
+        if !cells[((p[0] as usize >> 3) << 10) | ((p[1] as usize >> 3) << 5) | (p[2] as usize >> 3)] {
+            continue;
+        }
+        let (r, g, b) = (p[0] as i32, p[1] as i32, p[2] as i32);
+        if !near_banned(r, g, b) {
+            continue;
+        }
+        let (max, min) = (r.max(g).max(b), r.min(g).min(b));
+        let c = (max - min) as f32 / 255.0;
+        let (rf, gf, bf) = (r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0);
+        let v = max as f32 / 255.0;
+        let hf = if max == r {
+            ((gf - bf) / c).rem_euclid(6.0)
+        } else if max == g {
+            (bf - rf) / c + 2.0
+        } else {
+            (rf - gf) / c + 4.0
+        } * 60.0;
+        let (h2, s2) = driftwave_core::hues::safe_hsv(hf, c / v, v);
+        let o = hsv_raw(h2 / 360.0, s2, v);
+        p[0] = (o[0] * 255.0 + 0.5) as u8;
+        p[1] = (o[1] * 255.0 + 0.5) as u8;
+        p[2] = (o[2] * 255.0 + 0.5) as u8;
+    }
+}
+
 #[inline]
 fn shoulder(v: f32) -> f32 {
     let v = v.max(0.0);
@@ -169,8 +232,41 @@ pub fn mix(a: Rgb, b: Rgb, t: f32) -> Rgb {
     [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 }
 
-/// Hue (0–1, wrapping), saturation and value to RGB.
+/// A colour moved out of teal, purple and pink (the colour rule), keeping its brightness: for blends between
+/// palettes, where two allowed colours can meet in a banned one (blue and green make teal).
+pub fn safe(c: Rgb) -> Rgb {
+    let (max, min) = (c[0].max(c[1]).max(c[2]), c[0].min(c[1]).min(c[2]));
+    let d = max - min;
+    if max <= 1e-5 || d <= 1e-5 {
+        return c;
+    }
+    let h = if max == c[0] {
+        ((c[1] - c[2]) / d).rem_euclid(6.0)
+    } else if max == c[1] {
+        (c[2] - c[0]) / d + 2.0
+    } else {
+        (c[0] - c[1]) / d + 4.0
+    } * 60.0;
+    let (h2, s2) = driftwave_core::hues::safe_hsv(h, d / max, max);
+    if h2 == h && s2 == d / max {
+        return c;
+    }
+    hsv_raw(h2 / 360.0, s2, max)
+}
+
+/// Hue (0–1, wrapping), saturation and value to RGB. The colour rule (no teal, purple or pink) applies: a sweep
+/// round the hues spends its time on crimson to green and azure to blue, dipping briefly through silver between.
 pub fn hsv(h: f32, s: f32, v: f32) -> Rgb {
+    let (h, s) = driftwave_core::hues::safe_hsv(driftwave_core::hues::spread(h.rem_euclid(1.0) * 360.0), s, v);
+    hsv_raw(h / 360.0, s, v)
+}
+
+/// Hue, saturation and value to RGB without the colour rule (tests make banned colours with it on purpose).
+pub fn hsv_unruled(h: f32, s: f32, v: f32) -> Rgb {
+    hsv_raw(h, s, v)
+}
+
+fn hsv_raw(h: f32, s: f32, v: f32) -> Rgb {
     let h = h.rem_euclid(1.0) * 6.0;
     let i = h.floor();
     let f = h - i;

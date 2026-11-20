@@ -1,8 +1,14 @@
 Photographs used as theme backgrounds (Wikimedia Commons, free licences). The other pictures here were
-rendered for Driftwave by tools/make-theme-art.py, make-rain.py and make-fluent-bloom.py.
+rendered for Driftwave by tools/make-theme-art.py, make-rain.py, make-fluent-bloom.py, make-neon-glass.py and
+make-woodgrain.py.
+
+Driftwave's colour rule (no teal, purple or pink) applies to the photographs too: their colours were shifted by
+tools/safe_hues.py (2026-11-20). Pink and magenta light now reads crimson, purple blue, cyan azure, and the aurora's
+teal green. photo-night-market-glass.jpg, night-market-neon.png and drop-*.png are made from photo-night-market.jpg
+(blurred, darkened, colour-shifted).
 
 photo-night-market.jpg: "Colorful neon street signs in Kabukichō, Shinjuku, Tokyo.jpg" by Basile Morin, CC BY-SA 4.0, https://commons.wikimedia.org/wiki/File:Colorful_neon_street_signs_in_Kabukich%C5%8D,_Shinjuku,_Tokyo.jpg (resized)
-photo-neon-noir.jpg: "Akihabara Main Street south side at night (2017-03-29 21.39.33 by yagi-s).jpg" by yagi-s, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Akihabara_Main_Street_south_side_at_night_(2017-03-29_21.39.33_by_yagi-s).jpg (resized)
-photo-aurora.jpg: "PIXNIO-1094468-aurora borealis.jpg" by Yuliya, CC0, https://commons.wikimedia.org/wiki/File:PIXNIO-1094468-aurora_borealis.jpg (resized)
+photo-neon-noir.jpg: "Akihabara Main Street south side at night (2017-03-29 21.39.33 by yagi-s).jpg" by yagi-s, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Akihabara_Main_Street_south_side_at_night_(2017-03-29_21.39.33_by_yagi-s).jpg (resized; colours shifted)
+photo-aurora.jpg: "PIXNIO-1094468-aurora borealis.jpg" by Yuliya, CC0, https://commons.wikimedia.org/wiki/File:PIXNIO-1094468-aurora_borealis.jpg (resized; colours shifted)
 photo-hills.jpg: "Ukraine, Zakarpatska, Bohdan - Полонина Рогнеска WMID5619549.jpg" by ChSt, CC BY-SA 3.0, https://commons.wikimedia.org/wiki/File:Ukraine,_Zakarpatska,_Bohdan_-_%D0%9F%D0%BE%D0%BB%D0%BE%D0%BD%D0%B8%D0%BD%D0%B0_%D0%A0%D0%BE%D0%B3%D0%BD%D0%B5%D1%81%D0%BA%D0%B0_WMID5619549.jpg (resized)
-photo-coast.jpg: "Big Sur, California - Poseidon's Gate.jpg" by Janusz Sobolewski, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Big_Sur,_California_-_Poseidon%27s_Gate.jpg (resized)
+photo-coast.jpg: "Big Sur, California - Poseidon's Gate.jpg" by Janusz Sobolewski, CC BY 2.0, https://commons.wikimedia.org/wiki/File:Big_Sur,_California_-_Poseidon%27s_Gate.jpg (resized; colours shifted)

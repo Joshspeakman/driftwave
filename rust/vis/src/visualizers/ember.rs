@@ -1,22 +1,23 @@
 //! Ember Field: the palette-plasma style. A single field of heat is pulled inwards in a slow spiral and softly
 //! blurred each frame; the waveform is sprinkled across it as sparks, and kicks breathe warmth into the middle. The
-//! heat is coloured through a palette that drifts between fire, ocean, aurora and orchid every half minute.
+//! heat is coloured through a palette that drifts between fire, aurora, moonlight and ocean every half minute
+//! (in that order, so blue never blends into green).
 
 use super::{mesh_warp, preset_mix, Visualizer};
 use crate::analysis::Analysis;
-use crate::canvas::{mix, Canvas, Rgb};
+use crate::canvas::{mix, safe, Canvas, Rgb};
 
 type Palette = [(f32, Rgb); 5];
 
 const PALETTES: [Palette; 4] = [
     // fire
     [(0.0, [0.0, 0.0, 0.0]), (0.25, [0.35, 0.03, 0.02]), (0.5, [0.85, 0.28, 0.04]), (0.75, [1.0, 0.7, 0.2]), (1.0, [1.0, 0.95, 0.75])],
-    // ocean
-    [(0.0, [0.0, 0.0, 0.01]), (0.25, [0.0, 0.08, 0.25]), (0.5, [0.02, 0.38, 0.62]), (0.75, [0.3, 0.8, 0.9]), (1.0, [0.85, 0.98, 1.0])],
-    // aurora
-    [(0.0, [0.0, 0.01, 0.01]), (0.25, [0.0, 0.2, 0.15]), (0.5, [0.1, 0.65, 0.4]), (0.75, [0.55, 0.95, 0.7]), (1.0, [0.95, 1.0, 0.95])],
-    // orchid
-    [(0.0, [0.0, 0.0, 0.0]), (0.25, [0.22, 0.02, 0.3]), (0.5, [0.65, 0.12, 0.7]), (0.75, [0.98, 0.55, 0.85]), (1.0, [1.0, 0.92, 0.98])],
+    // aurora (green, clear of teal)
+    [(0.0, [0.0, 0.01, 0.005]), (0.25, [0.0, 0.2, 0.08]), (0.5, [0.1, 0.65, 0.3]), (0.75, [0.55, 0.95, 0.6]), (1.0, [0.95, 1.0, 0.95])],
+    // moonlight (silver, where orchid was: no purple or pink)
+    [(0.0, [0.0, 0.0, 0.0]), (0.25, [0.08, 0.1, 0.14]), (0.5, [0.35, 0.4, 0.5]), (0.75, [0.75, 0.8, 0.88]), (1.0, [1.0, 1.0, 1.0])],
+    // ocean (deep blue to ice; the colour rule keeps it clear of cyan)
+    [(0.0, [0.0, 0.0, 0.01]), (0.25, [0.0, 0.07, 0.25]), (0.5, [0.02, 0.3, 0.7]), (0.75, [0.35, 0.65, 1.0]), (1.0, [0.85, 0.92, 1.0])],
 ];
 
 fn lookup(p: &Palette, v: f32) -> Rgb {
@@ -131,7 +132,7 @@ impl Visualizer for EmberField {
         self.lut.clear();
         for s in 0..256 {
             let v = s as f32 / 255.0;
-            self.lut.push(mix(lookup(&PALETTES[i], v), lookup(&PALETTES[j], v), m));
+            self.lut.push(safe(mix(lookup(&PALETTES[i], v), lookup(&PALETTES[j], v), m)));
         }
         for y in 0..fh {
             let sy = (y as f32 + 0.5) * 0.5;

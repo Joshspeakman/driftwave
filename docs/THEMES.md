@@ -27,13 +27,13 @@ Every other theme brings its own light or dark base.
   "version": 1,
   "id": "retrowave",
   "name": "Retrowave",
-  "description": "Neon pink and purple over a synthwave sun and an endless grid.",
+  "description": "A midnight drive: a molten orange sun sinking into an electric-blue grid.",
   "base": "dark",
   "backdrop": "none",
-  "colors": { "background": "#12062B", "surface": "#B3180A33", "text": "#F3E8FF", "accent": "#FF2E97", "...": "..." },
+  "colors": { "background": "#070B1F", "surface": "#B30C1433", "text": "#EEF2FF", "accent": "#FF6A2B", "...": "..." },
   "fonts": { "title": "Orbitron", "titleSize": 30, "titleWeight": "Bold", "titleUppercase": true, "titleSpacing": 80 },
   "corners": { "control": 2, "overlay": 4, "card": 6, "cover": 0.08 },
-  "effects": { "synthwave": { "sunTop": "#FFE45E" }, "titleShadow": { "color": "#FF2E97", "blur": 16 } }
+  "effects": { "synthwave": { "sunTop": "#FFE066" }, "titleShadow": { "color": "#2F7BFF", "blur": 16 } }
 }
 ```
 
@@ -192,12 +192,21 @@ that dry slowly. Each drop is a little lens of the street.
 follow the sound. The Windows app has no access to the decoded audio, because Media Foundation plays
 it.
 
+## The colour rule
+
+No theme uses teal, purple or pink (Josh, 2026-11-20). `rust/core/src/hues.rs` says what counts (`banned`) and its
+tests hold every built-in theme to it, translucent tokens included as they show over their backgrounds. Colours the
+app makes itself keep to it too: derived palettes (`palette::ruled`), placeholder tiles (`hues::nearest_allowed`),
+and the visualizers (their rainbows through `hues::spread` and `hues::safe`, and every frame through
+`canvas::keep_the_rule` before the flash guard). Pictures are moved out of those hues by `tools/safe_hues.py`, which
+the art scripts run last. The one exception is Driftwave's own sunset logo.
+
 ## Built-in themes
 
 | id | Name | After | Base | Highlights |
 |---|---|---|---|---|
 | `retrowave` | Retrowave | 80s synthwave | dark | Synthwave sun and grid, neon title glow, scanlines, Orbitron |
-| `neon-noir` | Neon Noir | Blade Runner | dark | Rain, amber and cyan city glow, cyan neon title, grain, vignette, Share Tech Mono |
+| `neon-noir` | Neon Noir | Blade Runner | dark | Rain, amber and steel-blue city glow, blue neon title, grain, vignette, Share Tech Mono |
 | `liminal` | Liminal Space | the Backrooms | light | Yellowed walls, grain, vignette, light titles |
 | `brutalist` | Brutalist | brutalist web design | light | Concrete, black outlines, square corners, Space Mono, orange hard shadow |
 | `retro-64` | Retro 64 | the Commodore 64 | dark | Blue screen, light blue border, block cursor, scanlines, Press Start 2P |
@@ -228,15 +237,15 @@ it.
 
 ### Homage themes
 
-These are tributes to computers, phones and consoles people loved. `windows/tools/make-homage-themes.py`
-writes them. Each is original work in the spirit of its subject: colours, type, shapes and a detailed
+These are tributes to computers, phones and consoles people loved. `tools/make-homage-themes.py` first wrote
+them; the files in `themes/` have been edited by hand since, and are the source now (don't run it again). Each is original work in the spirit of its subject: colours, type, shapes and a detailed
 scene with easter eggs. No logos, artwork, fonts or other assets were copied, and the names describe the
 look rather than the brands.
 
 | id | Name | A homage to | Some details (and where to look for eggs) |
 |---|---|---|---|
 | `program-manager` | Program Manager | Windows 3.1 | Navy title bar, program groups, hourglass. Type *solitaire*; click Games |
-| `ninety-five` | Ninety-Five | Windows 95 | Teal desktop with icons, a taskbar with a clock. Click Start and Recycled Tracks; type *shutdown*; Konami |
+| `ninety-five` | Ninety-Five | Windows 95 | Blue desktop with icons, a taskbar with a clock. Click Start and Recycled Tracks; type *shutdown*; Konami |
 | `luna` | Luna | Windows XP | Hills and clouds, a glossy title bar, green start button. Click start; wait; type *bliss* |
 | `aurora-glass` | Aurora Glass | Windows Vista | Smoky glass, aurora, clock and now-on-air gadgets, a glass orb. Click the orb; type *wow* |
 | `superbar` | Superbar | Windows 7 | A light swoosh, the superbar with pinned favourites. Click the orb; type *shake* |
@@ -247,9 +256,9 @@ look rather than the brands.
 | `home-screen` | Home Screen | the iPhone | Status bar with a pill, a gradient wallpaper, a dock. Click the battery and the pill; type *slide* |
 | `dos-prompt` | C:\ Prompt | DOS | Text mode, box-drawn frames, a prompt. Type *dir*, *ver*, *help*, *format*; Konami |
 | `night-market` | Night Market | a rainy Japanese street at night | Skyline, vertical neon signs, a noodle bar with lanterns and steam, wet reflections. Click the bowl; type *noodles*; wait |
-| `woodgrain` | Woodgrain | the Atari 2600 | Walnut, ribbed black panel, rainbow stripes, a joystick. Click the joystick; Konami; type *adventure* |
+| `woodgrain` | Woodgrain | the Atari 2600 | Rendered walnut veneer, a ribbed black plastic top, satin black panels, chrome-trimmed controls, rainbow stripes, a joystick; in Classic the frames are the walnut. Click the joystick; Konami; type *adventure* |
 | `brick-phone` | Brick Phone | Nokia phones of 1999 | Green LCD, signal and battery, a phone. Type *snake*; click the phone; Konami |
-| `super-16` | Super 16 | the Super Nintendo | Greys and purple, four coloured buttons, a pad. Konami; type *blow* |
+| `super-16` | Super 16 | the Super Nintendo | Soft greys, four coloured buttons, a pad. Konami; type *blow* |
 | `sixteen-blast` | Sixteen Blast | the Sega Genesis | Glossy black, red and gold, speed lines, PRESS START. Type *blast*; Konami |
 | `llama-whip` | Llama Whip | Winamp | Black and gold, LCD marquee, spectrum bars, a llama. Click the llama; type *llama*; Konami |
 

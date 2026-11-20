@@ -179,6 +179,7 @@ impl App {
         let mut slots = [0; 4];
         let effects: Vec<EffectRow> = EFFECT_KINDS
             .iter()
+            .filter(|(k, _)| *k != "classic")
             .map(|(k, label)| {
                 let g = group(k);
                 slots[g] += 1;

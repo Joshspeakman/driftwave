@@ -106,6 +106,8 @@ pub struct Look {
     /// The Classic skin's painted size (px) and theme, and a size waiting to settle.
     skin_painted: Option<(u32, u32)>,
     skin_pending: Option<((u32, u32), Instant)>,
+    /// How see-through the theme wants Classic's frames (palette.rs), before the picture's say.
+    pub classic_see: f32,
     /// The theme's scene layers as written (for placing the eggs' clickable items).
     layers: Vec<Map<String, Value>>,
     /// The last motion frames' cost, for DRIFTWAVE_LOG.
@@ -159,6 +161,10 @@ fn synth_rows(lh: f32, scale: f32, phase: f32, grid: slint::Color) -> (Vec<u8>, 
 
 fn slint_colour(c: Color) -> slint::Color {
     slint::Color::from_argb_u8(c.a, c.r, c.g, c.b)
+}
+
+fn from_slint(c: slint::Color) -> Color {
+    Color { a: c.alpha(), r: c.red(), g: c.green(), b: c.blue() }
 }
 
 fn num(o: &Map<String, Value>, k: &str) -> Option<f64> {
@@ -649,7 +655,26 @@ impl App {
         let t0 = Instant::now();
         let pal = ui.global::<super::Pal>();
         match scene.skin(w, h, scale) {
-            Some(p) => {
+            Some(mut p) => {
+                // Glass themes: frosted, as Full frosts the picture under its panels.
+                if scene.glass() {
+                    let (pw, ph) = (p.w, p.h);
+                    crate::paint::frost(&mut p, 0, 0, pw, ph, (15.0 * scale).round() as usize);
+                }
+                driftwave_vis::canvas::keep_the_rule(&mut p.px);
+                // As see-through as the theme asks, unless the picture would drown the frames' labels. They're all on
+                // the player's frame, at the top (136 units of a 412-unit-wide window).
+                let face = from_slint(pal.get_face());
+                let want = self.look.classic_see;
+                let top = (136.0 * w / 412.0 * scale).min(p.h as f32);
+                let alpha = scene::readable_alpha(
+                    &p,
+                    scene::Rect { x: 0.0, y: 0.0, w: p.w as f32, h: top },
+                    Color { a: ((1.0 - want) * 255.0).round() as u8, ..face },
+                    from_slint(pal.get_label()),
+                    4.5,
+                );
+                pal.set_see(want.min(1.0 - alpha as f32 / 255.0));
                 let mut buf = SharedPixelBuffer::<Rgb8Pixel>::new(p.w as u32, p.h as u32);
                 for (d, s) in buf.make_mut_bytes().as_chunks_mut::<3>().0.iter_mut().zip(p.px.as_chunks::<4>().0) {
                     d.copy_from_slice(&s[..3]);
@@ -682,6 +707,9 @@ impl App {
             let (bw, bh) = (back.w, back.h);
             crate::paint::frost(&mut back, 0, (g.title * scale).round() as usize, bw, bh, r);
         }
+        // The colour rule over the whole picture, once it's put together: light meeting light (red neon over blue)
+        // can make what no layer had. Painted once per size, so this costs a millisecond or two, once.
+        driftwave_vis::canvas::keep_the_rule(&mut back.px);
         // The full-window scaled art isn't needed until the next backdrop (motion's pictures are smaller).
         // Retrowave's sun: its own picture over the page's glass, in its real colours.
         {

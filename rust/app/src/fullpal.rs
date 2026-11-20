@@ -1,7 +1,7 @@
 //! Every theme, in the Full layout: the theme's own tokens where it has them, Driftwave's Default (light or dark)
 //! where it doesn't. Pure and tested: every built-in theme reads at WCAG contrast 4.5 for text and 3 for the accent.
 
-use crate::palette::{contrast, readable};
+use crate::palette::{contrast, readable, ruled};
 use driftwave_core::theme::{Color, Theme};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -57,7 +57,7 @@ pub fn default(dark: bool) -> FullPalette {
             title_text: c(255, 0xFF, 0xFF, 0xFF),
             control_text: c(255, 0xFF, 0xFF, 0xFF),
             accent: c(255, 0x4C, 0xC2, 0xFF),
-            accent_text: c(255, 0x99, 0xEB, 0xFF),
+            accent_text: c(255, 0x9C, 0xCB, 0xFF),
             on_accent: c(255, 0, 0, 0),
             dialog: c(255, 0x2B, 0x2B, 0x2B),
         }
@@ -121,7 +121,7 @@ pub fn full(theme: Option<&Theme>, dark: bool) -> FullPalette {
     let control_text = readable(want_text, control, 4.5);
     let on_accent = readable(get("onAccent").unwrap_or(base.on_accent), accent, 4.5);
     let accent_text = readable(get("accentText").unwrap_or(accent), card, 4.5);
-    FullPalette {
+    let p = FullPalette {
         background,
         pane,
         surface,
@@ -143,6 +143,30 @@ pub fn full(theme: Option<&Theme>, dark: bool) -> FullPalette {
         accent_text,
         on_accent,
         dialog: solid("dialog", base.dialog),
+    };
+    // Derived colours kept to the colour rule (a navy lightened for reading turns lavender).
+    FullPalette {
+        background: ruled(p.background),
+        pane: ruled(p.pane),
+        surface: ruled(p.surface),
+        card: ruled(p.card),
+        card_stroke: ruled(p.card_stroke),
+        control: ruled(p.control),
+        control_stroke: ruled(p.control_stroke),
+        subtle: ruled(p.subtle),
+        divider: ruled(p.divider),
+        text: ruled(p.text),
+        text2: ruled(p.text2),
+        text3: ruled(p.text3),
+        card_text: ruled(p.card_text),
+        card_text2: ruled(p.card_text2),
+        pane_text: ruled(p.pane_text),
+        title_text: ruled(p.title_text),
+        control_text: ruled(p.control_text),
+        accent: ruled(p.accent),
+        accent_text: ruled(p.accent_text),
+        on_accent: ruled(p.on_accent),
+        dialog: ruled(p.dialog),
     }
 }
 

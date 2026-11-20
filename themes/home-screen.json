@@ -7,7 +7,7 @@
   "base": "dark",
   "backdrop": "none",
   "colors": {
-    "background": "#2A1840",
+    "background": "#0E1A33",
     "surface": "#4D10101C",
     "card": "#73FFFFFF",
     "cardStroke": "#33FFFFFF",
@@ -16,10 +16,10 @@
     "subtle": "#22FFFFFF",
     "divider": "#33FFFFFF",
     "text": "#FFFFFF",
-    "textSecondary": "#F0ECF4",
-    "textTertiary": "#C8C0D2",
+    "textSecondary": "#ECF0F6",
+    "textTertiary": "#C3CAD6",
     "accent": "#0A84FF",
-    "accentText": "#64D2FF",
+    "accentText": "#6CB4FF",
     "onAccent": "#FFFFFF",
     "dialog": "#EE1C1C2A",
     "pane": "#59100A1C"

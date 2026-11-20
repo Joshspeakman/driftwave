@@ -141,7 +141,7 @@ pub const TOKENS: [(&str, &str); 16] = [
 ];
 
 /// The decorative effects, with the label the editor shows. None of them may flash (docs/THEMES.md).
-pub const EFFECT_KINDS: [(&str, &str); 23] = [
+pub const EFFECT_KINDS: [(&str, &str); 24] = [
     ("synthwave", "Synthwave sun and grid"),
     ("rain", "Neon rain"),
     ("aurora", "Drifting colour behind glass"),
@@ -165,6 +165,8 @@ pub const EFFECT_KINDS: [(&str, &str); 23] = [
     ("tiles", "Placeholder cover colours"),
     ("chrome", "Window buttons and bevels of an era"),
     ("visTint", "Visualizers in the screen's own colour"),
+    // Not a switch in the editor: a theme's own colours for the Classic layout's parts (app/src/palette.rs).
+    ("classic", "Classic layout's own colours"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -264,7 +264,10 @@ fn concrete(p: &mut Picture, scale: f32, opacity: f32, dark_base: bool) {
 fn synthwave(p: &mut Picture, scale: f32, s: &Synthwave, back: Rgba, sun_x: f32) {
     let (w, h) = (p.w as f32, p.h as f32);
     let horizon = h * 0.68;
-    let sky = Paint::Stops(vec![(0.0, back), (0.7, s.sky), (1.0, mix(s.sky, s.sun_bottom, 0.45))], b'v');
+    // Down to the horizon's glow through a near-neutral dusk: straight from blue to red would pass through purple.
+    let dusk = mix(s.sky, [0.13, 0.13, 0.14, 1.0], 0.7);
+    // The glow at the horizon is the sun's gold (its red under the blue rows would read purple).
+    let sky = Paint::Stops(vec![(0.0, back), (0.6, s.sky), (0.84, dusk), (1.0, mix(dusk, s.sun_top, 0.45))], b'v');
     p.fill(Rect { x: 0.0, y: 0.0, w, h: horizon }, Shape::Rect(0.0), &sky, 1.0);
     let floor = Paint::Stops(vec![(0.0, mix(back, s.grid, 0.18)), (1.0, back)], b'v');
     p.fill(Rect { x: 0.0, y: horizon, w, h: h - horizon }, Shape::Rect(0.0), &floor, 1.0);

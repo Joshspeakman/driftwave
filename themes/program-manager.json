@@ -13,7 +13,7 @@
     "cardStroke": "#000000",
     "control": "#C0C0C0",
     "controlStroke": "#000000",
-    "subtle": "#330000A8",
+    "subtle": "#33002A9C",
     "divider": "#808080",
     "text": "#000000",
     "textSecondary": "#202020",
@@ -40,7 +40,7 @@
     "tiles": {
       "colors": [
         "#000080",
-        "#008080",
+        "#808000",
         "#808080"
       ],
       "flat": true

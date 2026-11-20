@@ -57,16 +57,17 @@ impl Visualizer for Waveland {
         let horizon = h * (0.34 + 0.015 * (t * 0.3).sin());
         if self.sky.as_ref().map(|s| (s.w, s.h)) != Some((c.w, c.h)) {
             let mut s = Canvas::new(c.w, c.h);
-            s.gradient([0.02, 0.01, 0.06], [0.05, 0.02, 0.09]);
+            s.gradient([0.01, 0.015, 0.05], [0.02, 0.035, 0.09]);
             // Glow along the (resting) horizon.
             let rest = h * 0.35;
             for y in 0..(rest as usize).min(c.h) {
                 let k = (y as f32 / rest).powi(3) * 0.25;
                 for x in 0..c.w {
                     let p = &mut s.px[y * c.w + x];
+                    // An amber glow (it was magenta).
                     p[0] += 0.5 * k;
-                    p[1] += 0.12 * k;
-                    p[2] += 0.45 * k;
+                    p[1] += 0.22 * k;
+                    p[2] += 0.05 * k;
                 }
             }
             self.sky = Some(s);
@@ -88,7 +89,8 @@ impl Visualizer for Waveland {
             for k in 0..COLS {
                 let v = self.rows[r][k];
                 let p = project(k, depth, v);
-                let col = scale(hsv(0.52 + v * 0.38 - r as f32 * 0.002, 0.8, 1.0), 0.15 + 0.75 * fade);
+                // Azure to deep blue as the land rises (the colour rule: no cyan, violet or pink).
+                let col = scale(hsv(0.58 + v * 0.12 - r as f32 * 0.0005, 0.8, 1.0), 0.15 + 0.75 * fade);
                 if let Some(q) = prev {
                     c.line(q.0, q.1, p.0, p.1, col, 0.9, if r < 6 { 1.6 } else { 1.0 });
                 }

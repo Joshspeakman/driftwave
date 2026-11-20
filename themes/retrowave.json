@@ -3,25 +3,25 @@
   "version": 1,
   "id": "retrowave",
   "name": "Retrowave",
-  "description": "Neon pink and purple over a synthwave sun and an endless grid.",
+  "description": "A midnight drive: a molten orange sun sinking into an electric-blue grid.",
   "base": "dark",
   "backdrop": "none",
   "colors": {
-    "background": "#12062B",
-    "surface": "#B3180A33",
-    "card": "#B32A1450",
-    "cardStroke": "#55FF2E97",
-    "control": "#CC3A1E66",
-    "controlStroke": "#66FF71CE",
-    "subtle": "#33FF71CE",
-    "divider": "#44FF2E97",
-    "text": "#F3E8FF",
-    "textSecondary": "#C8A8F0",
-    "textTertiary": "#8E72B8",
-    "accent": "#FF2E97",
-    "accentText": "#FF71CE",
-    "onAccent": "#12062B",
-    "dialog": "#1E0B3D"
+    "background": "#070B1F",
+    "surface": "#B30C1433",
+    "card": "#B3121D45",
+    "cardStroke": "#552F7BFF",
+    "control": "#CC18264F",
+    "controlStroke": "#66FF7A33",
+    "subtle": "#332F7BFF",
+    "divider": "#442F7BFF",
+    "text": "#EEF2FF",
+    "textSecondary": "#A9B6DC",
+    "textTertiary": "#6F7CA3",
+    "accent": "#FF6A2B",
+    "accentText": "#FFA55C",
+    "onAccent": "#070B1F",
+    "dialog": "#0E1636"
   },
   "fonts": {
     "title": "Orbitron",
@@ -38,13 +38,13 @@
   },
   "effects": {
     "synthwave": {
-      "sunTop": "#FFE45E",
-      "sunBottom": "#FF2E97",
-      "grid": "#FF2E97",
-      "sky": "#3B0F5C"
+      "sunTop": "#FFE066",
+      "sunBottom": "#FF5A1F",
+      "grid": "#2F7BFF",
+      "sky": "#10225C"
     },
     "titleShadow": {
-      "color": "#FF2E97",
+      "color": "#2F7BFF",
       "blur": 16
     },
     "scanlines": {
