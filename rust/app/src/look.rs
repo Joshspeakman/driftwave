@@ -608,7 +608,9 @@ impl App {
         self.look.last_motion = Some(now);
         let t0 = Instant::now();
         // Soft things (rain, light, colour) scale up smoothly: no finer than 0.6 px a point on dense screens.
-        let m = scene.motion(&g, (scale * scene.motion_scale).min(0.6), t, mdt);
+        // Off the Mac, motion that stays in the title bar is a strip, so only the strip is repainted.
+        let band = if self.look.native_on { None } else { scene.motion_band(&g) };
+        let m = scene.motion(&g, (scale * scene.motion_scale).min(0.6), t, mdt, band);
         if self.look.native_on {
             // The GPU stretches and blends it: nothing in the UI is redrawn.
             if let Some(l) = self.look.native_layers.as_mut() {
@@ -617,6 +619,7 @@ impl App {
         } else {
             let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(&m.px, m.w as u32, m.h as u32);
             scenery.set_motion(Image::from_rgba8_premultiplied(buf));
+            scenery.set_motion_band(band.unwrap_or(0.0));
             scenery.set_moving(true);
         }
         self.look.motion_ms += t0.elapsed().as_secs_f64() * 1000.0;

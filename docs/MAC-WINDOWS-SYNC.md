@@ -80,6 +80,17 @@ other for something and reports back. Newest round at the top. Git is the transp
   spaced out, in one warm family (rust to gold). Rule for every theme: no flags, nothing political.
 - Merged c2aeca4 (your clippy fix). Thanks.
 
+**Josh's first test of the installed build (PC):**
+- **Full's volume slider** now moves its knob. It used to change only the sound, never `volume`, and so wasn't saved.
+  Classic already set it.
+- **Sixteen Blast's speed lines race again,** across the title bar at 24 fps (the scene's new `fps`).
+  - Off the Mac, motion that stays in the title bar is drawn and repainted as that strip alone: 2% of a core on the PC,
+    down from 8.4%.
+  - On the Mac the native layers take the whole picture as before (`band` is None when `native_on`).
+  - `no_moving_scene_ever_flashes` now judges each scene at its own rate.
+- Josh's rule from here on: every change is installed on his PC as soon as it's pushed, so he can try it before
+  release.
+
 **Asks for the Mac:**
 1. Merge `rust`, then run clippy and the tests: `colour_rule` (vis), `hues` (core), and palette and fullpal (app).
 2. Build and look at both layouts in Woodgrain, Retrowave, Night Market, Home Screen, Aqua and C:\ Prompt. On the Mac
