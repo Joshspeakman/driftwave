@@ -123,6 +123,9 @@ export global Scenery {
     in property <image> back;
     in property <bool> moving;
     in property <image> motion;
+    // When all that moves is in the title bar: the motion picture's height (logical px), so only that strip repaints.
+    // 0 means the whole window.
+    in property <float> motion-band;
     // macOS: the backdrop and motion are Core Animation layers beneath the window (look.rs), so the Full
     // view is drawn see-through over them instead of drawing those two pictures itself.
     in property <bool> native;
@@ -1482,7 +1485,7 @@ export component FullView inherits Rectangle {
         Rectangle { background: #000000.transparentize(1 - Scenery.user-dim); }
     }
     if Scenery.on && !Scenery.native && Scenery.moving: Image {
-        x: 0; y: 0; width: parent.width; height: parent.height; source: Scenery.motion; image-fit: fill; image-rendering: smooth;
+        x: 0; y: 0; width: parent.width; height: Scenery.motion-band > 0 ? Scenery.motion-band * 1px : parent.height; source: Scenery.motion; image-fit: fill; image-rendering: smooth;
     }
     property <length> player-w: show-player ? 312px : 0px;
 
@@ -2056,7 +2059,7 @@ export component FullView inherits Rectangle {
                         glyph: root.playing || root.loading ? "M 3 3 L 13 3 L 13 13 L 3 13 Z" : "M 4 2 L 14 8 L 4 14 Z";
                         clicked => { if (root.playing || root.loading) { root.stop(); } else { root.play(); } }
                     }
-                    // Volume.
+                    // Volume. The knob follows the drag here (as in Classic): Rust only sets the engine's level.
                     Rectangle {
                         x: 80px; y: parent.y-ctl + 12px; width: 190px; height: 20px;
                         Rectangle { y: 8px; height: 4px; border-radius: 2px; background: Th.control-stroke; }
@@ -2066,8 +2069,8 @@ export component FullView inherits Rectangle {
                             border-width: 1px; border-color: Th.control-stroke;
                             Rectangle { x: 5px; y: 5px; width: 8px; height: 8px; border-radius: 4px; background: Th.accent; } }
                         TouchArea {
-                            moved => { if (self.pressed) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
-                            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.volume-changed(clamp(self.mouse-x / self.width, 0, 1)); } }
+                            moved => { if (self.pressed) { root.volume = clamp(self.mouse-x / self.width, 0, 1); root.volume-changed(root.volume); } }
+                            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.volume = clamp(self.mouse-x / self.width, 0, 1); root.volume-changed(root.volume); } }
                         }
                     }
                     // Recording.

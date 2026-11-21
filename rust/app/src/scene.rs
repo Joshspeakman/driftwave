@@ -380,10 +380,13 @@ impl Scene {
         let sc = t.effects.get("scene");
         let glass = sc.and_then(|s| s.get("surfaces")).and_then(Value::as_str) == Some("translucent")
             && sc.and_then(|s| s.get("frost")).and_then(Value::as_bool) != Some(false);
+        // A scene may ask for a smoother rate ("fps", 6–30): fast, small things like speed lines in the title bar
+        // judder at the usual 12.
+        let fps = sc.and_then(|s| s.get("fps")).and_then(Value::as_f64).map(|f| f.clamp(6.0, 30.0));
         Some(Scene {
             glass,
             has_motion: layer_motion || effects.moves(),
-            motion_fps: if layer_motion { 12.0 } else { 6.0 },
+            motion_fps: if layer_motion { fps.unwrap_or(12.0) } else { 6.0 },
             motion_scale: if layer_motion { 0.5 } else { 0.25 },
             layers,
             neon,
@@ -491,9 +494,18 @@ impl Scene {
         p
     }
 
-    /// The moving part at time `t` (seconds), at `scale` px per logical px; `dt` advances the drops.
-    pub fn motion(&mut self, g: &Geometry, scale: f32, t: f64, dt: f32) -> Picture {
-        let (w, h) = ((g.width * scale).round() as usize, (g.height * scale).round() as usize);
+    /// How tall the moving part is (logical px from the top) when all of it lies in the title bar, like Sixteen
+    /// Blast's speed lines: the UI then repaints only that strip each frame, not the whole window. None when
+    /// something moves further down (rain, the aurora, the street).
+    pub fn motion_band(&self, g: &Geometry) -> Option<f32> {
+        let up_top = |l: &Map<String, Value>| matches!(str_of(l, "in"), Some("titlebar" | "titlebar-full"));
+        (self.drips.is_none() && !self.effects.moves() && self.layers.iter().filter(|l| moving(l)).all(up_top)).then_some(g.title)
+    }
+
+    /// The moving part at time `t` (seconds), at `scale` px per logical px; `dt` advances the drops. With a `band`
+    /// (see `motion_band`) it's only the top `band` logical px of the window.
+    pub fn motion(&mut self, g: &Geometry, scale: f32, t: f64, dt: f32, band: Option<f32>) -> Picture {
+        let (w, h) = ((g.width * scale).round() as usize, (band.unwrap_or(g.height) * scale).round() as usize);
         let mut p = Picture::new(w, h);
         self.effects.moving(&mut p, scale, t);
         for l in self.layers.clone().iter().filter(|l| moving(l)) {
@@ -910,11 +922,11 @@ mod tests {
                 continue;
             }
             let scale = (2.0 * scene.motion_scale).min(0.6);
-            let _ = scene.motion(&g, scale, 0.0, 0.0);
+            let _ = scene.motion(&g, scale, 0.0, 0.0, None);
             let n = 120;
             let t0 = std::time::Instant::now();
             for f in 0..n {
-                let _ = scene.motion(&g, scale, f as f64 / 12.0, 1.0 / 12.0);
+                let _ = scene.motion(&g, scale, f as f64 / 12.0, 1.0 / 12.0, None);
             }
             println!("{:16} {:.2} ms a frame", t.id, t0.elapsed().as_secs_f64() * 1000.0 / n as f64);
         }
@@ -924,7 +936,6 @@ mod tests {
     /// whole window and over regions about WCAG's small-area size: no flashing, anywhere.
     #[test]
     fn no_moving_scene_ever_flashes() {
-        let fps = 12.0;
         let scale = 0.4;
         let g = Geometry { width: 1180.0, height: 760.0, title: 48.0, pane: 220.0, player: 312.0, title_end: 110.0 };
         let mut moving = 0;
@@ -934,12 +945,14 @@ mod tests {
                 continue;
             }
             moving += 1;
+            // Judged at the rate it really moves (Sixteen Blast's speed lines run at 24).
+            let fps = scene.motion_fps;
             let back = scene.backdrop(&g, scale, false);
             let (gx, gy) = (4, 3);
             let mut whole = Vec::new();
             let mut cells: Vec<Vec<flash::Frame>> = vec![Vec::new(); gx * gy];
             for f in 0..(24.0 * fps) as usize {
-                let m = scene.motion(&g, scale, f as f64 / fps, (1.0 / fps) as f32);
+                let m = scene.motion(&g, scale, f as f64 / fps, (1.0 / fps) as f32, None);
                 assert_eq!((m.w, m.h), (back.w, back.h));
                 let mut seen = Picture { w: back.w, h: back.h, px: back.px.clone() };
                 for i in 0..m.w * m.h {
@@ -957,6 +970,25 @@ mod tests {
             }
         }
         assert!(moving >= 1, "Night Market at least moves");
+    }
+
+    /// Motion that stays in the title bar is drawn as a strip (so only the strip repaints); the street's doesn't.
+    #[test]
+    fn title_bar_motion_is_a_strip() {
+        let g = Geometry { width: 1180.0, height: 760.0, title: 48.0, pane: 220.0, player: 312.0, title_end: 110.0 };
+        let all = themes();
+        let scene = |id: &str| Scene::for_theme(all.iter().find(|t| t.id == id)).unwrap();
+        let mut blast = scene("sixteen-blast");
+        assert!(blast.has_motion && blast.motion_fps == 24.0);
+        assert_eq!(blast.motion_band(&g), Some(48.0));
+        // A steady stream: every moment of the loop has a few streaks crossing, not one or none.
+        for f in 0..40 {
+            let m = blast.motion(&g, 0.5, f as f64 * 0.25, 0.25, Some(48.0));
+            assert_eq!((m.w, m.h), (590, 24));
+            let lit = (0..m.w).filter(|x| (0..m.h).any(|y| m.px[(y * m.w + x) * 4 + 3] > 24)).count();
+            assert!(lit > 120, "speed lines across {lit} of {} columns at {} s", m.w, f as f64 * 0.25);
+        }
+        assert_eq!(scene("night-market").motion_band(&g), None);
     }
 
     /// A see-through panel is made just opaque enough for its text over a bright picture, and left alone over a

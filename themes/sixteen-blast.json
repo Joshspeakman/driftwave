@@ -53,6 +53,7 @@
       "uppercase": true
     },
     "scene": {
+      "fps": 24,
       "layers": [
         {
           "type": "rect",
@@ -82,20 +83,56 @@
         {
           "type": "rect",
           "in": "titlebar-full",
-          "x": 0,
-          "y": 0,
-          "w": 120,
+          "x": "-25%",
+          "y": 3,
+          "w": 150,
           "h": 2,
           "fill": [
             "#00FFFFFF",
-            "#55FFFFFF"
+            "#70FFFFFF"
           ],
           "angle": "h",
           "scatter": {
-            "n": 14,
+            "n": 16,
             "seed": 3,
-            "w": "100%",
-            "h": 44
+            "w": 1,
+            "h": 40,
+            "fade": true
+          },
+          "jitter": {
+            "w": 0.8
+          },
+          "motion": {
+            "kind": "scroll",
+            "x": 3400,
+            "seconds": 10,
+            "offset": 0.625,
+            "randomOffset": 0.4
+          }
+        },
+        {
+          "type": "rect",
+          "in": "titlebar-full",
+          "x": "-30%",
+          "y": 6,
+          "w": 220,
+          "h": 2,
+          "fill": [
+            "#00FFD24A",
+            "#99FFD24A"
+          ],
+          "angle": "h",
+          "scatter": {
+            "n": 2,
+            "seed": 11,
+            "w": 1,
+            "h": 34
+          },
+          "motion": {
+            "kind": "scroll",
+            "x": 3400,
+            "seconds": 13,
+            "randomOffset": 13
           }
         },
         {

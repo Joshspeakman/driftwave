@@ -156,6 +156,10 @@ frosted (painted once); `"frost": false` keeps it sharp (Luna, Aqua).
 
 `start` shifts one item in time, `offset` staggers repeated items, and `randomOffset` scatters them.
 
+A scene redraws what moves 12 times a second; `"fps"` on the scene (6–30) asks for smoother, as Sixteen Blast's
+speed lines do at 24. Motion that stays in the title bar (`titlebar`, `titlebar-full`) is repainted as that strip
+alone, so it costs little.
+
 `withPhoto: true` marks a layer that belongs to the photograph's world, such as the people's lights in the street.
 It leaves with the photo when you set your own background.
 
@@ -259,7 +263,7 @@ look rather than the brands.
 | `woodgrain` | Woodgrain | the Atari 2600 | Rendered walnut veneer, a ribbed black plastic top, satin black panels, chrome-trimmed controls, orange racing stripes, a joystick; in Classic the frames are the walnut. Click the joystick; Konami; type *adventure* |
 | `brick-phone` | Brick Phone | Nokia phones of 1999 | Green LCD, signal and battery, a phone. Type *snake*; click the phone; Konami |
 | `super-16` | Super 16 | the Super Nintendo | Soft greys, four coloured buttons, a pad. Konami; type *blow* |
-| `sixteen-blast` | Sixteen Blast | the Sega Genesis | Glossy black, red and gold, speed lines, PRESS START. Type *blast*; Konami |
+| `sixteen-blast` | Sixteen Blast | the Sega Genesis | Glossy black, red and gold, speed lines racing across the title bar. Type *blast* or click *16-BIT*; Konami |
 | `llama-whip` | Llama Whip | Winamp | Black and gold, LCD marquee, spectrum bars, a llama. Click the llama; type *llama*; Konami |
 
 The names describe the look rather than the brands. No artwork, logos or fonts from the originals
